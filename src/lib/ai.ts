@@ -96,7 +96,7 @@ export async function paraphraseNews(
 ): Promise<ParaphrasedResult> {
   const apiKey = process.env.GEMINI_API_KEY;
 
-  if (!apiKey || apiKey.startsWith("AIzaSyYour")) {
+  if (!apiKey || apiKey === "AIzaSyYourGeminiKeyHere") {
     console.log("Todaynews.ng AI: GEMINI_API_KEY is not configured. Using local fallback.");
     return localProceduralRewriter(rawText, rawTitle, category);
   }
@@ -192,31 +192,10 @@ export async function chatWithAi(
 ): Promise<ChatAiResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
 
-  if (!apiKey || apiKey.startsWith("AIzaSyYour")) {
-    // Basic local fallback processing if Gemini is offline
-    const text = userMessage.toLowerCase();
-    if (text.includes("scrape") || text.includes("fetch") || text.includes("find") || text.includes("search") || text.includes("news")) {
-      let query = "";
-      if (text.includes("naira")) query = "naira";
-      else if (text.includes("security")) query = "security";
-      else if (text.includes("politics")) query = "politics";
-      else if (text.includes("sports")) query = "sports";
-      else if (text.includes("entertainment")) query = "entertainment";
-      else if (text.includes("bbnaija")) query = "bbnaija";
-
-      return {
-        intent: "search",
-        searchQuery: query || undefined,
-        reply: `I have initialized our security algorithms to compare news across Punch, Daily Trust, and BBC Africa. Here is what I found:`,
-      };
-    }
-
-    return {
-      intent: "chat",
-      reply: `Greetings from the Todaynews.ng Editorial Desk. I am processing your message offline: "${userMessage}". Let me know if you would like to run search commands.`,
-    };
+  // Only skip Gemini if key is genuinely missing or is the example placeholder
+  if (!apiKey || apiKey === "AIzaSyYourGeminiKeyHere") {
+    return smartLocalChat(userMessage);
   }
-
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
@@ -267,10 +246,78 @@ export async function chatWithAi(
     return JSON.parse(text) as ChatAiResponse;
   } catch (err) {
     console.error("Gemini Chat AI Error, falling back:", err);
+    return smartLocalChat(userMessage);
+  }
+}
+
+/**
+ * Smart local chat fallback — keyword-aware intent parser.
+ * Used when Gemini API is unavailable or key is invalid.
+ * Actually triggers searches and returns meaningful replies.
+ */
+function smartLocalChat(userMessage: string): ChatAiResponse {
+  const text = userMessage.toLowerCase();
+
+  // Greeting / small talk detection
+  const greetings = ["hello", "hi", "hey", "good morning", "good evening", "good afternoon", "sup", "what's up"];
+  if (greetings.some((g) => text.startsWith(g) || text === g)) {
     return {
       intent: "chat",
-      reply: `I received your command: "${userMessage}". Let me know if you would like me to retrieve specific news feeds.`,
+      reply: `Good to hear from you! I'm the Todaynews.ng AI Editor — your intelligence partner for Nigerian news.\n\nI can search for breaking news, scrape the latest from Punch, Daily Trust, Vanguard, and more. Try commands like:\n• "Search terror news today"\n• "Find business and economy news"\n• "Get latest Naira rates"\n• "Scrape BBNaija trending stories"`,
     };
   }
+
+  // Search / news intent keywords
+  const searchTriggers = ["search", "find", "fetch", "get", "scrape", "look for", "show me", "latest", "news", "trending", "today", "update"];
+  const isSearchIntent = searchTriggers.some((t) => text.includes(t));
+
+  // Topic keyword mapping
+  const topicMap: { keywords: string[]; query: string; label: string }[] = [
+    { keywords: ["naira", "exchange", "dollar", "forex", "cbn", "currency"], query: "naira exchange rate", label: "Naira & Forex" },
+    { keywords: ["terror", "terrorism", "boko haram", "bandit", "kidnap", "attack", "bomb", "insurgent", "militant"], query: "terrorism security Nigeria", label: "Security & Terror" },
+    { keywords: ["security", "police", "army", "military", "dss", "efcc"], query: "security Nigeria", label: "Security" },
+    { keywords: ["business", "economy", "economic", "trade", "market", "stock", "invest", "inflation", "gdp"], query: "Nigeria business economy", label: "Business & Economy" },
+    { keywords: ["school", "education", "asuu", "university", "student", "waec", "jamb", "neco", "nbte"], query: "Nigeria education school", label: "Education" },
+    { keywords: ["politics", "tinubu", "senate", "house of reps", "governor", "election", "aso rock", "presidency", "minister"], query: "Nigeria politics", label: "Politics" },
+    { keywords: ["bbnaija", "big brother", "entertainment", "celebrity", "nollywood", "afrobeats", "music"], query: "Nigeria entertainment bbnaija", label: "Entertainment" },
+    { keywords: ["sports", "super eagles", "football", "npfl", "basketball", "athletics"], query: "Nigeria sports", label: "Sports" },
+    { keywords: ["health", "hospital", "disease", "covid", "malaria", "doctor", "medical"], query: "Nigeria health", label: "Health" },
+    { keywords: ["tech", "technology", "startup", "ai", "fintech", "internet"], query: "Nigeria technology", label: "Technology" },
+  ];
+
+  // Find all matching topics from the message
+  const matchedTopics = topicMap.filter((t) =>
+    t.keywords.some((kw) => text.includes(kw))
+  );
+
+  if (isSearchIntent || matchedTopics.length > 0) {
+    let query = "";
+    let topicLabels = "";
+
+    if (matchedTopics.length > 0) {
+      // Use the first matched topic as primary query
+      query = matchedTopics[0].query;
+      topicLabels = matchedTopics.map((t) => t.label).join(", ");
+    }
+
+    const introLines = [
+      `Understood. I've activated the Todaynews.ng intelligence scanner across Punch, Daily Trust, Vanguard, and Premium Times for ${topicLabels || "latest Nigerian news"}.`,
+      `On it. Cross-referencing live feeds from Punch NG, BBC Africa Hausa, and Guardian Nigeria for ${topicLabels || "top trending stories"}.`,
+      `Scanning active Nigerian news channels for ${topicLabels || "breaking stories"}. Here's what I found across verified sources:`,
+    ];
+    const intro = introLines[Math.floor(Math.random() * introLines.length)];
+
+    return {
+      intent: "search",
+      searchQuery: query || undefined,
+      reply: intro,
+    };
+  }
+
+  // General knowledge / editorial fallback
+  return {
+    intent: "chat",
+    reply: `As the Todaynews.ng AI Editor, I can help you stay informed. Try asking me to:\n• Search for specific news topics (e.g. "find terror news today")\n• Fetch latest stories from a category (e.g. "get latest business news")\n• Scrape trending Nigerian stories (e.g. "what's trending in Nigeria right now")\n\nWhat would you like me to look up?`,
+  };
 }
 
