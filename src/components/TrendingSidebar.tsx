@@ -11,7 +11,7 @@ export default function TrendingSidebar() {
   return (
     <div className="border-2 border-ink p-5 rounded bg-white font-body shadow-sm">
       <h3 className="font-display font-black text-sm uppercase tracking-wider text-ink border-b-2 border-ink pb-2 mb-4 flex items-center gap-1">
-        <span>Trending Wahala</span>
+        <span>Trending Topics</span>
         <span className="text-signal text-xs animate-bounce font-mono bg-signal/10 px-1 py-0.5 rounded">
           Top 5
         </span>

@@ -31,7 +31,7 @@ export default function Footer() {
             </span>
           </Link>
           <p className="text-xs text-muted mt-3 leading-relaxed">
-            Nigeria's independent digital news hub. Delivering breaking politics, parallel market Naira updates, sports coverage, and entertainment gist with human-reviewed journalistic rigor.
+            Nigerian AI-powered news channel focusing on reducing misinformation and news censorship using complex algorithms to locate critical security news to keep Nigerians safe, as well as breaking politics, currency rates, and culture.
           </p>
           <div className="mt-4">
             <SocialHandles iconOnly />

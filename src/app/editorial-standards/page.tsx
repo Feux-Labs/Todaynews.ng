@@ -38,10 +38,10 @@ export default function EditorialStandardsPage() {
         <div className="border-2 border-ink p-6 rounded-lg bg-paper shadow-brutal space-y-4">
           <div className="flex items-center gap-3">
             <FileText className="w-7 h-7 text-flag" />
-            <h2 className="font-display font-black text-xl text-ink">2. AI-Assisted & Human-Reviewed Newsroom Policy</h2>
+            <h2 className="font-display font-black text-xl text-ink">2. Anti-Misinformation, Anti-Censorship & AI Algorithms</h2>
           </div>
           <p className="text-sm text-muted leading-relaxed">
-            We leverage state-of-the-art AI intelligence tools for initial news gathering, structured summarization, and rapid drafting. <strong>However, no AI-generated article is ever published automatically without human review.</strong> Every story undergoes copy-editing, factual verification, and editorial approval by a named human editor prior to public indexing.
+            Todaynews.ng operates as an AI-powered news channel focused on reducing misinformation and news censorship across Nigeria. We utilize complex algorithms to locate important news — with specialized emphasis on security-related news — in order to keep Nigerians safe. While automated intelligence gathering assists rapid drafting, <strong>every article undergoes rigorous 100% human-editor verification and approval</strong> prior to publication.
           </p>
         </div>
 

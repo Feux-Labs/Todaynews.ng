@@ -5,8 +5,8 @@ import JsonLd from "@/components/JsonLd";
 import { ShieldCheck, Users, Globe, BookOpen, Award, CheckCircle } from "lucide-react";
 
 export const metadata = {
-  title: "About Us | Todaynews.ng - Independent Nigerian News Platform",
-  description: "Learn about Todaynews.ng, Nigeria's independent digital news platform delivering real-time politics, Naira exchange updates, national security, and entertainment news with human-reviewed journalistic rigor.",
+  title: "About Us | Todaynews.ng - AI-Powered Nigerian News Channel",
+  description: "Todaynews.ng is a Nigerian AI-powered news channel focusing on reducing misinformation and news censorship by using complex algorithms to locate important news, especially security-related news, in order to keep Nigerians safe.",
 };
 
 export default function AboutPage() {
@@ -46,10 +46,10 @@ export default function AboutPage() {
           About Todaynews.ng
         </span>
         <h1 className="font-display font-black text-3xl md:text-5xl tracking-tight text-ink mt-3">
-          Independent, Fast & Verified News for Nigeria
+          AI-Powered News Channel For Nigeria
         </h1>
         <p className="text-muted text-lg mt-3 leading-relaxed">
-          Delivering breaking news across Lagos, Abuja, and 36 States with speed, precision, and verified journalistic integrity.
+          Reducing misinformation and news censorship through complex algorithms to locate critical news — especially security-related updates — to keep Nigerians safe.
         </p>
       </div>
 
@@ -59,15 +59,15 @@ export default function AboutPage() {
           <Globe className="w-8 h-8 text-flag mb-3" />
           <h2 className="font-display font-black text-xl text-ink mb-2">Our Mission</h2>
           <p className="text-sm text-muted leading-relaxed">
-            To provide millions of Nigerians at home and in the Diaspora with instant access to credible, accurate, and objective news regarding governance, parallel market currency rates, security, and culture.
+            Todaynews.ng is a Nigerian AI-powered news channel focusing on reducing misinformation and news censorship by using complex algorithms to locate important news — especially security-related news — in order to keep Nigerians safe, as well as covering all other news forms across politics, economy, culture, and sports.
           </p>
         </div>
 
         <div className="border-2 border-ink p-6 rounded-lg bg-paper shadow-brutal">
           <ShieldCheck className="w-8 h-8 text-flag mb-3" />
-          <h2 className="font-display font-black text-xl text-ink mb-2">Editorial Integrity</h2>
+          <h2 className="font-display font-black text-xl text-ink mb-2">Anti-Censorship & Editorial Rigor</h2>
           <p className="text-sm text-muted leading-relaxed">
-            We combine high-speed intelligence gathering with rigorous 100% human-editor reviews. Every story is verified, copy-edited, and fact-checked before going live to eliminate fake news and sensationalism.
+            By leveraging automated intelligence gathering combined with 100% human editorial verification, we bypass information bottlenecks and censorship to ensure high-priority public safety alerts reach citizens fast without distortion.
           </p>
         </div>
       </div>
