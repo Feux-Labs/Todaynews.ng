@@ -3,6 +3,10 @@
 import React, { useEffect, useRef } from "react";
 import Script from "next/script";
 
+// ─── Ad Configuration ──────────────────────────────────────────────────────
+const AD_KEY = "f1676b31bf7fb91f65c368c428768a54";
+const AD_INVOKE_URL = `https://wailsilence.com/${AD_KEY}/invoke.js`;
+
 export type AdsterraFormat =
   | "popunder"
   | "in-page-push"
@@ -21,7 +25,6 @@ interface AdSlotProps {
   className?: string;
   smartlinkUrl?: string;
   smartlinkLabel?: string;
-  bannerSize?: "728x90" | "300x250" | "468x60" | "160x600";
 }
 
 export default function AdSlot({
@@ -30,24 +33,28 @@ export default function AdSlot({
   className = "",
   smartlinkUrl = process.env.NEXT_PUBLIC_ADSTERRA_SMARTLINK || "https://todaynews.ng",
   smartlinkLabel = "🔥 Trending Deals & Offers in Nigeria — Click Here",
-  bannerSize = "300x250",
 }: AdSlotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Script injection for Banners (300x250 square or 728x90 leaderboard rectangle)
+  // ── Banner (iframe) injection ──────────────────────────────────────────────
   useEffect(() => {
-    if ((type === "banner" || type === "banner-top" || type === "in-article-mid") && containerRef.current) {
+    if (
+      (type === "banner" || type === "banner-top" || type === "in-article-mid") &&
+      containerRef.current
+    ) {
       containerRef.current.innerHTML = "";
+
+      // Top banner → 728×90 leaderboard rectangle
+      // In-article / sidebar → 300×250 medium rectangle
+      const isWide = type === "banner-top";
+      const width = isWide ? 728 : 300;
+      const height = isWide ? 90 : 250;
+
       const confScript = document.createElement("script");
       confScript.type = "text/javascript";
-      
-      const isTopBanner = type === "banner-top";
-      const height = isTopBanner ? 90 : 250;
-      const width = isTopBanner ? 728 : 300;
-
       confScript.innerHTML = `
         atOptions = {
-          'key' : 'baec4ba691aee8e6facd331480c3ff7a',
+          'key' : '${AD_KEY}',
           'format' : 'iframe',
           'height' : ${height},
           'width' : ${width},
@@ -57,7 +64,7 @@ export default function AdSlot({
 
       const invokeScript = document.createElement("script");
       invokeScript.type = "text/javascript";
-      invokeScript.src = "https://www.highperformanceformat.com/baec4ba691aee8e6facd331480c3ff7a/invoke.js";
+      invokeScript.src = AD_INVOKE_URL;
       invokeScript.async = true;
 
       containerRef.current.appendChild(confScript);
@@ -65,7 +72,7 @@ export default function AdSlot({
     }
   }, [type]);
 
-  // Script injection for Native Banner Widget
+  // ── Native Banner Widget injection ─────────────────────────────────────────
   useEffect(() => {
     if ((type === "native" || type === "sidebar-native") && containerRef.current) {
       containerRef.current.innerHTML = "";
@@ -73,7 +80,8 @@ export default function AdSlot({
       const nativeScript = document.createElement("script");
       nativeScript.async = true;
       nativeScript.setAttribute("data-cfasync", "false");
-      nativeScript.src = "https://pl30801291.effectivecpmnetwork.com/f98e29f0e52639872d03cd647118ee6b/invoke.js";
+      nativeScript.src =
+        "https://pl30801291.effectivecpmnetwork.com/f98e29f0e52639872d03cd647118ee6b/invoke.js";
 
       const nativeDiv = document.createElement("div");
       nativeDiv.id = "container-f98e29f0e52639872d03cd647118ee6b";
@@ -83,13 +91,13 @@ export default function AdSlot({
     }
   }, [type]);
 
-  // Smartlink component
+  // ── Smartlink strip ─────────────────────────────────────────────────────────
   if (type === "smartlink") {
     return (
       <a
         href={smartlinkUrl}
         target="_blank"
-        rel="noopener noreferrer shadow"
+        rel="noopener noreferrer"
         className={`my-4 flex items-center justify-between p-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white font-bold rounded-xl shadow-lg hover:brightness-110 transition-all text-sm group ${className}`}
       >
         <span className="flex items-center gap-2">
@@ -103,7 +111,7 @@ export default function AdSlot({
     );
   }
 
-  // Social Bar format (script injected directly near body end)
+  // ── Social Bar (injected near body end) ────────────────────────────────────
   if (type === "social-bar") {
     return (
       <Script
@@ -114,18 +122,14 @@ export default function AdSlot({
     );
   }
 
-  // Other popunder or push formats
+  // ── Popunder / Push / Interstitial — headless ──────────────────────────────
   if (type === "popunder" || type === "in-page-push" || type === "interstitial") {
-    return (
-      <div className="hidden">
-        {/* Placeholder for additional script units */}
-      </div>
-    );
+    return <div className="hidden" />;
   }
 
+  // ── Rendered container for Banner & Native ─────────────────────────────────
   const isTopBanner = type === "banner-top";
 
-  // Render container for Banner and Native units
   return (
     <div className={`w-full my-4 flex flex-col items-center justify-center ${className}`}>
       <span className="text-[9px] uppercase font-bold tracking-widest text-muted/60 mb-1 font-mono">
@@ -135,8 +139,8 @@ export default function AdSlot({
         id={id}
         ref={containerRef}
         className={`w-full flex items-center justify-center overflow-hidden rounded-lg bg-paper border border-ink/5 shadow-sm transition-all ${
-          isTopBanner 
-            ? "min-h-[70px] md:min-h-[90px] max-h-[100px] max-w-4xl mx-auto" 
+          isTopBanner
+            ? "min-h-[70px] md:min-h-[90px] max-h-[100px] max-w-[740px] mx-auto"
             : "min-h-[250px] min-w-[300px]"
         }`}
       />
