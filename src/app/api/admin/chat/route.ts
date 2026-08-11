@@ -3,7 +3,7 @@ import { scrapeRSSFeeds, scrapeUrl } from "@/lib/scraper";
 import { paraphraseNews, chatWithAi } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { getChatMemory, appendChatMessage, clearChatMemory, updateMemoryCardStatus } from "@/lib/aiMemory";
-import { getServerSettings } from "@/app/api/admin/settings/route";
+import { getServerSettings } from "@/lib/settings";
 
 export async function GET() {
   try {
