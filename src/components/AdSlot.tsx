@@ -34,18 +34,23 @@ export default function AdSlot({
 }: AdSlotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Script injection for Banner 300x250
+  // Script injection for Banners (300x250 square or 728x90 leaderboard rectangle)
   useEffect(() => {
     if ((type === "banner" || type === "banner-top" || type === "in-article-mid") && containerRef.current) {
       containerRef.current.innerHTML = "";
       const confScript = document.createElement("script");
       confScript.type = "text/javascript";
+      
+      const isTopBanner = type === "banner-top";
+      const height = isTopBanner ? 90 : 250;
+      const width = isTopBanner ? 728 : 300;
+
       confScript.innerHTML = `
         atOptions = {
           'key' : 'baec4ba691aee8e6facd331480c3ff7a',
           'format' : 'iframe',
-          'height' : 250,
-          'width' : 300,
+          'height' : ${height},
+          'width' : ${width},
           'params' : {}
         };
       `;
@@ -118,16 +123,22 @@ export default function AdSlot({
     );
   }
 
+  const isTopBanner = type === "banner-top";
+
   // Render container for Banner and Native units
   return (
-    <div className={`w-full my-6 flex flex-col items-center justify-center ${className}`}>
+    <div className={`w-full my-4 flex flex-col items-center justify-center ${className}`}>
       <span className="text-[9px] uppercase font-bold tracking-widest text-muted/60 mb-1 font-mono">
         Sponsored Advertisement
       </span>
       <div
         id={id}
         ref={containerRef}
-        className="min-h-[250px] min-w-[300px] flex items-center justify-center overflow-hidden rounded-lg bg-paper border border-ink/5 shadow-sm"
+        className={`w-full flex items-center justify-center overflow-hidden rounded-lg bg-paper border border-ink/5 shadow-sm transition-all ${
+          isTopBanner 
+            ? "min-h-[70px] md:min-h-[90px] max-h-[100px] max-w-4xl mx-auto" 
+            : "min-h-[250px] min-w-[300px]"
+        }`}
       />
     </div>
   );
