@@ -13,8 +13,8 @@ export async function GET(req: Request) {
   try {
     console.log("[Cron Scraper] Starting 30-minute auto-scrape cycle...");
 
-    // Fetch top 3 fresh stories from RSS feeds
-    const stories = await scrapeRSSFeeds(3);
+    // Fetch top 3 fresh stories from RSS feeds published in the last 30 minutes
+    const stories = await scrapeRSSFeeds(3, undefined, 30);
 
     if (stories.length === 0) {
       return NextResponse.json({ message: "No new stories found in feeds." });

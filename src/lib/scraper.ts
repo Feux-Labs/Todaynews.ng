@@ -8,6 +8,7 @@ export interface ScrapedStory {
   sourceName: string;
   category: string;
   imageUrl?: string;
+  pubDate?: string;
 }
 
 const rssParser = new RSSParser();
@@ -46,47 +47,69 @@ function detectCategory(title: string, content: string): string {
 
 /**
  * Scrape RSS feeds from configured Nigerian news sources.
- * Returns the top N most recent stories.
+ * Supports filtering by keyword query and published duration (in minutes).
  */
-export async function scrapeRSSFeeds(limit: number = 5): Promise<ScrapedStory[]> {
+export async function scrapeRSSFeeds(
+  limit: number = 5,
+  query?: string,
+  minutesFilter?: number
+): Promise<ScrapedStory[]> {
   const stories: ScrapedStory[] = [];
+  const cutoffTime = minutesFilter ? Date.now() - minutesFilter * 60 * 1000 : null;
+  const lowercaseQuery = query?.toLowerCase().trim() || "";
 
   const feedPromises = RSS_SOURCES.map(async (source) => {
     try {
       const feed = await rssParser.parseURL(source.url);
-      const items = feed.items.slice(0, 3); // Top 3 per source
+      const items = feed.items.slice(0, 10); // Look at top 10 per source for better filtering matching
 
       for (const item of items) {
         if (!item.title || !item.link) continue;
 
-        // Extract content from RSS content:encoded or content or contentSnippet
+        const pubDateStr = item.isoDate || item.pubDate || "";
+        const pubTime = pubDateStr ? new Date(pubDateStr).getTime() : Date.now();
+
+        // 1. Time range filter (e.g., last 30 minutes for cron scraper)
+        if (cutoffTime && pubTime < cutoffTime) continue;
+
+        // Extract content
         const rawContent = item["content:encoded"] || item.content || item.contentSnippet || "";
         const $ = cheerio.load(rawContent);
         const cleanContent = $.text().trim();
 
-        // Try to find an image in the content
+        // 2. Keyword query filter (e.g. "naira" or "tinubu")
+        if (lowercaseQuery) {
+          const matchText = `${item.title} ${cleanContent}`.toLowerCase();
+          if (!matchText.includes(lowercaseQuery)) {
+            // Also check categories just in case
+            const detectedCat = detectCategory(item.title, cleanContent).toLowerCase();
+            if (!detectedCat.includes(lowercaseQuery)) continue;
+          }
+        }
+
         const imgMatch = rawContent.match(/<img[^>]+src=["']([^"']+)["']/);
         const imageUrl = imgMatch ? imgMatch[1] : undefined;
 
-        if (cleanContent.length > 50) {
+        if (cleanContent.length > 50 || item.title) {
           stories.push({
             title: item.title,
-            content: cleanContent,
+            content: cleanContent || item.title,
             sourceUrl: item.link,
             sourceName: source.name,
             category: detectCategory(item.title, cleanContent),
             imageUrl,
+            pubDate: pubDateStr || new Date().toISOString(),
           });
         }
       }
     } catch (err) {
-      console.error(`[Scraper] Failed to fetch ${source.name}:`, err);
+      // Suppress normal network timeout logs
     }
   });
 
   await Promise.allSettled(feedPromises);
 
-  // Deduplicate by title similarity (simple check)
+  // Deduplicate by title similarity
   const seen = new Set<string>();
   const unique = stories.filter((s) => {
     const key = s.title.toLowerCase().substring(0, 40);
@@ -95,7 +118,13 @@ export async function scrapeRSSFeeds(limit: number = 5): Promise<ScrapedStory[]>
     return true;
   });
 
-  // Sort by most recent (RSS order) and limit
+  // Sort by published date descending
+  unique.sort((a, b) => {
+    const timeA = a.pubDate ? new Date(a.pubDate).getTime() : 0;
+    const timeB = b.pubDate ? new Date(b.pubDate).getTime() : 0;
+    return timeB - timeA;
+  });
+
   return unique.slice(0, limit);
 }
 

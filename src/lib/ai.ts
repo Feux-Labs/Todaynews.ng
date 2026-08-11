@@ -179,3 +179,98 @@ export async function paraphraseNews(
     }
   );
 }
+
+export interface ChatAiResponse {
+  intent: "chat" | "search" | "paraphrase";
+  searchQuery?: string;
+  reply: string;
+}
+
+export async function chatWithAi(
+  userMessage: string,
+  history: { role: "user" | "assistant"; content: string }[]
+): Promise<ChatAiResponse> {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey || apiKey.startsWith("AIzaSyYour")) {
+    // Basic local fallback processing if Gemini is offline
+    const text = userMessage.toLowerCase();
+    if (text.includes("scrape") || text.includes("fetch") || text.includes("find") || text.includes("search") || text.includes("news")) {
+      let query = "";
+      if (text.includes("naira")) query = "naira";
+      else if (text.includes("security")) query = "security";
+      else if (text.includes("politics")) query = "politics";
+      else if (text.includes("sports")) query = "sports";
+      else if (text.includes("entertainment")) query = "entertainment";
+      else if (text.includes("bbnaija")) query = "bbnaija";
+
+      return {
+        intent: "search",
+        searchQuery: query || undefined,
+        reply: `I have initialized our security algorithms to compare news across Punch, Daily Trust, and BBC Africa. Here is what I found:`,
+      };
+    }
+
+    return {
+      intent: "chat",
+      reply: `Greetings from the Todaynews.ng Editorial Desk. I am processing your message offline: "${userMessage}". Let me know if you would like to run search commands.`,
+    };
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
+
+    const conversationContext = history
+      .slice(-10) // past 10 messages for memory context
+      .map((h) => `${h.role === "user" ? "User" : "Editor"}: ${h.content}`)
+      .join("\n");
+
+    const prompt = `
+    You are the Chief Editor and AI Special Operations Specialist at Todaynews.ng, a wise, authoritative newsroom bot. You specialize in Nigerian security, parallel exchange rates, national policies, and cultural gist. You talk naturally and professionally.
+
+    Your current task is to interpret the user's latest message and classify their intent into one of these actions:
+    1. "search" - The user wants to find, scrape, or search for news/updates about a topic, location, rate, or general "new news".
+    2. "chat" - The user is talking normally, asking an opinion, following up on a past message, or greeting you.
+
+    Guidelines:
+    - If the user asks for "new news", "trending stories", "scare for new news", or specific topics ("naira news", "Tinubu"), set intent to "search" and extract the core topic into "searchQuery" (e.g., "naira", "security", "politics", "bbnaija", or leave blank for general trending news).
+    - If intent is "search", write a wise editor reply introducing the results, e.g. "I compared reporting across Punch, Daily Trust, and Premium Times on this topic. Here is what I found:" or similar.
+    - If intent is "chat", write a highly intelligent, conversational editor response addressing their query, utilizing the provided conversation context.
+
+    Return response strictly as a JSON object matching this schema:
+    {
+      "intent": "chat" or "search",
+      "searchQuery": "extracted search term or empty",
+      "reply": "Your wise, natural response"
+    }
+
+    Conversation History:
+    ${conversationContext}
+
+    Latest User Message: "${userMessage}"
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    if (!text) {
+      throw new Error("Empty response from Gemini");
+    }
+
+    return JSON.parse(text) as ChatAiResponse;
+  } catch (err) {
+    console.error("Gemini Chat AI Error, falling back:", err);
+    return {
+      intent: "chat",
+      reply: `I received your command: "${userMessage}". Let me know if you would like me to retrieve specific news feeds.`,
+    };
+  }
+}
+

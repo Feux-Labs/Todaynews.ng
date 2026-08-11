@@ -73,7 +73,7 @@ export async function sendNewStoryAlert(story: {
   sourceName: string;
   category: string;
 }) {
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@todaynews.ng";
+  const adminEmail = process.env.ADMIN_EMAIL || "Admin@feuxlabs.ng";
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
   const approveToken = Buffer.from(`${story.id}:${Date.now()}`).toString("base64url");
 
