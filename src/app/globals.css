@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-color: #F7F4EC;
+  color: #141312;
+  font-family: var(--font-body);
+}
+
+.hazard-stripe {
+  background-image: repeating-linear-gradient(
+    135deg,
+    #F2C94C 0,
+    #F2C94C 10px,
+    transparent 10px,
+    transparent 20px
+  );
+  background-size: 100% 3px;
+  background-position: bottom;
+  background-repeat: repeat-x;
+}
+
+.punch-border {
+  border-bottom: 4px solid #141312;
+}
+
+.punch-red-accent {
+  border-left: 4px solid #CC0000;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F7F4EC;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #6B6459;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #008751;
+}

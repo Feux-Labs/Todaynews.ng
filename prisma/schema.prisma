@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  POLITICS
+  NAIRA
+  ENTERTAINMENT
+  SPORTS
+  SECURITY
+  METRO
+  EDUCATION
+  TECHNOLOGY
+  HEALTH
+}
+
+enum Status {
+  AI_PENDING
+  DRAFT
+  PUBLISHED
+  UNPUBLISHED
+  REJECTED
+  PENDING
+}
+
+enum AdminRole {
+  SUPERADMIN
+  EDITOR
+  REVIEWER
+}
+
+model AdminUser {
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  hashedPassword String
+  role           AdminRole @default(EDITOR)
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Article {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  summary         String
+  category        Category
+  status          Status        @default(AI_PENDING)
+  sourceUrl       String?
+  sourceName      String?
+  imageUrl        String?
+  imageAlt        String?
+  imageCredit     String?
+  author          String        @default("Todaynews.ng Editorial")
+  readTimeMinutes Int           @default(3)
+  views           Int           @default(0)
+  approvedById    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  pages           ArticlePage[]
+
+  @@index([category])
+  @@index([status])
+  @@index([slug])
+  @@index([createdAt])
+}
+
+model ArticlePage {
+  id         String   @id @default(cuid())
+  articleId  String
+  pageNumber Int
+  title      String?
+  content    String
+  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, pageNumber])
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model PageView {
+  id          String   @id @default(cuid())
+  articleSlug String
+  category    String?
+  ipHash      String?
+  userAgent   String?
+  visitedAt   DateTime @default(now())
+
+  @@index([articleSlug])
+  @@index([visitedAt])
+  @@index([category])
+}
