@@ -210,9 +210,9 @@ class InMemoryDb {
   async getArticleCount() {
     return {
       total: this.articles.length,
-      published: this.articles.filter((a) => a.status === "PUBLISHED").length,
-      drafts: this.articles.filter((a) => a.status === "DRAFT").length,
-      pending: this.articles.filter((a) => a.status === "AI_PENDING" || a.status === "PENDING").length,
+      published: this.articles.filter((a) => (a.status as string) === "PUBLISHED").length,
+      drafts: this.articles.filter((a) => (a.status as string) === "DRAFT").length,
+      pending: this.articles.filter((a) => (a.status as string) === "AI_PENDING" || (a.status as string) === "PENDING").length,
     };
   }
 }

@@ -14,6 +14,7 @@ import TrendingSidebar from "@/components/TrendingSidebar";
 import WhatsAppBanner from "@/components/WhatsAppBanner";
 import Pagination from "@/components/Pagination";
 import JsonLd from "@/components/JsonLd";
+import PageViewBeacon from "@/components/PageViewBeacon";
 import { ArticleData } from "@/lib/sample-data";
 
 export const revalidate = 60;
@@ -128,6 +129,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
 
   return (
     <div className="space-y-6 font-body">
+      <PageViewBeacon slug={article.slug} category={article.category} />
       <JsonLd schema={articleJsonLd} />
       <JsonLd schema={breadcrumbsJsonLd} />
 
