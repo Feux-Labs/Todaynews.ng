@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import Script from "next/script";
 
 export type AdsterraFormat =
   | "popunder"
@@ -27,46 +28,57 @@ export default function AdSlot({
   id,
   type,
   className = "",
-  smartlinkUrl = process.env.NEXT_PUBLIC_ADSTERRA_SMARTLINK || "#",
-  smartlinkLabel = "🔥 Trending Deals & Offers — Click Here",
-  bannerSize = "728x90",
+  smartlinkUrl = process.env.NEXT_PUBLIC_ADSTERRA_SMARTLINK || "https://todaynews.ng",
+  smartlinkLabel = "🔥 Trending Deals & Offers in Nigeria — Click Here",
+  bannerSize = "300x250",
 }: AdSlotProps) {
-  const [debugMode, setDebugMode] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  // Script injection for Banner 300x250
   useEffect(() => {
-    const isLive = process.env.NEXT_PUBLIC_LIVE_ADS === "true";
-    setDebugMode(!isLive);
+    if ((type === "banner" || type === "banner-top" || type === "in-article-mid") && containerRef.current) {
+      containerRef.current.innerHTML = "";
+      const confScript = document.createElement("script");
+      confScript.type = "text/javascript";
+      confScript.innerHTML = `
+        atOptions = {
+          'key' : 'baec4ba691aee8e6facd331480c3ff7a',
+          'format' : 'iframe',
+          'height' : 250,
+          'width' : 300,
+          'params' : {}
+        };
+      `;
 
-    if (isLive) {
-      try {
-        if (type === "popunder") {
-          const script = document.createElement("script");
-          script.src = process.env.NEXT_PUBLIC_ADSTERRA_POPUNDER_SCRIPT || "//pl21345678.highratecpm.com/ab/cd/ef/popunder.js";
-          script.async = true;
-          document.body.appendChild(script);
-        } else if (type === "social-bar") {
-          const script = document.createElement("script");
-          script.src = process.env.NEXT_PUBLIC_ADSTERRA_SOCIALBAR_SCRIPT || "//pl21345678.highratecpm.com/ab/cd/ef/socialbar.js";
-          script.async = true;
-          document.body.appendChild(script);
-        } else if (type === "in-page-push") {
-          const script = document.createElement("script");
-          script.src = process.env.NEXT_PUBLIC_ADSTERRA_PUSH_SCRIPT || "//pl21345678.highratecpm.com/ab/cd/ef/inpagepush.js";
-          script.async = true;
-          document.body.appendChild(script);
-        } else if (type === "interstitial") {
-          const script = document.createElement("script");
-          script.src = process.env.NEXT_PUBLIC_ADSTERRA_INTERSTITIAL_SCRIPT || "//pl21345678.highratecpm.com/ab/cd/ef/interstitial.js";
-          script.async = true;
-          document.body.appendChild(script);
-        }
-      } catch (err) {
-        console.warn("[Adsterra] Failed to inject ad script:", err);
-      }
+      const invokeScript = document.createElement("script");
+      invokeScript.type = "text/javascript";
+      invokeScript.src = "https://www.highperformanceformat.com/baec4ba691aee8e6facd331480c3ff7a/invoke.js";
+      invokeScript.async = true;
+
+      containerRef.current.appendChild(confScript);
+      containerRef.current.appendChild(invokeScript);
     }
   }, [type]);
 
-  // Handle Smartlink format
+  // Script injection for Native Banner Widget
+  useEffect(() => {
+    if ((type === "native" || type === "sidebar-native") && containerRef.current) {
+      containerRef.current.innerHTML = "";
+
+      const nativeScript = document.createElement("script");
+      nativeScript.async = true;
+      nativeScript.setAttribute("data-cfasync", "false");
+      nativeScript.src = "https://pl30801291.effectivecpmnetwork.com/f98e29f0e52639872d03cd647118ee6b/invoke.js";
+
+      const nativeDiv = document.createElement("div");
+      nativeDiv.id = "container-f98e29f0e52639872d03cd647118ee6b";
+
+      containerRef.current.appendChild(nativeScript);
+      containerRef.current.appendChild(nativeDiv);
+    }
+  }, [type]);
+
+  // Smartlink component
   if (type === "smartlink") {
     return (
       <a
@@ -86,60 +98,37 @@ export default function AdSlot({
     );
   }
 
-  // Handle script-injected background overlay formats
-  if (type === "popunder" || type === "social-bar" || type === "in-page-push" || type === "interstitial") {
-    return debugMode ? (
-      <div className="fixed bottom-3 right-3 bg-[#0a0f1c] text-[#00e676] text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl z-50 border border-[#00e676]/30 flex items-center gap-2">
-        <span className="w-2 h-2 bg-[#00e676] rounded-full animate-pulse" />
-        Adsterra {type.toUpperCase()} Active (High CPM)
-      </div>
-    ) : null;
+  // Social Bar format (script injected directly near body end)
+  if (type === "social-bar") {
+    return (
+      <Script
+        id="adsterra-social-bar-script"
+        src="https://pl30801290.effectivecpmnetwork.com/9a/e9/3b/9ae93b69d11e842af1c5c33415214763.js"
+        strategy="lazyOnload"
+      />
+    );
   }
 
-  // Handle Banner and Native display formats
-  const getSlotDetails = () => {
-    switch (type) {
-      case "banner":
-      case "banner-top":
-        return {
-          dimensions: bannerSize,
-          label: `Adsterra Display Banner (${bannerSize})`,
-          color: "bg-[#00e676]/5 text-[#00e676] border-[#00e676]/20",
-        };
-      case "native":
-      case "in-article-mid":
-      case "sidebar-native":
-        return {
-          dimensions: "Native Widget / Responsive",
-          label: "Adsterra Native Recommendation Feed",
-          color: "bg-blue-500/5 text-blue-400 border-blue-500/20",
-        };
-      default:
-        return {
-          dimensions: "Responsive",
-          label: "Adsterra Display Unit",
-          color: "bg-slate-500/5 text-slate-400 border-slate-500/20",
-        };
-    }
-  };
+  // Other popunder or push formats
+  if (type === "popunder" || type === "in-page-push" || type === "interstitial") {
+    return (
+      <div className="hidden">
+        {/* Placeholder for additional script units */}
+      </div>
+    );
+  }
 
-  const details = getSlotDetails();
-
+  // Render container for Banner and Native units
   return (
-    <div
-      id={id}
-      className={`w-full my-6 border border-dashed rounded-xl flex flex-col items-center justify-center p-4 text-center ${details.color} ${className}`}
-      style={{ minHeight: bannerSize === "728x90" ? "90px" : "250px" }}
-    >
-      <span className="text-[10px] uppercase font-bold tracking-widest opacity-60 mb-1">
+    <div className={`w-full my-6 flex flex-col items-center justify-center ${className}`}>
+      <span className="text-[9px] uppercase font-bold tracking-widest text-muted/60 mb-1 font-mono">
         Sponsored Advertisement
       </span>
-      <span className="text-xs font-semibold">{details.label}</span>
-      {debugMode && (
-        <span className="text-[10px] opacity-75 mt-1 font-mono">
-          [Adsterra {type} - {details.dimensions}]
-        </span>
-      )}
+      <div
+        id={id}
+        ref={containerRef}
+        className="min-h-[250px] min-w-[300px] flex items-center justify-center overflow-hidden rounded-lg bg-paper border border-ink/5 shadow-sm"
+      />
     </div>
   );
 }
