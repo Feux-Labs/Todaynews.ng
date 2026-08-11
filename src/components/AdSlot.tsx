@@ -81,7 +81,7 @@ export default function AdSlot({
       nativeScript.async = true;
       nativeScript.setAttribute("data-cfasync", "false");
       nativeScript.src =
-        "https://pl30801291.effectivecpmnetwork.com/f98e29f0e52639872d03cd647118ee6b/invoke.js";
+        "https://wailsilence.com/f98e29f0e52639872d03cd647118ee6b/invoke.js";
 
       const nativeDiv = document.createElement("div");
       nativeDiv.id = "container-f98e29f0e52639872d03cd647118ee6b";
@@ -116,7 +116,7 @@ export default function AdSlot({
     return (
       <Script
         id={`adsterra-social-bar-${type}`}
-        src="https://pl30801290.effectivecpmnetwork.com/9a/e9/3b/9ae93b69d11e842af1c5c33415214763.js"
+        src="https://wailsilence.com/9a/e9/3b/9ae93b69d11e842af1c5c33415214763.js"
         strategy="lazyOnload"
       />
     );
