@@ -56,8 +56,8 @@ async function searchArticles(query: string): Promise<ArticleData[]> {
     console.error("DB Search failed, falling back to memory:", e);
   }
 
-  // Fallback memory search
-  const all = (await memoryDb.getArticles(undefined, "PUBLISHED")) as any[];
+  const res: any = await memoryDb.getArticles(undefined, "PUBLISHED", 1, 100);
+  const all: ArticleData[] = res.articles || res;
   return all.filter(
     (a) =>
       a.title.toLowerCase().includes(query.toLowerCase()) ||

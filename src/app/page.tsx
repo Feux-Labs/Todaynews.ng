@@ -50,8 +50,8 @@ async function getPublishedArticles(): Promise<ArticleData[]> {
     console.error("Database connection failed, falling back to memory database:", err);
   }
 
-  // Fallback to sample/in-memory data
-  return (await memoryDb.getArticles(undefined, "PUBLISHED")) as any;
+  const res = await memoryDb.getArticles(undefined, "PUBLISHED", 1, 50);
+  return (res.articles || (res as any)) as any;
 }
 
 export default async function HomePage() {

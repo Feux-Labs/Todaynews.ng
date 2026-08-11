@@ -43,6 +43,9 @@ model AdminUser {
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  @@index([email])
+  @@index([active])
 }
 
 model Article {
@@ -65,10 +68,12 @@ model Article {
   updatedAt       DateTime      @updatedAt
   pages           ArticlePage[]
 
+  // System Design: High-performance compound indexes for queries
+  @@index([status, createdAt(sort: Desc)])
+  @@index([status, category, createdAt(sort: Desc)])
+  @@index([status, views(sort: Desc)])
   @@index([category])
-  @@index([status])
   @@index([slug])
-  @@index([createdAt])
 }
 
 model ArticlePage {
@@ -80,6 +85,7 @@ model ArticlePage {
   article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
   @@unique([articleId, pageNumber])
+  @@index([articleId])
 }
 
 model Subscriber {
@@ -96,7 +102,9 @@ model PageView {
   userAgent   String?
   visitedAt   DateTime @default(now())
 
+  // System Design: Indexing for fast time-series aggregation
   @@index([articleSlug])
-  @@index([visitedAt])
+  @@index([visitedAt(sort: Desc)])
+  @@index([visitedAt, articleSlug])
   @@index([category])
 }

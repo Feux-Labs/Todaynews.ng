@@ -93,7 +93,7 @@ export function getNewsArticleJsonLd({
   imageUrl,
   datePublished,
   dateModified,
-  authorName = "Adekunle Sulaimon",
+  authorName = "Gideon Ibitoye",
   slug,
   category,
 }: {
@@ -117,15 +117,20 @@ export function getNewsArticleJsonLd({
     "description": description,
     "image": [imageUrl],
     "datePublished": datePublished,
-    "dateModified": dateModified,
+    "dateModified": dateModified || datePublished,
+    "isAccessibleForFree": true,
+    "inLanguage": "en-NG",
+    "articleSection": category,
     "author": {
       "@type": "Person",
-      "name": authorName,
-      "url": `${SITE_URL}/author/${encodeURIComponent(authorName.toLowerCase().replace(/ /g, "-"))}`,
+      "name": authorName || "Gideon Ibitoye",
+      "jobTitle": "Chief Editor & Reviewing Authority",
+      "url": `${SITE_URL}/author/gideon-ibitoye`,
     },
     "publisher": {
-      "@type": "Organization",
+      "@type": "NewsMediaOrganization",
       "name": "Todaynews.ng",
+      "url": SITE_URL,
       "logo": {
         "@type": "ImageObject",
         "url": `${SITE_URL}/images/logo-publisher.png`,

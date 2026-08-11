@@ -73,7 +73,8 @@ async function getCategoryArticles(categoryKey: string): Promise<ArticleData[]> 
     console.error("DB Query failed in category page, falling back to memory:", err);
   }
 
-  return (await memoryDb.getArticles(categoryKey, "PUBLISHED")) as any;
+  const res = await memoryDb.getArticles(categoryKey, "PUBLISHED", 1, 50);
+  return (res.articles || (res as any)) as any;
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {

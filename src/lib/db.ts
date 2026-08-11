@@ -1,21 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 import { INITIAL_ARTICLES, ArticleData } from "./sample-data";
 
-// PrismaClient is attached to the `global` object in development to prevent
-// exhausting your database connection limit.
+// PrismaClient singleton pattern to avoid exhausting database connections in dev/serverless
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
-    log: ["query"],
+    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
-// --- IN-MEMORY DATABASE FALLBACK FOR ZERO-SETUP LOCAL PLAYGROUNDS ---
-// If the database URL is not set or Prisma connection fails, the application
-// will automatically fall back to this local in-memory store so it never crashes!
 
 export type ArticleStatus = "AI_PENDING" | "DRAFT" | "PUBLISHED" | "UNPUBLISHED" | "REJECTED" | "PENDING";
 
@@ -26,39 +21,63 @@ interface PageViewRecord {
   visitedAt: Date;
 }
 
+/**
+ * SYSTEM DESIGN: In-Memory Database Fallback with Memory-Leak Protection
+ * Includes bounded array capacities, LRU-style eviction, and defensive object cloning.
+ */
 class InMemoryDb {
   private articles: ArticleData[] = [...INITIAL_ARTICLES];
   private subscribers: string[] = [];
   private pageViews: PageViewRecord[] = [];
 
+  // Memory Leak Safeguards
+  private readonly MAX_PAGE_VIEWS = 5000; // Cap page views array in RAM
+  private readonly MAX_SUBSCRIBERS = 10000;
+
   constructor() {
-    console.log("Todaynews.ng: Loaded In-Memory Database Fallback.");
+    console.log("Todaynews.ng System Design: Loaded In-Memory DB with RAM leak protection.");
   }
 
-  async getArticles(category?: string, status?: string) {
+  async getArticles(category?: string, status?: string, page: number = 1, limit: number = 10) {
     let list = [...this.articles];
+
     if (category) {
       list = list.filter((a) => a.category.toLowerCase() === category.toLowerCase());
     }
     if (status) {
-      list = list.filter((a) => a.status.toLowerCase() === status.toLowerCase());
+      list = list.filter((a) => (a.status as string).toLowerCase() === status.toLowerCase());
     }
-    // Sort by date descending
-    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Sort by createdAt descending
+    list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // System Design: Offset-based pagination
+    const total = list.length;
+    const startIndex = (page - 1) * limit;
+    const paginatedItems = list.slice(startIndex, startIndex + limit);
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      hasMore: startIndex + limit < total,
+      articles: paginatedItems,
+    };
   }
 
   async getArticleBySlug(slug: string) {
     const article = this.articles.find((a) => a.slug === slug);
     if (article) {
-      // Increment views
       article.views += 1;
-      return article;
+      return { ...article }; // Return shallow clone to prevent external state mutation
     }
     return null;
   }
 
   async getArticleById(id: string) {
-    return this.articles.find((a) => a.id === id) || null;
+    const article = this.articles.find((a) => a.id === id);
+    return article ? { ...article } : null;
   }
 
   async createArticle(data: Omit<ArticleData, "id" | "createdAt" | "views">) {
@@ -68,15 +87,15 @@ class InMemoryDb {
       createdAt: new Date().toISOString(),
       views: 0,
     };
-    this.articles.push(newArticle);
-    return newArticle;
+    this.articles.unshift(newArticle); // Unshift so newest is first
+    return { ...newArticle };
   }
 
   async updateArticleStatus(id: string, status: ArticleStatus) {
     const article = this.articles.find((a) => a.id === id);
     if (article) {
       article.status = status as any;
-      return article;
+      return { ...article };
     }
     return null;
   }
@@ -96,7 +115,7 @@ class InMemoryDb {
           content: p.content,
         }));
       }
-      return article;
+      return { ...article };
     }
     return null;
   }
@@ -112,7 +131,7 @@ class InMemoryDb {
         title: p.title || null,
         content: p.content,
       }));
-      return article;
+      return { ...article };
     }
     return null;
   }
@@ -128,13 +147,22 @@ class InMemoryDb {
 
   async addSubscriber(email: string) {
     if (!this.subscribers.includes(email)) {
+      // Memory Leak Prevention: Evict oldest if array exceeds cap
+      if (this.subscribers.length >= this.MAX_SUBSCRIBERS) {
+        this.subscribers.shift();
+      }
       this.subscribers.push(email);
     }
     return { email };
   }
 
-  // --- Page View Analytics ---
+  // --- Page View Analytics with RAM Eviction Safeguard ---
   async recordPageView(articleSlug: string, category?: string) {
+    // Evict oldest 500 records if MAX_PAGE_VIEWS capacity reached
+    if (this.pageViews.length >= this.MAX_PAGE_VIEWS) {
+      this.pageViews = this.pageViews.slice(500);
+    }
+
     this.pageViews.push({
       id: `pv-${Math.random().toString(36).substring(2, 9)}`,
       articleSlug,
@@ -161,10 +189,8 @@ class InMemoryDb {
 
     const filtered = this.pageViews.filter((pv) => pv.visitedAt >= cutoff);
 
-    // Total views
     const totalViews = filtered.length;
 
-    // Views per article (top 10)
     const articleCounts: Record<string, number> = {};
     filtered.forEach((pv) => {
       articleCounts[pv.articleSlug] = (articleCounts[pv.articleSlug] || 0) + 1;
@@ -174,13 +200,11 @@ class InMemoryDb {
       .slice(0, 10)
       .map(([slug, count]) => ({ slug, views: count }));
 
-    // Views per category
     const categoryCounts: Record<string, number> = {};
     filtered.forEach((pv) => {
       categoryCounts[pv.category] = (categoryCounts[pv.category] || 0) + 1;
     });
 
-    // Views per hour (last 24h)
     const hourlyViews: { hour: string; views: number }[] = [];
     for (let i = 23; i >= 0; i--) {
       const hourStart = new Date(now.getTime() - i * 60 * 60 * 1000);
@@ -197,7 +221,7 @@ class InMemoryDb {
 
     return {
       totalViews,
-      totalArticles: this.articles.filter((a) => a.status === "PUBLISHED").length,
+      totalArticles: this.articles.filter((a) => (a.status as string) === "PUBLISHED").length,
       topArticles,
       categoryBreakdown: Object.entries(categoryCounts).map(([category, count]) => ({
         category,
@@ -221,7 +245,6 @@ const globalForMemoryDb = global as unknown as { memoryDb: InMemoryDb };
 export const memoryDb = globalForMemoryDb.memoryDb || new InMemoryDb();
 if (process.env.NODE_ENV !== "production") globalForMemoryDb.memoryDb = memoryDb;
 
-// Check if database URL is valid
 export const isDbConfigured = () => {
   return (
     process.env.DATABASE_URL &&

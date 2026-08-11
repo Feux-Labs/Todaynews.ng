@@ -9,7 +9,7 @@ export interface ArticleData {
   title: string;
   slug: string;
   summary: string;
-  category: "POLITICS" | "NAIRA" | "ENTERTAINMENT" | "SPORTS" | "SECURITY" | "METRO";
+  category: "POLITICS" | "NAIRA" | "ENTERTAINMENT" | "SPORTS" | "SECURITY" | "METRO" | "EDUCATION" | "TECHNOLOGY" | "HEALTH";
   status: "PENDING" | "PUBLISHED" | "REJECTED";
   sourceUrl?: string;
   sourceName?: string;

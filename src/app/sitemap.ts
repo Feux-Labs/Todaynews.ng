@@ -3,12 +3,27 @@ import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://todaynews.ng";
-  const routes = ["", "/category/politics", "/category/naira", "/category/entertainment", "/category/sports", "/category/security"];
+  const staticRoutes = [
+    "",
+    "/about",
+    "/editorial-standards",
+    "/contact",
+    "/author/gideon-ibitoye",
+    "/category/politics",
+    "/category/naira",
+    "/category/entertainment",
+    "/category/sports",
+    "/category/security",
+    "/category/metro",
+    "/category/education",
+    "/category/technology",
+    "/category/health",
+  ];
 
-  const sitemaps: MetadataRoute.Sitemap = routes.map((r) => ({
+  const sitemaps: MetadataRoute.Sitemap = staticRoutes.map((r) => ({
     url: `${baseUrl}${r}`,
     lastModified: new Date(),
-    changeFrequency: "hourly",
+    changeFrequency: r === "" ? "hourly" : "daily",
     priority: r === "" ? 1.0 : 0.8,
   }));
 
@@ -20,14 +35,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         select: { slug: true, updatedAt: true },
       });
     } else {
-      articles = await memoryDb.getArticles(undefined, "PUBLISHED");
+      const res = await memoryDb.getArticles(undefined, "PUBLISHED", 1, 100);
+      articles = res.articles || (res as any);
     }
 
     const articleSitemaps: MetadataRoute.Sitemap = articles.map((art: any) => ({
       url: `${baseUrl}/article/${art.slug}`,
       lastModified: art.updatedAt ? new Date(art.updatedAt) : new Date(),
-      changeFrequency: "weekly",
-      priority: 0.6,
+      changeFrequency: "hourly",
+      priority: 0.7,
     }));
 
     sitemaps.push(...articleSitemaps);
