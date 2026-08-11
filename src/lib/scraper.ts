@@ -77,13 +77,19 @@ export async function scrapeRSSFeeds(
         const $ = cheerio.load(rawContent);
         const cleanContent = $.text().trim();
 
-        // 2. Keyword query filter (e.g. "naira" or "tinubu")
+        // 2. Keyword query filter (supports multi-term searches like "terror business education")
         if (lowercaseQuery) {
           const matchText = `${item.title} ${cleanContent}`.toLowerCase();
-          if (!matchText.includes(lowercaseQuery)) {
-            // Also check categories just in case
-            const detectedCat = detectCategory(item.title, cleanContent).toLowerCase();
-            if (!detectedCat.includes(lowercaseQuery)) continue;
+          const detectedCat = detectCategory(item.title, cleanContent).toLowerCase();
+          const queryWords = lowercaseQuery.split(/\s+/).filter((w) => w.length > 2);
+
+          if (queryWords.length > 0) {
+            const matchesAnyWord = queryWords.some(
+              (word) => matchText.includes(word) || detectedCat.includes(word)
+            );
+            if (!matchesAnyWord) continue;
+          } else if (!matchText.includes(lowercaseQuery) && !detectedCat.includes(lowercaseQuery)) {
+            continue;
           }
         }
 

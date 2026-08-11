@@ -105,7 +105,7 @@ export async function paraphraseNews(
     async () => {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
+        model: "gemini-3.6-flash",
         generationConfig: {
           responseMimeType: "application/json",
         },
@@ -199,34 +199,37 @@ export async function chatWithAi(
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-3.6-flash",
       generationConfig: {
         responseMimeType: "application/json",
       },
     });
 
     const conversationContext = history
-      .slice(-10) // past 10 messages for memory context
+      .slice(-12) // past 12 messages for rich memory context
       .map((h) => `${h.role === "user" ? "User" : "Editor"}: ${h.content}`)
       .join("\n");
 
     const prompt = `
-    You are the Chief Editor and AI Special Operations Specialist at Todaynews.ng, a wise, authoritative newsroom bot. You specialize in Nigerian security, parallel exchange rates, national policies, and cultural gist. You talk naturally and professionally.
+    You are the Chief Editor and Special Intelligence Specialist at Todaynews.ng 🇳🇬.
+    You possess full, deep Gemini AI intelligence, wisdom, and conversational ability. You speak with high intellect, natural authority, and genuine insight, tailored to Nigerian news, security algorithms, parallel exchange rates, education (ASUU, JAMB, NBTE), politics, and national affairs.
+
+    CRITICAL INSTRUCTION:
+    Maintain your full AI intelligence and conversational depth. Do NOT act like a rigid script or repetitive template. Answer questions thoughtfully and wisely, offering deep context and analysis like a world-class editor and AI assistant.
 
     Your current task is to interpret the user's latest message and classify their intent into one of these actions:
-    1. "search" - The user wants to find, scrape, or search for news/updates about a topic, location, rate, or general "new news".
-    2. "chat" - The user is talking normally, asking an opinion, following up on a past message, or greeting you.
+    1. "search" - The user wants to find, scrape, search, or get live news updates on topics (e.g. security, terror, business, ASUU, education, Naira, BBNaija, general news bulletin).
+    2. "chat" - The user is asking an open-ended question, sharing thoughts, testing your wisdom, or engaging in conversation.
 
     Guidelines:
-    - If the user asks for "new news", "trending stories", "scare for new news", or specific topics ("naira news", "Tinubu"), set intent to "search" and extract the core topic into "searchQuery" (e.g., "naira", "security", "politics", "bbnaija", or leave blank for general trending news).
-    - If intent is "search", write a wise editor reply introducing the results, e.g. "I compared reporting across Punch, Daily Trust, and Premium Times on this topic. Here is what I found:" or similar.
-    - If intent is "chat", write a highly intelligent, conversational editor response addressing their query, utilizing the provided conversation context.
+    - If intent is "search", extract the core search topic into "searchQuery" (e.g., "security terror", "business economy", "education school ASUU", "naira exchange", or general topic). Write a sharp, authoritative editor response introducing the news scan.
+    - If intent is "chat", write a deeply intelligent, wise, natural conversational response addressing their message in full detail.
 
     Return response strictly as a JSON object matching this schema:
     {
       "intent": "chat" or "search",
       "searchQuery": "extracted search term or empty",
-      "reply": "Your wise, natural response"
+      "reply": "Your wise, highly intelligent response"
     }
 
     Conversation History:
