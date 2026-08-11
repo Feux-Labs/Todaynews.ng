@@ -3,10 +3,6 @@
 import React, { useEffect, useRef } from "react";
 import Script from "next/script";
 
-// ─── Ad Configuration ──────────────────────────────────────────────────────
-const AD_KEY = "f1676b31bf7fb91f65c368c428768a54";
-const AD_INVOKE_URL = `https://wailsilence.com/${AD_KEY}/invoke.js`;
-
 export type AdsterraFormat =
   | "popunder"
   | "in-page-push"
@@ -47,19 +43,28 @@ export default function AdSlot({
       // 728×90 leaderboard (top banner) — unit 30701438
       // 300×250 medium rectangle (in-article / sidebar) — unit 30700793
       const isWide = type === "banner-top";
-      const width  = isWide ? 728 : 300;
-      const height = isWide ? 90  : 250;
-      const key    = isWide
+      const width = isWide ? 728 : 300;
+      const height = isWide ? 90 : 250;
+      const key = isWide
         ? "f1676b31bf7fb91f65c368c428768a54"   // 728x90
         : "baec4ba691aee8e6facd331480c3ff7a";  // 300x250
-      const src    = isWide
+      const src = isWide
         ? "https://wailsilence.com/f1676b31bf7fb91f65c368c428768a54/invoke.js"
         : "https://wailsilence.com/baec4ba691aee8e6facd331480c3ff7a/invoke.js";
+
+      // Set global window.atOptions for Adsterra invoke script
+      (window as any).atOptions = {
+        key,
+        format: "iframe",
+        height,
+        width,
+        params: {},
+      };
 
       const confScript = document.createElement("script");
       confScript.type = "text/javascript";
       confScript.innerHTML = `
-        atOptions = {
+        window.atOptions = {
           'key' : '${key}',
           'format' : 'iframe',
           'height' : ${height},
@@ -144,9 +149,9 @@ export default function AdSlot({
       <div
         id={id}
         ref={containerRef}
-        className={`w-full flex items-center justify-center overflow-hidden rounded-lg bg-paper border border-ink/5 shadow-sm transition-all ${
+        className={`w-full flex items-center justify-center overflow-x-auto rounded-lg bg-paper border border-ink/5 shadow-sm transition-all ${
           isTopBanner
-            ? "min-h-[70px] md:min-h-[90px] max-h-[100px] max-w-[740px] mx-auto"
+            ? "min-h-[90px] max-w-[735px] mx-auto p-1"
             : "min-h-[250px] min-w-[300px]"
         }`}
       />

@@ -137,7 +137,7 @@ class InMemoryDb {
   }
 
   async deleteArticle(id: string) {
-    const index = this.articles.findIndex((a) => a.id === id);
+    const index = this.articles.findIndex((a) => a.id === id || a.slug === id);
     if (index !== -1) {
       this.articles.splice(index, 1);
       return true;

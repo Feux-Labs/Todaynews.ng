@@ -1,25 +1,53 @@
 import { NextResponse } from "next/server";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const data = await request.json();
+    const { status, title, summary, category, author } = data;
+
+    if (isDbConfigured()) {
+      const updateData: any = {};
+      if (status !== undefined) updateData.status = status;
+      if (title !== undefined) updateData.title = title;
+      if (summary !== undefined) updateData.summary = summary;
+      if (category !== undefined) updateData.category = category;
+      if (author !== undefined) updateData.author = author;
+
+      const updated = await prisma.article.update({
+        where: { id: params.id },
+        data: updateData,
+      });
+      return NextResponse.json(updated);
+    } else {
+      const updated = await memoryDb.updateArticle(params.id, data);
+      return NextResponse.json(updated);
+    }
+  } catch (error) {
+    console.error("PATCH Article status error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
     const data = await request.json();
-    const { status, title, summary, category, pages } = data;
+    const { status, title, summary, category, pages, author } = data;
 
     if (isDbConfigured()) {
       if (status && !pages) {
-        // Status only update
         const updated = await prisma.article.update({
           where: { id: params.id },
-          data: { status: status as any },
+          data: { status: status as any, author: author || undefined },
         });
         return NextResponse.json(updated);
       } else {
-        // Full edit update including pages
-        // First delete old pages
         await prisma.articlePage.deleteMany({
           where: { articleId: params.id },
         });
@@ -30,6 +58,7 @@ export async function PUT(
             title,
             summary,
             category: category as any,
+            author: author || undefined,
             pages: {
               create: pages.map((p: any, idx: number) => ({
                 pageNumber: idx + 1,
@@ -52,7 +81,7 @@ export async function PUT(
       }
     }
   } catch (error) {
-    console.error("PUT Article status error:", error);
+    console.error("PUT Article error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -63,8 +92,9 @@ export async function DELETE(
 ) {
   try {
     if (isDbConfigured()) {
-      await prisma.article.delete({
-        where: { id: params.id },
+      // Allow deleting by id or slug
+      await prisma.article.deleteMany({
+        where: { OR: [{ id: params.id }, { slug: params.id }] },
       });
     } else {
       await memoryDb.deleteArticle(params.id);

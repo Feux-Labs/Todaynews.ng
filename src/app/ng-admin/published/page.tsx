@@ -68,13 +68,25 @@ export default function PublishedPage() {
     }
   };
 
-  const deleteArticle = async (id: string) => {
+  const deleteArticle = async (id: string, slug?: string) => {
     if (!confirm("Are you sure you want to permanently delete this live article?")) return;
     try {
-      await fetch(`/api/articles/${id}`, { method: "DELETE" });
-      setArticles((prev) => prev.filter((a) => a.id !== id));
+      await fetch(`/api/articles/${id || slug}`, { method: "DELETE" });
+      setArticles((prev) => prev.filter((a) => a.id !== id && a.slug !== (slug || id)));
     } catch (err) {
       console.error("Delete failed:", err);
+    }
+  };
+
+  const deleteAllArticles = async () => {
+    if (!confirm("WARNING: This will permanently delete ALL published articles on the site. Proceed?")) return;
+    try {
+      for (const a of articles) {
+        await fetch(`/api/articles/${a.id || a.slug}`, { method: "DELETE" });
+      }
+      setArticles([]);
+    } catch (err) {
+      console.error("Bulk delete failed:", err);
     }
   };
 
@@ -122,14 +134,25 @@ export default function PublishedPage() {
           <p className="text-slate-400 text-sm mt-1">Live articles currently visible to visitors on Todaynews.ng</p>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search live articles..."
-            className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 w-64"
-          />
+        <div className="flex items-center gap-3">
+          {articles.length > 0 && (
+            <button
+              onClick={deleteAllArticles}
+              className="flex items-center gap-1.5 px-3 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs font-bold transition"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete All Published Stories ({articles.length})
+            </button>
+          )}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search live articles..."
+              className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 w-64"
+            />
+          </div>
         </div>
       </div>
 
@@ -221,7 +244,7 @@ export default function PublishedPage() {
                   <button onClick={() => unpublishArticle(article.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-medium rounded-md hover:bg-amber-500/20 transition">
                     <RotateCcw className="w-3.5 h-3.5" /> Retract / Unpublish
                   </button>
-                  <button onClick={() => deleteArticle(article.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/5 text-red-500/60 text-xs rounded-md hover:bg-red-500/10 transition ml-auto">
+                  <button onClick={() => deleteArticle(article.id, article.slug)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/5 text-red-500/60 text-xs rounded-md hover:bg-red-500/10 transition ml-auto">
                     <Trash2 className="w-3.5 h-3.5" /> Delete Permanently
                   </button>
                 </div>
