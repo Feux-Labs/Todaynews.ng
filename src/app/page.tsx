@@ -9,12 +9,13 @@ import NativeSponsoredFeed from "@/components/NativeSponsoredFeed";
 import WhatsAppBanner from "@/components/WhatsAppBanner";
 import AdSlot from "@/components/AdSlot";
 import { ArticleData } from "@/lib/sample-data";
+import { ShieldCheck, Clock, ArrowRight, Zap, TrendingUp, Flame } from "lucide-react";
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
 export const metadata = generateSeoMetadata({
-  title: "Todaynews.ng — Breaking Nigerian News, Naira Rates & Gist",
-  description: "Read breaking Nigerian news on politics, business, parallel Naira exchange rates, sports, entertainment, security, and BBNaija updates.",
+  title: "Todaynews.ng — Breaking Nigerian News, Security Alerts & Naira Rates",
+  description: "Read breaking Nigerian news on security updates, politics, parallel Naira exchange rates, sports, entertainment, and investigative reports updated all day.",
   path: "/",
 });
 
@@ -27,7 +28,6 @@ async function getPublishedArticles(): Promise<ArticleData[]> {
         orderBy: { createdAt: "desc" },
       });
       if (dbArticles.length > 0) {
-        // Map Prisma model back to standard interface
         return dbArticles.map((a: any) => ({
           id: a.id,
           title: a.title,
@@ -59,6 +59,8 @@ export default async function HomePage() {
 
   const heroArticle = articles[0];
   const sideArticles = articles.slice(1, 3);
+  const securityArticles = articles.filter((a) => a.category === "SECURITY" || a.category === "METRO").slice(0, 4);
+  const politicsArticles = articles.filter((a) => a.category === "POLITICS").slice(0, 4);
   const remainingArticles = articles.slice(3);
 
   const newsOrgJsonLd = {
@@ -83,58 +85,64 @@ export default async function HomePage() {
   };
 
   return (
-    <div className="space-y-8 font-body">
+    <div className="space-y-10 font-body">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(newsOrgJsonLd) }}
       />
-      {/* ================= HERO GRID ================= */}
 
+      {/* ================= HERO SPOTLIGHT GRID (PUNCH STYLE) ================= */}
       {heroArticle && (
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Hero Card (Large Feature) */}
-          <div className="lg:col-span-2 bg-white border border-ink/5 rounded overflow-hidden shadow-sm hover:shadow transition-shadow group flex flex-col justify-between">
+          {/* Main Large Hero Spotlight Feature */}
+          <div className="lg:col-span-2 bg-white border-2 border-ink rounded overflow-hidden shadow-sm hover:shadow transition-shadow group flex flex-col justify-between">
             <div>
               {heroArticle.imageUrl && (
-                <div className="relative aspect-video overflow-hidden border-b border-ink/5">
+                <div className="relative aspect-video overflow-hidden border-b-2 border-ink">
                   <img
                     src={heroArticle.imageUrl}
                     alt={heroArticle.title}
                     className="object-cover w-full h-full group-hover:scale-[1.02] transition-transform duration-500"
                   />
                   <span className="absolute top-3 left-3 bg-punchRed text-paper text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded shadow">
-                    Featured story
+                    🔥 Top Spotlight
                   </span>
                 </div>
               )}
               <div className="p-6">
-                <span className="text-[10px] uppercase font-black tracking-widest text-flag block mb-2">
-                  {heroArticle.category} • {new Date(heroArticle.createdAt).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}
-                </span>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="bg-flag text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded font-mono">
+                    {heroArticle.category}
+                  </span>
+                  <span className="text-xs text-muted font-bold">
+                    {new Date(heroArticle.createdAt).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}
+                  </span>
+                </div>
                 <h2 className="font-display font-black text-2xl md:text-3xl lg:text-4xl text-ink hover:text-flag transition-colors leading-tight">
                   <Link href={`/article/${heroArticle.slug}`}>
                     {heroArticle.title}
                   </Link>
                 </h2>
-                <p className="text-sm text-muted mt-3 leading-relaxed">
+                <p className="text-sm text-muted mt-3 leading-relaxed line-clamp-3">
                   {heroArticle.summary}
                 </p>
               </div>
             </div>
-            <div className="p-6 pt-0 flex items-center justify-between border-t border-ink/5 mt-4 text-xs text-muted font-bold uppercase tracking-wider">
+            <div className="p-6 pt-0 flex items-center justify-between border-t border-ink/10 mt-4 text-xs text-muted font-bold uppercase tracking-wider">
               <span>By {heroArticle.author}</span>
-              <span className="text-flag hover:underline font-extrabold">
-                <Link href={`/article/${heroArticle.slug}`}>Read Full Story →</Link>
-              </span>
+              <Link href={`/article/${heroArticle.slug}`} className="text-flag hover:underline font-black flex items-center gap-1">
+                <span>Read Full Story</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           </div>
 
-          {/* Secondary Hero Sidebar (2 items stacked) */}
+          {/* Secondary Hero Sidebar (Punch 2-Card Stack) */}
           <div className="flex flex-col gap-6">
             {sideArticles.map((article) => (
               <div
                 key={article.slug}
-                className="bg-white border border-ink/5 p-5 rounded shadow-sm hover:shadow transition-shadow group flex flex-col justify-between flex-1"
+                className="bg-white border-2 border-ink p-5 rounded shadow-sm hover:shadow transition-shadow group flex flex-col justify-between flex-1"
               >
                 <div>
                   <span className="text-[9px] uppercase font-black tracking-widest text-flag block mb-1">
@@ -145,40 +153,74 @@ export default async function HomePage() {
                       {article.title}
                     </Link>
                   </h3>
-                  <p className="text-xs text-muted mt-2 line-clamp-3 leading-relaxed">
+                  <p className="text-xs text-muted mt-2 line-clamp-2 leading-relaxed">
                     {article.summary}
                   </p>
                 </div>
-                <div className="flex items-center justify-between border-t border-ink/5 mt-4 pt-2 text-[10px] text-muted font-bold uppercase tracking-wider">
+                <div className="flex items-center justify-between border-t border-ink/10 mt-4 pt-2 text-[10px] text-muted font-bold uppercase tracking-wider">
                   <span>⏱ {article.readTimeMinutes} Min Read</span>
-                  <span className="text-flag">Read More →</span>
+                  <Link href={`/article/${article.slug}`} className="text-flag font-black hover:underline">
+                    Read Story →
+                  </Link>
                 </div>
               </div>
             ))}
             
-            {/* Quick Micro-Banner Ad slot */}
-            <div className="bg-hazard/10 border-2 border-dashed border-hazard/40 p-4 rounded flex items-center justify-center text-center">
-              <span className="text-[10px] font-black uppercase text-ink tracking-wider">
-                💵 Naira trades steady at parallel market today. check rates below!
-              </span>
-            </div>
+            {/* Smartlink Deals Strip */}
+            <AdSlot id="hero-smartlink" type="smartlink" />
           </div>
         </section>
       )}
 
-      {/* ================= NAIRA RATE WIDGET ================= */}
+      {/* ================= NAIRA RATE WATCH WIDGET ================= */}
       <section>
         <NairaRateWidget />
       </section>
 
-      {/* ================= MAIN CONTENT COLUMNS ================= */}
+      {/* ================= PUNCH-STYLE SECURITY & METRO SECTION ================= */}
+      <section className="bg-paper border-2 border-ink p-6 rounded-lg shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b-2 border-ink pb-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-punchRed" />
+            <h2 className="font-display font-black text-xl text-ink uppercase tracking-tight">
+              Security & Metro Safety Alert
+            </h2>
+          </div>
+          <Link href="/category/security" className="text-xs text-flag font-black uppercase hover:underline">
+            View All Security News →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(securityArticles.length > 0 ? securityArticles : articles.slice(0, 4)).map((story) => (
+            <div key={story.slug} className="p-3 border border-ink/10 rounded bg-white hover:border-flag transition-all flex gap-3 items-start">
+              {story.imageUrl && (
+                <img src={story.imageUrl} alt="" className="w-20 h-20 rounded object-cover shrink-0 border border-ink/10" />
+              )}
+              <div>
+                <span className="text-[9px] font-black uppercase text-punchRed bg-punchRed/10 px-1.5 py-0.5 rounded font-mono">
+                  {story.category}
+                </span>
+                <h4 className="font-display font-bold text-sm text-ink hover:text-flag transition-colors mt-1 leading-snug">
+                  <Link href={`/article/${story.slug}`}>{story.title}</Link>
+                </h4>
+                <p className="text-[11px] text-muted line-clamp-1 mt-1">{story.summary}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ================= MAIN CONTENT COLUMNS (LATEST NEWS + SIDEBAR) ================= */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Latest News Feed */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="border-b-4 border-ink pb-2 mb-6">
-            <h2 className="font-display font-black text-xl md:text-2xl uppercase tracking-tight">
-              Latest Headlines
+          <div className="border-b-4 border-ink pb-2 flex items-center justify-between">
+            <h2 className="font-display font-black text-xl md:text-2xl uppercase tracking-tight flex items-center gap-2">
+              <Zap className="h-5 w-5 text-flag fill-current" />
+              Latest News Stream
             </h2>
+            <span className="text-xs text-muted font-bold font-mono">Updated Every 30 Mins</span>
           </div>
 
           {remainingArticles.length > 0 ? (
@@ -186,7 +228,7 @@ export default async function HomePage() {
               {remainingArticles.map((article, idx) => (
                 <React.Fragment key={article.slug}>
                   <ArticleCard article={article} />
-                  {/* Ad Inserter Equivalent: Injects middle display ad after the 2nd article */}
+                  {/* Ad Inserter: Injects middle display ad after the 2nd article */}
                   {idx === 1 && (
                     <AdSlot id="mid-feed-adsterra" type="in-article-mid" />
                   )}
@@ -200,30 +242,30 @@ export default async function HomePage() {
           )}
         </div>
 
-        {/* Right Column: Sidebar (PostViews trending widget, WhatsApp widget) */}
+        {/* Right Column: Sidebar (Trending, Adsterra Native, WhatsApp Channel) */}
         <div className="space-y-6">
-          {/* Trending list */}
+          {/* Trending ranking list */}
           <TrendingSidebar />
 
-          {/* Adsterra Native Sidebar Display placement */}
+          {/* Adsterra Native Sidebar Placement */}
           <AdSlot id="sidebar-display-adsterra" type="sidebar-native" />
 
-          {/* WhatsApp viral channel banner */}
+          {/* WhatsApp Channel Join Banner */}
           <WhatsAppBanner />
 
-          {/* About Widget */}
-          <div className="border-2 border-ink p-5 rounded bg-paper/50">
-            <h4 className="font-display font-black text-xs uppercase tracking-wider text-ink border-b border-ink/10 pb-2 mb-3">
-              About Todaynews.ng
+          {/* Anti-Misinformation Mission Card */}
+          <div className="border-2 border-ink p-5 rounded bg-paper/50 space-y-2">
+            <h4 className="font-display font-black text-xs uppercase tracking-wider text-ink border-b border-ink/10 pb-2">
+              Mission Statement
             </h4>
             <p className="text-xs text-muted leading-relaxed">
-              We leverage expert local editors and state-of-the-art AI systems to source and compile accurate reports across Nigeria. All articles are carefully copy-edited to eliminate factual errors before they go live on our website.
+              Todaynews.ng is a Nigerian AI-powered news channel focusing on reducing misinformation and news censorship using complex algorithms to locate important security news to keep Nigerians safe.
             </p>
           </div>
         </div>
       </section>
 
-      {/* ================= NATIVE RECOMMENDED GRID (TABOOLA EQUIVALENT) ================= */}
+      {/* ================= NATIVE SPONSORED RECOMMENDATIONS FEED ================= */}
       <section>
         <NativeSponsoredFeed />
       </section>
