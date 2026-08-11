@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       active: true,
     });
 
-    return NextResponse.json({ user: created });
+    return NextResponse.json({ user: created }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: "Failed to create admin" }, { status: 500 });
   }

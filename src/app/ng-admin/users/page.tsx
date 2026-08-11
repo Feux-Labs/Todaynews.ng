@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Users, UserPlus, Shield, Trash2, CheckCircle, XCircle } from "lucide-react";
-import { adminStore } from "@/app/api/auth/[...nextauth]/options";
+import { useState, useEffect } from "react";
+import {
+  Users,
+  UserPlus,
+  Shield,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 
 interface AdminUserRecord {
   id: string;
@@ -13,51 +21,93 @@ interface AdminUserRecord {
 }
 
 export default function UsersPage() {
-  // Initial state loaded from default store
-  const [users, setUsers] = useState<AdminUserRecord[]>([
-    {
-      id: "admin-super-1",
-      name: "Todaynews SuperAdmin",
-      email: "admin@todaynews.ng",
-      role: "SUPERADMIN",
-      active: true,
-    },
-  ]);
-
+  const [users, setUsers] = useState<AdminUserRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"SUPERADMIN" | "EDITOR" | "REVIEWER">("EDITOR");
 
-  const handleCreate = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/users");
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || !name) return;
+    setSubmitting(true);
+    setFormError(null);
 
-    const newUser: AdminUserRecord = {
-      id: `admin-${Date.now()}`,
-      name,
-      email,
-      role,
-      active: true,
-    };
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password, role }),
+      });
 
-    setUsers((prev) => [...prev, newUser]);
-    setName("");
-    setEmail("");
-    setPassword("");
-    setShowModal(false);
+      const data = await res.json();
+      if (!res.ok) {
+        setFormError(data.error || "Failed to create user");
+        return;
+      }
+
+      setUsers((prev) => [...prev, data.user]);
+      setName("");
+      setEmail("");
+      setPassword("");
+      setShowModal(false);
+    } catch (err) {
+      setFormError("Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const toggleStatus = (id: string) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, active: !u.active } : u))
-    );
+  const toggleStatus = async (user: AdminUserRecord) => {
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !user.active }),
+      });
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, active: !u.active } : u))
+        );
+      }
+    } catch (err) {
+      console.error("Toggle status failed:", err);
+    }
   };
 
-  const deleteUser = (id: string) => {
+  const deleteUser = async (id: string) => {
     if (!confirm("Are you sure you want to delete this admin account?")) return;
-    setUsers((prev) => prev.filter((u) => u.id !== id));
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+      }
+    } catch (err) {
+      console.error("Delete user failed:", err);
+    }
   };
 
   return (
@@ -71,78 +121,101 @@ export default function UsersPage() {
           <p className="text-slate-400 text-sm mt-1">Manage editorial team accounts and access permissions</p>
         </div>
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#00e676] hover:bg-[#00c853] text-[#060b18] font-bold rounded-lg text-sm transition shadow-lg shadow-[#00e676]/20"
-        >
-          <UserPlus className="w-4 h-4" /> Add New Admin
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchUsers}
+            className="p-2 bg-white/5 border border-white/10 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+            title="Refresh"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#00e676] hover:bg-[#00c853] text-[#060b18] font-bold rounded-lg text-sm transition shadow-lg shadow-[#00e676]/20"
+          >
+            <UserPlus className="w-4 h-4" /> Add New Admin
+          </button>
+        </div>
       </div>
 
       {/* Users Table */}
-      <div className="bg-[#0f1729]/80 border border-white/5 rounded-xl overflow-hidden">
-        <table className="w-full text-left text-sm text-slate-300">
-          <thead className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
-            <tr>
-              <th className="px-6 py-4">Name</th>
-              <th className="px-6 py-4">Email</th>
-              <th className="px-6 py-4">Role</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {users.map((user) => (
-              <tr key={user.id} className="hover:bg-white/[0.02] transition">
-                <td className="px-6 py-4 font-semibold text-white">{user.name}</td>
-                <td className="px-6 py-4 text-slate-400">{user.email}</td>
-                <td className="px-6 py-4">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      user.role === "SUPERADMIN"
-                        ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                        : user.role === "EDITOR"
-                        ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                        : "bg-slate-500/10 text-slate-400 border border-slate-500/20"
-                    }`}
-                  >
-                    <Shield className="w-3 h-3" />
-                    {user.role}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  {user.active ? (
-                    <span className="text-xs text-[#00e676] flex items-center gap-1">
-                      <CheckCircle className="w-3.5 h-3.5" /> Active
-                    </span>
-                  ) : (
-                    <span className="text-xs text-red-400 flex items-center gap-1">
-                      <XCircle className="w-3.5 h-3.5" /> Inactive
-                    </span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-right space-x-2">
-                  <button
-                    onClick={() => toggleStatus(user.id)}
-                    className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-xs rounded text-slate-300 transition"
-                  >
-                    {user.active ? "Deactivate" : "Activate"}
-                  </button>
-                  {user.role !== "SUPERADMIN" && (
-                    <button
-                      onClick={() => deleteUser(user.id)}
-                      className="p-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded transition"
-                      title="Delete Admin"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </td>
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-[#00e676]" />
+        </div>
+      ) : (
+        <div className="bg-[#0f1729]/80 border border-white/5 rounded-xl overflow-hidden">
+          <table className="w-full text-left text-sm text-slate-300">
+            <thead className="bg-white/5 text-slate-400 text-xs uppercase tracking-wider">
+              <tr>
+                <th className="px-6 py-4">Name</th>
+                <th className="px-6 py-4">Email</th>
+                <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                    No admin users found.
+                  </td>
+                </tr>
+              ) : (
+                users.map((user) => (
+                  <tr key={user.id} className="hover:bg-white/[0.02] transition">
+                    <td className="px-6 py-4 font-semibold text-white">{user.name}</td>
+                    <td className="px-6 py-4 text-slate-400">{user.email}</td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          user.role === "SUPERADMIN"
+                            ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                            : user.role === "EDITOR"
+                            ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                            : "bg-slate-500/10 text-slate-400 border border-slate-500/20"
+                        }`}
+                      >
+                        <Shield className="w-3 h-3" />
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.active ? (
+                        <span className="text-xs text-[#00e676] flex items-center gap-1">
+                          <CheckCircle className="w-3.5 h-3.5" /> Active
+                        </span>
+                      ) : (
+                        <span className="text-xs text-red-400 flex items-center gap-1">
+                          <XCircle className="w-3.5 h-3.5" /> Inactive
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button
+                        onClick={() => toggleStatus(user)}
+                        className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-xs rounded text-slate-300 transition"
+                      >
+                        {user.active ? "Deactivate" : "Activate"}
+                      </button>
+                      {user.role !== "SUPERADMIN" && (
+                        <button
+                          onClick={() => deleteUser(user.id)}
+                          className="p-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded transition"
+                          title="Delete Admin"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Create User Modal */}
       {showModal && (
@@ -151,6 +224,12 @@ export default function UsersPage() {
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-[#00e676]" /> Create New Admin
             </h3>
+
+            {formError && (
+              <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs">
+                {formError}
+              </div>
+            )}
 
             <form onSubmit={handleCreate} className="space-y-3">
               <div>
@@ -182,8 +261,9 @@ export default function UsersPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Temporary password"
+                  placeholder="Minimum 8 characters"
                   required
+                  minLength={8}
                   className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
                 />
               </div>
@@ -204,13 +284,15 @@ export default function UsersPage() {
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-[#00e676] hover:bg-[#00c853] text-[#060b18] font-bold rounded-lg text-sm transition"
+                  disabled={submitting}
+                  className="flex-1 py-2 bg-[#00e676] hover:bg-[#00c853] text-[#060b18] font-bold rounded-lg text-sm transition disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                  Create Admin
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {submitting ? "Creating..." : "Create Admin"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => { setShowModal(false); setFormError(null); }}
                   className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 text-sm font-medium rounded-lg transition"
                 >
                   Cancel

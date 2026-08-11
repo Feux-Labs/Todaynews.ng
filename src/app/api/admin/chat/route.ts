@@ -3,6 +3,7 @@ import { scrapeRSSFeeds, scrapeUrl } from "@/lib/scraper";
 import { paraphraseNews, chatWithAi } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { getChatMemory, appendChatMessage, clearChatMemory, updateMemoryCardStatus } from "@/lib/aiMemory";
+import { getServerSettings } from "@/app/api/admin/settings/route";
 
 export async function GET() {
   try {
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
               category: article.category as any,
               status: targetStatus as any,
               sourceName: storySource || "Web Scraper",
-              author: "Gideon Ibitoye",
+              author: getServerSettings().defaultAuthorName || "Todaynews.ng Editorial",
               pages: {
                 create: article.pages.map((p) => ({
                   pageNumber: p.pageNumber,
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
             category: article.category as any,
             status: targetStatus as any,
             sourceName: storySource || "Web Scraper",
-            author: "Gideon Ibitoye",
+            author: getServerSettings().defaultAuthorName || "Todaynews.ng Editorial",
             readTimeMinutes: 3,
             pages: article.pages,
           });

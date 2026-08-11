@@ -21,8 +21,6 @@ interface SiteSettings {
   contactEmail: string;
 }
 
-const STORAGE_KEY = "todaynews_site_settings";
-
 const DEFAULT_SETTINGS: SiteSettings = {
   defaultAuthorName: "Gideon Ibitoye",
   defaultAuthorEmail: "editor@todaynews.ng",
@@ -37,34 +35,66 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
-      } catch {
-        setSettings(DEFAULT_SETTINGS);
-      }
-    }
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    setFetchLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setSettings({ ...DEFAULT_SETTINGS, ...data });
+      }
+    } catch (err) {
+      console.error("Failed to load settings:", err);
+    } finally {
+      setFetchLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setError("Failed to save settings. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     setSettings(DEFAULT_SETTINGS);
-    localStorage.removeItem(STORAGE_KEY);
+    await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(DEFAULT_SETTINGS),
+    });
   };
 
   const update = (key: keyof SiteSettings) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setSettings((prev) => ({ ...prev, [key]: e.target.value }));
+
+  if (fetchLoading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="w-6 h-6 animate-spin text-[#00e676]" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -107,7 +137,13 @@ export default function AdminSettingsPage() {
       {saved && (
         <div className="p-3 bg-[#00e676]/10 border border-[#00e676]/30 rounded-lg text-[#00e676] text-sm font-medium flex items-center gap-2">
           <CheckCircle className="w-4 h-4" />
-          Settings saved successfully! These defaults will apply to all new articles.
+          Settings saved to server! All new AI-scraped articles will use these defaults.
+        </div>
+      )}
+
+      {error && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium">
+          {error}
         </div>
       )}
 
@@ -237,6 +273,7 @@ export default function AdminSettingsPage() {
               <li>New AI-scraped articles will use <strong className="text-white">"{settings.defaultAuthorName}"</strong> as default byline.</li>
               <li>You can override the name per-article inside the <strong className="text-white">Inbox</strong> or <strong className="text-white">Drafts</strong> before publishing.</li>
               <li>The author name also appears in <strong className="text-white">Google News JSON-LD schema</strong> for SEO credit.</li>
+              <li>Settings are saved <strong className="text-white">server-side</strong> and persist across all devices and deployments.</li>
             </ul>
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 
 export type AdsterraFormat =
@@ -31,28 +31,30 @@ export default function AdSlot({
   smartlinkLabel = "🔥 Trending Deals & Offers in Nigeria — Click Here",
 }: AdSlotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const injectedRef = useRef(false);
+  const [adLoaded, setAdLoaded] = useState(false);
 
-  // ── Banner (iframe) injection ──────────────────────────────────────────────
+  // ── Banner (iframe) injection — guaranteed config-before-invoke order ────────
   useEffect(() => {
     if (
       (type === "banner" || type === "banner-top" || type === "in-article-mid") &&
-      containerRef.current
+      containerRef.current &&
+      !injectedRef.current
     ) {
+      injectedRef.current = true;
       containerRef.current.innerHTML = "";
 
-      // 728×90 leaderboard (top banner) — unit 30701438
-      // 300×250 medium rectangle (in-article / sidebar) — unit 30700793
       const isWide = type === "banner-top";
       const width = isWide ? 728 : 300;
       const height = isWide ? 90 : 250;
       const key = isWide
-        ? "f1676b31bf7fb91f65c368c428768a54"   // 728x90
-        : "baec4ba691aee8e6facd331480c3ff7a";  // 300x250
+        ? "f1676b31bf7fb91f65c368c428768a54"   // 728×90 leaderboard
+        : "baec4ba691aee8e6facd331480c3ff7a";  // 300×250 rectangle
       const src = isWide
         ? "https://wailsilence.com/f1676b31bf7fb91f65c368c428768a54/invoke.js"
         : "https://wailsilence.com/baec4ba691aee8e6facd331480c3ff7a/invoke.js";
 
-      // Set global window.atOptions for Adsterra invoke script
+      // STEP 1 — Set config on window synchronously BEFORE inject script
       (window as any).atOptions = {
         key,
         format: "iframe",
@@ -61,9 +63,10 @@ export default function AdSlot({
         params: {},
       };
 
-      const confScript = document.createElement("script");
-      confScript.type = "text/javascript";
-      confScript.innerHTML = `
+      // STEP 2 — Inline <script> to ensure atOptions is declared in the same tick
+      const configScript = document.createElement("script");
+      configScript.type = "text/javascript";
+      configScript.text = `
         window.atOptions = {
           'key' : '${key}',
           'format' : 'iframe',
@@ -72,20 +75,24 @@ export default function AdSlot({
           'params' : {}
         };
       `;
+      containerRef.current.appendChild(configScript);
 
+      // STEP 3 — Only after config script is appended, inject invoke script
       const invokeScript = document.createElement("script");
       invokeScript.type = "text/javascript";
       invokeScript.src = src;
-      invokeScript.async = true;
+      invokeScript.async = false; // synchronous load order critical
+      invokeScript.onload = () => setAdLoaded(true);
+      invokeScript.onerror = () => setAdLoaded(true); // hide placeholder even on error
 
-      containerRef.current.appendChild(confScript);
       containerRef.current.appendChild(invokeScript);
     }
   }, [type]);
 
   // ── Native Banner Widget injection ─────────────────────────────────────────
   useEffect(() => {
-    if ((type === "native" || type === "sidebar-native") && containerRef.current) {
+    if ((type === "native" || type === "sidebar-native") && containerRef.current && !injectedRef.current) {
+      injectedRef.current = true;
       containerRef.current.innerHTML = "";
 
       const nativeScript = document.createElement("script");
@@ -93,6 +100,7 @@ export default function AdSlot({
       nativeScript.setAttribute("data-cfasync", "false");
       nativeScript.src =
         "https://wailsilence.com/f98e29f0e52639872d03cd647118ee6b/invoke.js";
+      nativeScript.onload = () => setAdLoaded(true);
 
       const nativeDiv = document.createElement("div");
       nativeDiv.id = "container-f98e29f0e52639872d03cd647118ee6b";
@@ -146,14 +154,28 @@ export default function AdSlot({
       <span className="text-[9px] uppercase font-bold tracking-widest text-muted/60 mb-1 font-mono">
         Sponsored Advertisement
       </span>
+      {/* Loading placeholder — visible until ad iframe loads */}
+      {!adLoaded && (
+        <div
+          className={`animate-pulse bg-ink/5 border border-ink/10 rounded-lg flex items-center justify-center ${
+            isTopBanner
+              ? "w-full max-w-[728px] h-[90px]"
+              : "w-[300px] h-[250px]"
+          }`}
+        >
+          <span className="text-[10px] text-muted/40 font-mono uppercase tracking-widest">
+            Advertisement
+          </span>
+        </div>
+      )}
       <div
         id={id}
         ref={containerRef}
         className={`w-full flex items-center justify-center overflow-x-auto rounded-lg bg-paper border border-ink/5 shadow-sm transition-all ${
           isTopBanner
-            ? "min-h-[90px] max-w-[735px] mx-auto p-1"
+            ? "min-h-[90px] max-w-[728px] mx-auto p-1"
             : "min-h-[250px] min-w-[300px]"
-        }`}
+        } ${!adLoaded ? "hidden" : ""}`}
       />
     </div>
   );
