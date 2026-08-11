@@ -229,21 +229,28 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
 
           {/* Author Biography Section (Punch-style bio card) */}
           <div className="bg-paper border-2 border-ink p-5 rounded flex gap-4 items-start my-8">
-            <div className="w-12 h-12 bg-flag text-paper rounded-full flex items-center justify-center font-display font-black text-xl shrink-0">
-              A
-            </div>
+            <Link href="/author/gideon-ibitoye">
+              <div className="w-12 h-12 bg-flag/10 border-2 border-flag text-flag rounded-full flex items-center justify-center font-display font-black text-xl shrink-0 hover:bg-flag hover:text-paper transition-colors cursor-pointer">
+                GI
+              </div>
+            </Link>
             <div>
-              <h5 className="font-display font-black text-sm uppercase text-ink">
-                {article.author}
-              </h5>
-              <p className="text-xs text-muted mt-1 leading-relaxed">
-                Adekunle is a fellow of Data and Solutions Journalism at Todaynews.ng, with over four years of experience covering Nigeria's economic and political landscape.
+              <div className="flex items-center gap-2 mb-1">
+                <h5 className="font-display font-black text-sm uppercase text-ink">
+                  {article.author || "Gideon Ibitoye"}
+                </h5>
+                <span className="bg-flag text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Verified Editor</span>
+              </div>
+              <p className="text-xs text-muted leading-relaxed">
+                {article.author || "Gideon Ibitoye"} is the Chief Editor and Reviewing Authority at Todaynews.ng, specializing in Nigerian political affairs, parallel currency trends, and national policy analysis.
               </p>
-              <div className="mt-2 text-[10px] text-flag font-bold uppercase tracking-wider">
-                <span>Email: </span>
-                <a href="mailto:adekunle@todaynews.ng" className="underline hover:text-ink">
-                  adekunle@todaynews.ng
+              <div className="mt-2 flex items-center gap-4 text-[10px] font-bold">
+                <a href="mailto:editor@todaynews.ng" className="text-flag underline hover:text-ink">
+                  editor@todaynews.ng
                 </a>
+                <Link href="/author/gideon-ibitoye" className="text-muted hover:text-flag">
+                  View All Articles →
+                </Link>
               </div>
             </div>
           </div>

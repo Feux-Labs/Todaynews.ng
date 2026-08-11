@@ -61,9 +61,35 @@ export default async function HomePage() {
   const sideArticles = articles.slice(1, 3);
   const remainingArticles = articles.slice(3);
 
+  const newsOrgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "NewsMediaOrganization",
+    "name": "Todaynews.ng",
+    "url": "https://todaynews.ng",
+    "logo": "https://todaynews.ng/images/logo-publisher.png",
+    "sameAs": [
+      "https://facebook.com/todaynewsng",
+      "https://twitter.com/todaynewsng",
+      "https://instagram.com/todaynewsng"
+    ],
+    "publishingPrinciples": "https://todaynews.ng/editorial-standards",
+    "correctionsPolicy": "https://todaynews.ng/editorial-standards#corrections",
+    "foundingDate": "2024",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Lagos",
+      "addressCountry": "NG"
+    }
+  };
+
   return (
     <div className="space-y-8 font-body">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(newsOrgJsonLd) }}
+      />
       {/* ================= HERO GRID ================= */}
+
       {heroArticle && (
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Hero Card (Large Feature) */}
