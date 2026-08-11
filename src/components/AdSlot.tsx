@@ -44,17 +44,23 @@ export default function AdSlot({
     ) {
       containerRef.current.innerHTML = "";
 
-      // Top banner → 728×90 leaderboard rectangle
-      // In-article / sidebar → 300×250 medium rectangle
+      // 728×90 leaderboard (top banner) — unit 30701438
+      // 300×250 medium rectangle (in-article / sidebar) — unit 30700793
       const isWide = type === "banner-top";
-      const width = isWide ? 728 : 300;
-      const height = isWide ? 90 : 250;
+      const width  = isWide ? 728 : 300;
+      const height = isWide ? 90  : 250;
+      const key    = isWide
+        ? "f1676b31bf7fb91f65c368c428768a54"   // 728x90
+        : "baec4ba691aee8e6facd331480c3ff7a";  // 300x250
+      const src    = isWide
+        ? "https://wailsilence.com/f1676b31bf7fb91f65c368c428768a54/invoke.js"
+        : "https://wailsilence.com/baec4ba691aee8e6facd331480c3ff7a/invoke.js";
 
       const confScript = document.createElement("script");
       confScript.type = "text/javascript";
       confScript.innerHTML = `
         atOptions = {
-          'key' : '${AD_KEY}',
+          'key' : '${key}',
           'format' : 'iframe',
           'height' : ${height},
           'width' : ${width},
@@ -64,7 +70,7 @@ export default function AdSlot({
 
       const invokeScript = document.createElement("script");
       invokeScript.type = "text/javascript";
-      invokeScript.src = AD_INVOKE_URL;
+      invokeScript.src = src;
       invokeScript.async = true;
 
       containerRef.current.appendChild(confScript);
