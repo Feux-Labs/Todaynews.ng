@@ -1,0 +1,14 @@
+name: 30-Min Free Auto-Scraper Cron
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Todaynews.ng Scraper API
+        run: |
+          curl -X GET "https://todaynews.ng/api/cron/scrape" || true
