@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Calendar, BellRing } from "lucide-react";
+import { Search, Calendar } from "lucide-react";
 import SocialHandles from "./SocialHandles";
 
 const CATEGORIES = [
@@ -111,13 +111,6 @@ export default function Header() {
               {c.label}
             </Link>
           ))}
-          <Link
-            href="/admin"
-            className="py-3 ml-auto shrink-0 text-punchRed hover:text-flag transition-colors font-black flex items-center gap-1"
-          >
-            <BellRing className="h-3.5 w-3.5" />
-            <span>Editor Portal</span>
-          </Link>
         </div>
       </nav>
     </header>

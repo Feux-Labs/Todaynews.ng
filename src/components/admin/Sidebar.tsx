@@ -14,6 +14,7 @@ import {
   Newspaper,
   ChevronLeft,
   ChevronRight,
+  Settings,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { href: "/ng-admin/drafts", label: "Drafts", icon: FileEdit },
   { href: "/ng-admin/published", label: "Published", icon: Globe },
   { href: "/ng-admin/users", label: "Admin Users", icon: Users },
+  { href: "/ng-admin/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AdminSidebar() {

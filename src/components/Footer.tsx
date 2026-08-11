@@ -17,8 +17,6 @@ export default function Footer() {
     { label: "Editorial Standards & Policy", href: "/editorial-standards" },
     { label: "Contact Newsdesk", href: "/contact" },
     { label: "Chief Editor Profile", href: "/author/gideon-ibitoye" },
-    { label: "Google News XML Sitemap", href: "/sitemap-news.xml" },
-    { label: "Main XML Sitemap", href: "/sitemap.xml" },
   ];
 
   return (
@@ -89,24 +87,16 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Bottom Legal Row */}
+      {/* Bottom Legal Row — NO admin links visible to public */}
       <div className="max-w-6xl mx-auto px-4 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] text-muted font-bold uppercase tracking-wider">
         <span>
           © {new Date().getFullYear()} Todaynews.ng Limited. All rights reserved.
         </span>
         <div className="flex flex-wrap gap-4">
-          <Link href="/ng-admin/login" className="hover:text-flag transition-colors underline">
-            Editor Login Portal
-          </Link>
-          <Link href="/about" className="hover:text-flag transition-colors">
-            About
-          </Link>
-          <Link href="/editorial-standards" className="hover:text-flag transition-colors">
-            Ethics Policy
-          </Link>
-          <Link href="/contact" className="hover:text-flag transition-colors">
-            Contact
-          </Link>
+          <Link href="/about" className="hover:text-flag transition-colors">About</Link>
+          <Link href="/editorial-standards" className="hover:text-flag transition-colors">Ethics Policy</Link>
+          <Link href="/contact" className="hover:text-flag transition-colors">Contact</Link>
+          <Link href="/sitemap.xml" className="hover:text-flag transition-colors">Sitemap</Link>
         </div>
       </div>
     </footer>
