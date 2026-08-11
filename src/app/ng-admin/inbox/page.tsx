@@ -35,11 +35,21 @@ export default function InboxPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editSummary, setEditSummary] = useState("");
+  const [editAuthor, setEditAuthor] = useState("");
+  const [defaultAuthor, setDefaultAuthor] = useState("Gideon Ibitoye");
   const [paraphrasingId, setParaphrasingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchInbox();
+    // Load default author from admin settings
+    try {
+      const stored = localStorage.getItem("todaynews_site_settings");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.defaultAuthorName) setDefaultAuthor(parsed.defaultAuthorName);
+      }
+    } catch {}
   }, []);
 
   const fetchInbox = async () => {
@@ -104,6 +114,7 @@ export default function InboxPage() {
     setEditingId(article.id);
     setEditTitle(article.title);
     setEditSummary(article.summary);
+    setEditAuthor((article as any).author || defaultAuthor);
   };
 
   const saveEdit = async (id: string) => {
@@ -111,7 +122,7 @@ export default function InboxPage() {
       await fetch(`/api/articles/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: editTitle, summary: editSummary }),
+        body: JSON.stringify({ title: editTitle, summary: editSummary, author: editAuthor }),
       });
       setArticles((prev) =>
         prev.map((a) =>
@@ -199,18 +210,34 @@ export default function InboxPage() {
                       <input
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="Article Headline"
                         className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
                       />
                       <textarea
                         value={editSummary}
                         onChange={(e) => setEditSummary(e.target.value)}
                         rows={2}
+                        placeholder="Article summary / meta description"
                         className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 resize-none"
                       />
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={editAuthor}
+                          onChange={(e) => setEditAuthor(e.target.value)}
+                          placeholder="Author / Byline name"
+                          className="flex-1 px-3 py-2 bg-white/5 border border-[#00e676]/30 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                        />
+                        <button
+                          onClick={() => setEditAuthor(defaultAuthor)}
+                          className="px-2 py-2 text-[10px] text-slate-400 hover:text-[#00e676] border border-white/10 rounded-lg transition whitespace-nowrap"
+                        >
+                          Reset to Default
+                        </button>
+                      </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => saveEdit(article.id)}
-                          className="px-3 py-1.5 bg-[#00e676]/20 text-[#00e676] text-xs font-medium rounded-md"
+                          className="px-3 py-1.5 bg-[#00e676]/20 text-[#00e676] text-xs font-medium rounded-md hover:bg-[#00e676]/30"
                         >
                           Save Changes
                         </button>
