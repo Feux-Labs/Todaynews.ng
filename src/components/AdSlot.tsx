@@ -111,19 +111,19 @@ export default function AdSlot({
     );
   }
 
-  // ── Social Bar (injected near body end) ────────────────────────────────────
-  if (type === "social-bar") {
+  // ── Social Bar — also used for Interstitial template ──────────────────────
+  if (type === "social-bar" || type === "interstitial") {
     return (
       <Script
-        id="adsterra-social-bar-script"
+        id={`adsterra-social-bar-${type}`}
         src="https://pl30801290.effectivecpmnetwork.com/9a/e9/3b/9ae93b69d11e842af1c5c33415214763.js"
         strategy="lazyOnload"
       />
     );
   }
 
-  // ── Popunder / Push / Interstitial — headless ──────────────────────────────
-  if (type === "popunder" || type === "in-page-push" || type === "interstitial") {
+  // ── Popunder / In-page Push — headless ─────────────────────────────────────
+  if (type === "popunder" || type === "in-page-push") {
     return <div className="hidden" />;
   }
 
