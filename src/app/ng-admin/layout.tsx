@@ -1,5 +1,5 @@
-import AdminSidebar from "@/components/admin/Sidebar";
 import { SessionProvider } from "@/components/admin/SessionProvider";
+import AdminLayoutGuard from "@/components/admin/AdminLayoutGuard";
 
 export const metadata = {
   title: "Admin Portal | Todaynews.ng",
@@ -13,12 +13,7 @@ export default function NgAdminLayout({
 }) {
   return (
     <SessionProvider>
-      <div className="min-h-screen bg-[#060b18] text-slate-200">
-        <AdminSidebar />
-        <main className="ml-[260px] min-h-screen transition-all duration-300">
-          {children}
-        </main>
-      </div>
+      <AdminLayoutGuard>{children}</AdminLayoutGuard>
     </SessionProvider>
   );
 }
