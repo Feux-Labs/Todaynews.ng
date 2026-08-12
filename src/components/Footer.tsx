@@ -30,7 +30,7 @@ export default function Footer() {
   return (
     <footer className="border-t-4 border-ink bg-paper pt-12 pb-6 mt-16 font-body">
       <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8 pb-8 border-b border-ink/10">
-        
+
         {/* Column 1 & 2: Brand & Mission Statement */}
         <div className="sm:col-span-2 md:col-span-2 space-y-3">
           <Link href="/">
@@ -98,7 +98,7 @@ export default function Footer() {
       {/* Bottom Legal Row */}
       <div className="max-w-6xl mx-auto px-4 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] text-muted font-bold uppercase tracking-wider">
         <span>
-          © {new Date().getFullYear()} Todaynews.ng Limited. All rights reserved. Registered under Nigerian Press & Communications.
+          © {new Date().getFullYear()} Todaynews.ng Limited. All rights reserved.
         </span>
         <div className="flex flex-wrap gap-4">
           <Link href="/about" className="hover:text-flag transition-colors">About Us</Link>

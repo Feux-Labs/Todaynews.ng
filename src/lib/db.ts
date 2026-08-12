@@ -1,15 +1,23 @@
 import { PrismaClient } from "@prisma/client";
 import { INITIAL_ARTICLES, ArticleData } from "./sample-data";
 
-// PrismaClient singleton pattern to avoid exhausting database connections in dev/serverless
+// PrismaClient singleton pattern for dev (re-use across hot-reloads).
+// In production (Vercel serverless), we create a new client per cold start
+// since globals are NOT shared across concurrent serverless invocations.
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
+function createPrismaClient() {
+  return new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    datasources: process.env.DATABASE_URL
+      ? { db: { url: process.env.DATABASE_URL } }
+      : undefined,
   });
+}
 
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+
+// Only cache globally in non-production to avoid hot-reload connection storms
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export type ArticleStatus = "AI_PENDING" | "DRAFT" | "SCHEDULED" | "PUBLISHED" | "UNPUBLISHED" | "REJECTED" | "PENDING";
@@ -245,9 +253,15 @@ const globalForMemoryDb = global as unknown as { memoryDb: InMemoryDb };
 export const memoryDb = globalForMemoryDb.memoryDb || new InMemoryDb();
 if (process.env.NODE_ENV !== "production") globalForMemoryDb.memoryDb = memoryDb;
 
-export const isDbConfigured = () => {
-  return (
-    process.env.DATABASE_URL &&
-    !process.env.DATABASE_URL.includes("ep-sample-123456")
-  );
+export const isDbConfigured = (): boolean => {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.warn("[DB] DATABASE_URL is not set. Running in memory-only mode.");
+    return false;
+  }
+  if (url.includes("ep-sample-123456")) {
+    console.warn("[DB] DATABASE_URL is the placeholder sample value. Running in memory-only mode.");
+    return false;
+  }
+  return true;
 };
