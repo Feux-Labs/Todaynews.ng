@@ -3,6 +3,9 @@ import { scrapeRSSFeeds } from "@/lib/scraper";
 import { paraphraseNews } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { sendNewStoryAlert } from "@/lib/mailer";
+import { getPersistentServerSettings } from "@/lib/settings";
+
+export const dynamic = "force-dynamic";
 
 /**
  * 30-Minute Automated Cron Job Endpoint
@@ -12,12 +15,35 @@ import { sendNewStoryAlert } from "@/lib/mailer";
 export async function GET(req: Request) {
   try {
     console.log("[Cron Scraper] Starting 30-minute auto-scrape cycle...");
+    const settings = await getPersistentServerSettings();
+    let publishedScheduled = 0;
+
+    if (isDbConfigured()) {
+      try {
+        const due = await prisma.article.updateMany({
+          where: {
+            status: "SCHEDULED" as any,
+            scheduledAt: { lte: new Date() },
+          },
+          data: {
+            status: "PUBLISHED" as any,
+            scheduledAt: null,
+          },
+        });
+        publishedScheduled = due.count;
+      } catch (err) {
+        console.error("[Cron Scraper] Scheduled publish check skipped:", err);
+      }
+    }
 
     // Fetch top 3 fresh stories from RSS feeds published in the last 30 minutes
     const stories = await scrapeRSSFeeds(3, undefined, 30);
 
     if (stories.length === 0) {
-      return NextResponse.json({ message: "No new stories found in feeds." });
+      return NextResponse.json({
+        message: "No new stories found in feeds.",
+        publishedScheduled,
+      });
     }
 
     const savedStories = [];
@@ -47,6 +73,7 @@ export async function GET(req: Request) {
             sourceName: story.sourceName,
             sourceUrl: story.sourceUrl,
             imageUrl: story.imageUrl,
+            author: settings.defaultAuthorName,
             pages: {
               create: paraphrased.pages.map((p) => ({
                 pageNumber: p.pageNumber,
@@ -67,7 +94,7 @@ export async function GET(req: Request) {
           sourceName: story.sourceName,
           sourceUrl: story.sourceUrl,
           imageUrl: story.imageUrl,
-          author: "Todaynews.ng AI",
+          author: settings.defaultAuthorName,
           readTimeMinutes: 3,
           pages: paraphrased.pages,
         });
@@ -90,6 +117,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       success: true,
       count: savedStories.length,
+      publishedScheduled,
       stories: savedStories,
     });
   } catch (err) {

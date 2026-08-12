@@ -2,12 +2,19 @@ import { NextResponse } from "next/server";
 import { scrapeRSSFeeds, scrapeUrl } from "@/lib/scraper";
 import { paraphraseNews, chatWithAi } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
-import { getChatMemory, appendChatMessage, clearChatMemory, updateMemoryCardStatus } from "@/lib/aiMemory";
-import { getServerSettings } from "@/lib/settings";
+import {
+  getPersistentChatMemory,
+  appendPersistentChatMessage,
+  clearPersistentChatMemory,
+  updatePersistentMemoryCardStatus,
+} from "@/lib/aiMemory";
+import { getPersistentServerSettings } from "@/lib/settings";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const memory = getChatMemory();
+    const memory = await getPersistentChatMemory();
     return NextResponse.json({ history: memory });
   } catch (err) {
     console.error("GET Chat history failed:", err);
@@ -17,7 +24,7 @@ export async function GET() {
 
 export async function DELETE() {
   try {
-    clearChatMemory();
+    await clearPersistentChatMemory();
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DELETE Chat memory failed:", err);
@@ -52,13 +59,26 @@ function sanitizeCategory(cat?: string): string {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { message, action, storyId, storyTitle, storySummary, storyCategory, storySource, storyImageUrl } = body;
+    const {
+      message,
+      action,
+      storyId,
+      storyTitle,
+      storySummary,
+      storyContent,
+      storyCategory,
+      storySource,
+      storySourceUrl,
+      storyImageUrl,
+    } = body;
 
     // ── Handle Action Commands (Inbox, Drafts, Paraphrase updates) ────────────
     if (action) {
       const safeTitle = (storyTitle || storySummary || "Trending Nigerian Story").toString().trim();
       const safeSummary = (storySummary || storyTitle || "Verified Nigerian news update from Todaynews.ng editorial desk.").toString().trim();
+      const safeContent = (storyContent || safeSummary).toString().trim();
       const cleanCategory = sanitizeCategory(storyCategory);
+      const settings = await getPersistentServerSettings();
 
       if (action === "send_to_inbox" || action === "add_to_draft") {
         const targetStatus = action === "send_to_inbox" ? "AI_PENDING" : "DRAFT";
@@ -66,7 +86,7 @@ export async function POST(req: Request) {
         // Paraphrase article summary to build rich paginated content with 4s fast timeout fallback
         let article: any;
         try {
-          const paraphrasePromise = paraphraseNews(safeSummary, safeTitle, cleanCategory);
+          const paraphrasePromise = paraphraseNews(safeContent, safeTitle, cleanCategory);
           const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error("Paraphrase timeout")), 4000)
           );
@@ -81,7 +101,7 @@ export async function POST(req: Request) {
               {
                 pageNumber: 1,
                 title: "Core Facts & Breaking Report",
-                content: `<p class="mb-4">${safeSummary}</p>`,
+                content: `<p class="mb-4">${safeContent}</p>`,
               },
               {
                 pageNumber: 2,
@@ -111,9 +131,10 @@ export async function POST(req: Request) {
                 summary: article.summary || safeSummary,
                 category: finalCategory as any,
                 status: targetStatus as any,
+                sourceUrl: storySourceUrl || undefined,
                 sourceName: storySource || "Web Scraper",
                 imageUrl: storyImageUrl || undefined,
-                author: getServerSettings().defaultAuthorName || "Todaynews.ng Editorial",
+                author: settings.defaultAuthorName || "Todaynews.ng Editorial",
                 pages: {
                   create: (article.pages || [{ pageNumber: 1, content: safeSummary }]).map((p: any, idx: number) => ({
                     pageNumber: p.pageNumber || idx + 1,
@@ -132,9 +153,10 @@ export async function POST(req: Request) {
               summary: article.summary || safeSummary,
               category: finalCategory as any,
               status: targetStatus as any,
+              sourceUrl: storySourceUrl || undefined,
               sourceName: storySource || "Web Scraper",
               imageUrl: storyImageUrl || undefined,
-              author: getServerSettings().defaultAuthorName || "Todaynews.ng Editorial",
+              author: settings.defaultAuthorName || "Todaynews.ng Editorial",
               readTimeMinutes: 3,
               pages: article.pages || [{ pageNumber: 1, content: safeSummary }],
             });
@@ -147,9 +169,10 @@ export async function POST(req: Request) {
             summary: article.summary || safeSummary,
             category: finalCategory as any,
             status: targetStatus as any,
+            sourceUrl: storySourceUrl || undefined,
             sourceName: storySource || "Web Scraper",
             imageUrl: storyImageUrl || undefined,
-            author: getServerSettings().defaultAuthorName || "Todaynews.ng Editorial",
+            author: settings.defaultAuthorName || "Todaynews.ng Editorial",
             readTimeMinutes: 3,
             pages: article.pages || [{ pageNumber: 1, content: safeSummary }],
           });
@@ -159,19 +182,19 @@ export async function POST(req: Request) {
         // Update card status in memory JSON
         if (storyId) {
           try {
-            updateMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft");
+            await updatePersistentMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft");
           } catch {}
         }
 
         const replyMsg = `✅ **Article Saved to ${
           action === "send_to_inbox" ? "Inbox (Pending Review)" : "Drafts"
         }!**\n\n📌 **Title**: ${article.title || safeTitle}\n📁 **Category**: ${finalCategory}\n👤 **Author**: ${
-          getServerSettings().defaultAuthorName
+          settings.defaultAuthorName
         }\n📄 **Pages**: ${(article.pages || []).length} section(s) re-written with AI context.`;
 
         // Append assistant message to chat history
         try {
-          appendChatMessage({
+          await appendPersistentChatMessage({
             role: "assistant",
             content: replyMsg,
           });
@@ -189,7 +212,7 @@ export async function POST(req: Request) {
         let article: any;
         try {
           article = await paraphraseNews(
-            safeSummary,
+            safeContent,
             safeTitle,
             cleanCategory
           );
@@ -203,7 +226,7 @@ export async function POST(req: Request) {
               {
                 pageNumber: 1,
                 title: "Core Facts & Breaking Report",
-                content: `<p class="mb-4">${safeSummary}</p>`,
+                content: `<p class="mb-4">${safeContent}</p>`,
               },
             ],
           };
@@ -282,7 +305,7 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
         };
 
         try {
-          appendChatMessage({
+          await appendPersistentChatMessage({
             role: "assistant",
             content: replyMsg,
             storyCards: [paraphrasedCard],
@@ -302,11 +325,11 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
       return NextResponse.json({ reply: "Please type a message to start chatting." });
     }
 
-    const history = getChatMemory();
+    const history = await getPersistentChatMemory();
     const cleanHistory = history.map((h) => ({ role: h.role, content: h.content }));
 
     // Append user message to history
-    appendChatMessage({
+    await appendPersistentChatMessage({
       role: "user",
       content: message,
     });
@@ -319,13 +342,18 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
     // If intent is to search, scrape matching stories
     if (aiResponse.intent === "search") {
       const query = aiResponse.searchQuery;
-      const scraped = await scrapeRSSFeeds(4, query);
+      const urlMatch = message.match(/https?:\/\/[^\s)]+/i);
+      const scraped = urlMatch
+        ? [await scrapeUrl(urlMatch[0])].filter(Boolean) as any[]
+        : await scrapeRSSFeeds(6, query);
 
       storyCards = scraped.map((s, idx) => ({
         id: `scraped-${Date.now()}-${idx}`,
         title: s.title,
-        summary: s.content.substring(0, 160) + "...",
+        summary: s.content.substring(0, 280) + (s.content.length > 280 ? "..." : ""),
+        content: s.content,
         sourceName: s.sourceName,
+        sourceUrl: s.sourceUrl,
         category: s.category,
         imageUrl: s.imageUrl,
         status: "new" as const,
@@ -333,7 +361,7 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
     }
 
     // Append assistant reply to history
-    appendChatMessage({
+    await appendPersistentChatMessage({
       role: "assistant",
       content: aiResponse.reply,
       storyCards,

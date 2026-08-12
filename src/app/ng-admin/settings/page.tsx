@@ -48,11 +48,22 @@ export default function AdminSettingsPage() {
       const res = await fetch("/api/admin/settings");
       if (res.ok) {
         const data = await res.json();
-        setSettings({ ...DEFAULT_SETTINGS, ...data });
+        const merged = { ...DEFAULT_SETTINGS, ...data };
+        setSettings(merged);
+        try { localStorage.setItem("todaynews_site_settings", JSON.stringify(merged)); } catch {}
+        return;
       }
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Failed to load settings from server.");
     } catch (err) {
-      console.error("Failed to load settings:", err);
-    } finally {
+      console.error("Failed to load settings from server:", err);
+      setError("Failed to load settings from server.");
+    }
+    try {
+      const cached = localStorage.getItem("todaynews_site_settings");
+      if (cached) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(cached) });
+    } catch {}
+    finally {
       setFetchLoading(false);
     }
   };
@@ -66,11 +77,16 @@ export default function AdminSettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
-      if (!res.ok) throw new Error("Failed to save");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to save settings.");
+      const savedSettings = { ...DEFAULT_SETTINGS, ...(data.settings || settings) };
+      setSettings(savedSettings);
+      try { localStorage.setItem("todaynews_site_settings", JSON.stringify(savedSettings)); } catch {}
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      setError("Failed to save settings. Please try again.");
+    } catch (err: any) {
+      console.warn("Server settings save failed:", err);
+      setError(err?.message || "Settings could not be saved.");
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { adminStore } from "@/app/api/auth/[...nextauth]/options";
 import bcrypt from "bcryptjs";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const users = adminStore.getAll();

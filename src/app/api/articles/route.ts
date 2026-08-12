@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 /**
  * SYSTEM DESIGN: Paginated & Cached Articles API
  * Supports query params: ?category=POLITICS&status=PUBLISHED&page=1&limit=10
@@ -11,6 +13,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category") || undefined;
     const status = searchParams.get("status") || undefined;
+    const effectiveStatus = status || "PUBLISHED";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const rawLimit = parseInt(searchParams.get("limit") || "10", 10);
     const limit = Math.min(50, Math.max(1, rawLimit)); // Cap max limit at 50 to prevent huge queries
@@ -18,7 +21,11 @@ export async function GET(req: Request) {
     if (isDbConfigured()) {
       const where: any = {};
       if (category) where.category = category.toUpperCase();
-      if (status) where.status = status.toUpperCase();
+      const statuses = effectiveStatus
+        .split(",")
+        .map((item) => item.trim().toUpperCase())
+        .filter(Boolean);
+      where.status = statuses.length > 1 ? { in: statuses } : statuses[0];
 
       const total = await prisma.article.count({ where });
       const articles = await prisma.article.findMany({
@@ -47,7 +54,24 @@ export async function GET(req: Request) {
     }
 
     // Memory fallback paginated response
-    const result = await memoryDb.getArticles(category, status, page, limit);
+    if (effectiveStatus.includes(",")) {
+      const statuses = effectiveStatus.split(",").map((item) => item.trim()).filter(Boolean);
+      const combined = await Promise.all(statuses.map((item) => memoryDb.getArticles(category, item, 1, 100)));
+      const articles = combined
+        .flatMap((result) => result.articles)
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const startIndex = (page - 1) * limit;
+      return NextResponse.json({
+        total: articles.length,
+        page,
+        limit,
+        totalPages: Math.ceil(articles.length / limit),
+        hasMore: startIndex + limit < articles.length,
+        articles: articles.slice(startIndex, startIndex + limit),
+      });
+    }
+
+    const result = await memoryDb.getArticles(category, effectiveStatus, page, limit);
     const response = NextResponse.json(result);
 
     if (status === "PUBLISHED" || !status) {
@@ -64,7 +88,18 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { title, summary, category, pages, imageUrl, sourceName } = body;
+    const {
+      title,
+      summary,
+      category,
+      pages,
+      imageUrl,
+      sourceName,
+      author,
+      status,
+      readTimeMinutes,
+      scheduledAt,
+    } = body;
 
     if (!title || !summary || !category) {
       return NextResponse.json({ error: "Missing required fields: title, summary, category" }, { status: 400 });
@@ -78,24 +113,38 @@ export async function POST(req: Request) {
 
     const uniqueSlug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
 
+    const requestedStatus = (status || "DRAFT").toString().toUpperCase();
+    const hasScheduleDate = Boolean(scheduledAt);
+    const resolvedStatus = hasScheduleDate && requestedStatus === "PUBLISHED" ? "SCHEDULED" : requestedStatus;
+    const resolvedScheduledAt = hasScheduleDate ? new Date(scheduledAt) : undefined;
+    const resolvedAuthor = (author || "Todaynews.ng Editorial").toString().trim();
+    const resolvedReadTime = Number(readTimeMinutes) || 3;
+    const resolvedPages = pages && pages.length > 0
+      ? pages
+      : [{ pageNumber: 1, content: summary }];
+
     if (isDbConfigured()) {
       const created = await prisma.article.create({
         data: {
           title,
           slug: uniqueSlug,
           summary,
-          category: category.toUpperCase(),
-          status: "DRAFT" as any,
-          imageUrl,
+          category: category.toUpperCase() as any,
+          status: resolvedStatus as any,
+          scheduledAt: resolvedScheduledAt,
+          imageUrl: imageUrl || undefined,
           sourceName: sourceName || "Manual Editorial",
+          author: resolvedAuthor,
+          readTimeMinutes: resolvedReadTime,
           pages: {
-            create: (pages || [{ pageNumber: 1, content: summary }]).map((p: any, idx: number) => ({
+            create: resolvedPages.map((p: any, idx: number) => ({
               pageNumber: idx + 1,
               title: p.title || null,
-              content: p.content,
+              content: p.content || summary,
             })),
           },
         },
+        include: { pages: { orderBy: { pageNumber: "asc" } } },
       });
       return NextResponse.json(created, { status: 201 });
     }
@@ -104,13 +153,13 @@ export async function POST(req: Request) {
       title,
       slug: uniqueSlug,
       summary,
-      category: category.toUpperCase(),
-      status: "DRAFT" as any,
-      imageUrl,
+      category: category.toUpperCase() as any,
+      status: resolvedStatus as any,
+      imageUrl: imageUrl || undefined,
       sourceName: sourceName || "Manual Editorial",
-      author: "Todaynews.ng Editorial",
-      readTimeMinutes: 3,
-      pages: pages || [{ pageNumber: 1, content: summary }],
+      author: resolvedAuthor,
+      readTimeMinutes: resolvedReadTime,
+      pages: resolvedPages,
     });
 
     return NextResponse.json(created, { status: 201 });

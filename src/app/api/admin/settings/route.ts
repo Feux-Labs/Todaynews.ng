@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSettings, writeServerSettings } from "@/lib/settings";
+import { getPersistentServerSettings, writePersistentServerSettings } from "@/lib/settings";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const settings = getServerSettings();
+    const settings = await getPersistentServerSettings();
     return NextResponse.json(settings);
   } catch (err) {
     console.error("[Settings GET Error]:", err);
@@ -14,11 +16,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const ok = writeServerSettings(body);
-    if (!ok) {
-      return NextResponse.json({ error: "Failed to save settings" }, { status: 500 });
-    }
-    const updated = getServerSettings();
+    const updated = await writePersistentServerSettings(body);
     return NextResponse.json({ success: true, settings: updated });
   } catch (err) {
     console.error("[Settings POST Error]:", err);

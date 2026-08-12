@@ -121,6 +121,10 @@ export default function CmsEditorPage() {
         setAuthor(data.author || "Gideon Ibitoye");
         setImageUrl(data.imageUrl || "");
         setReadTimeMinutes(data.readTimeMinutes || 3);
+        if (data.scheduledAt) {
+          setPublishMode("scheduled");
+          setScheduledAt(data.scheduledAt.slice(0, 16));
+        }
         if (data.pages && data.pages.length > 0) {
           setPages(
             data.pages.map((p: any, idx: number) => ({
@@ -272,7 +276,7 @@ export default function CmsEditorPage() {
             : "Saved as Draft!";
         showToastMsg(`✅ ${actionLabel}`);
         setTimeout(() => {
-          router.push(targetStatus === "PUBLISHED" ? "/ng-admin/published" : "/ng-admin/drafts");
+          router.push(publishMode === "scheduled" ? "/ng-admin/drafts" : targetStatus === "PUBLISHED" ? "/ng-admin/published" : "/ng-admin/drafts");
         }, 1500);
       } else {
         const errData = await res.json();

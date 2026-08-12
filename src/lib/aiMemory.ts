@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { isDbConfigured, prisma } from "./db";
 
 export interface ChatMessageMemory {
   id: string;
@@ -10,12 +11,16 @@ export interface ChatMessageMemory {
     id: string;
     title: string;
     summary: string;
+    content?: string;
     sourceName: string;
+    sourceUrl?: string;
     category: string;
     imageUrl?: string;
     status: "new" | "sent_to_inbox" | "in_draft" | "paraphrasing";
   }[];
 }
+
+type StoryCardStatus = "new" | "sent_to_inbox" | "in_draft" | "paraphrasing";
 
 // In serverless environment (Vercel), use /tmp directory which is guaranteed to be writable
 const MEMORY_FILE_PATH =
@@ -60,6 +65,28 @@ export function getChatMemory(): ChatMessageMemory[] {
   return globalForMemory._aiChatMemory || [];
 }
 
+export async function getPersistentChatMemory(): Promise<ChatMessageMemory[]> {
+  if (!isDbConfigured()) return getChatMemory();
+
+  try {
+    const rows = await (prisma as any).aiChatMessage.findMany({
+      orderBy: { createdAt: "asc" },
+      take: MAX_MEMORY_ITEMS,
+    });
+
+    return rows.map((row: any) => ({
+      id: row.id,
+      role: row.role,
+      content: row.content,
+      timestamp: row.createdAt.toISOString(),
+      storyCards: Array.isArray(row.storyCards) ? row.storyCards : undefined,
+    }));
+  } catch (err) {
+    console.error("Failed to read persistent AI chat memory:", err);
+    return getChatMemory();
+  }
+}
+
 export function appendChatMessage(
   msg: Omit<ChatMessageMemory, "id" | "timestamp"> & { timestamp?: string }
 ): ChatMessageMemory {
@@ -83,6 +110,45 @@ export function appendChatMessage(
   }
 
   return newMsg;
+}
+
+export async function appendPersistentChatMessage(
+  msg: Omit<ChatMessageMemory, "id" | "timestamp"> & { timestamp?: string }
+): Promise<ChatMessageMemory> {
+  if (!isDbConfigured()) return appendChatMessage(msg);
+
+  try {
+    const created = await (prisma as any).aiChatMessage.create({
+      data: {
+        role: msg.role,
+        content: msg.content,
+        storyCards: msg.storyCards || undefined,
+        createdAt: msg.timestamp ? new Date(msg.timestamp) : undefined,
+      },
+    });
+
+    const excess = await (prisma as any).aiChatMessage.findMany({
+      orderBy: { createdAt: "desc" },
+      skip: MAX_MEMORY_ITEMS,
+      select: { id: true },
+    });
+    if (excess.length > 0) {
+      await (prisma as any).aiChatMessage.deleteMany({
+        where: { id: { in: excess.map((row: any) => row.id) } },
+      });
+    }
+
+    return {
+      id: created.id,
+      role: created.role,
+      content: created.content,
+      timestamp: created.createdAt.toISOString(),
+      storyCards: Array.isArray(created.storyCards) ? created.storyCards : undefined,
+    };
+  } catch (err) {
+    console.error("Failed to write persistent AI chat memory:", err);
+    return appendChatMessage(msg);
+  }
 }
 
 export function updateMemoryCardStatus(
@@ -118,6 +184,44 @@ export function updateMemoryCardStatus(
   }
 }
 
+export async function updatePersistentMemoryCardStatus(
+  cardId: string,
+  newStatus: Exclude<StoryCardStatus, "new" | "paraphrasing">
+): Promise<boolean> {
+  if (!isDbConfigured()) return updateMemoryCardStatus(cardId, newStatus);
+
+  try {
+    const rows = await (prisma as any).aiChatMessage.findMany({
+      orderBy: { createdAt: "desc" },
+      take: MAX_MEMORY_ITEMS,
+    });
+
+    let updated = false;
+    await Promise.all(
+      rows.map(async (row: any) => {
+        const cards = Array.isArray(row.storyCards) ? row.storyCards : [];
+        const nextCards = cards.map((card: any) => {
+          if (card.id !== cardId) return card;
+          updated = true;
+          return { ...card, status: newStatus };
+        });
+
+        if (nextCards !== cards && cards.some((card: any) => card.id === cardId)) {
+          await (prisma as any).aiChatMessage.update({
+            where: { id: row.id },
+            data: { storyCards: nextCards },
+          });
+        }
+      })
+    );
+
+    return updated;
+  } catch (err) {
+    console.error("Failed to update persistent memory card status:", err);
+    return updateMemoryCardStatus(cardId, newStatus);
+  }
+}
+
 export function clearChatMemory(): boolean {
   try {
     globalForMemory._aiChatMemory = [];
@@ -128,5 +232,18 @@ export function clearChatMemory(): boolean {
   } catch (err) {
     console.error("Failed to clear AI chat memory:", err);
     return false;
+  }
+}
+
+export async function clearPersistentChatMemory(): Promise<boolean> {
+  if (!isDbConfigured()) return clearChatMemory();
+
+  try {
+    await (prisma as any).aiChatMessage.deleteMany({});
+    clearChatMemory();
+    return true;
+  } catch (err) {
+    console.error("Failed to clear persistent AI chat memory:", err);
+    return clearChatMemory();
   }
 }

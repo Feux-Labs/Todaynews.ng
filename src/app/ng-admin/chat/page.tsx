@@ -30,7 +30,9 @@ interface StoryCard {
   id: string;
   title: string;
   summary: string;
+  content?: string;
   sourceName: string;
+  sourceUrl?: string;
   category: string;
   imageUrl?: string;
   status: "new" | "sent_to_inbox" | "in_draft";
@@ -199,8 +201,10 @@ export default function AIChatPage() {
           storyId: card.id,
           storyTitle: card.title,
           storySummary: card.summary,
+          storyContent: card.content,
           storyCategory: card.category,
           storySource: card.sourceName,
+          storySourceUrl: card.sourceUrl,
           storyImageUrl: card.imageUrl,
         }),
       });

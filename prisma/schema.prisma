@@ -22,6 +22,7 @@ enum Category {
 enum Status {
   AI_PENDING
   DRAFT
+  SCHEDULED
   PUBLISHED
   UNPUBLISHED
   REJECTED
@@ -64,16 +65,39 @@ model Article {
   readTimeMinutes Int           @default(3)
   views           Int           @default(0)
   approvedById    String?
+  scheduledAt     DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   pages           ArticlePage[]
 
   // System Design: High-performance compound indexes for queries
   @@index([status, createdAt(sort: Desc)])
+  @@index([status, scheduledAt])
   @@index([status, category, createdAt(sort: Desc)])
   @@index([status, views(sort: Desc)])
   @@index([category])
   @@index([slug])
+}
+
+model AiChatMessage {
+  id         String   @id @default(cuid())
+  role       String
+  content    String
+  storyCards Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+}
+
+model SiteSettings {
+  id                 String   @id @default("singleton")
+  defaultAuthorName  String
+  defaultAuthorEmail String
+  defaultAuthorBio   String
+  siteName           String
+  siteTagline        String
+  contactEmail       String
+  updatedAt          DateTime @updatedAt
 }
 
 model ArticlePage {

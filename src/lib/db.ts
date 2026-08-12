@@ -12,7 +12,7 @@ export const prisma =
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-export type ArticleStatus = "AI_PENDING" | "DRAFT" | "PUBLISHED" | "UNPUBLISHED" | "REJECTED" | "PENDING";
+export type ArticleStatus = "AI_PENDING" | "DRAFT" | "SCHEDULED" | "PUBLISHED" | "UNPUBLISHED" | "REJECTED" | "PENDING";
 
 interface PageViewRecord {
   id: string;

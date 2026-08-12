@@ -31,6 +31,8 @@ interface DraftArticle {
   category: string;
   imageUrl?: string;
   author?: string;
+  status?: "DRAFT" | "SCHEDULED";
+  scheduledAt?: string | null;
   createdAt: string;
   pages: ArticlePage[];
 }
@@ -51,6 +53,7 @@ export default function DraftsPage() {
   const [editPages, setEditPages] = useState<ArticlePage[]>([]);
   const [activePageIdx, setActivePageIdx] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [editScheduledAt, setEditScheduledAt] = useState("");
 
   useEffect(() => {
     fetchDrafts();
@@ -59,7 +62,7 @@ export default function DraftsPage() {
   const fetchDrafts = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/articles?status=DRAFT");
+      const res = await fetch("/api/articles?status=DRAFT,SCHEDULED");
       if (res.ok) {
         const data = await res.json();
         setArticles(data.articles || data);
@@ -100,6 +103,7 @@ export default function DraftsPage() {
     setEditSummary(article.summary);
     setEditCategory(article.category);
     setEditAuthor((article as any).author || "");
+    setEditScheduledAt(article.scheduledAt ? article.scheduledAt.slice(0, 16) : "");
     setEditPages(
       article.pages.length > 0
         ? [...article.pages]
@@ -138,8 +142,12 @@ export default function DraftsPage() {
     setActivePageIdx(Math.min(activePageIdx, updated.length - 1));
   };
 
-  const saveFullEdit = async () => {
+  const saveFullEdit = async (targetStatus: "DRAFT" | "PUBLISHED" = "DRAFT", scheduledAt?: string) => {
     if (!editingArticle) return;
+    if (scheduledAt && new Date(scheduledAt).getTime() <= Date.now()) {
+      alert("Choose a future date and time for scheduled publishing.");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/articles/${editingArticle.id}`, {
@@ -150,6 +158,8 @@ export default function DraftsPage() {
           summary: editSummary,
           category: editCategory,
           author: editAuthor,
+          status: targetStatus,
+          scheduledAt,
           pages: editPages,
         }),
       });
@@ -170,6 +180,9 @@ export default function DraftsPage() {
           )
         );
         closeEditor();
+        if (targetStatus === "PUBLISHED") {
+          await fetchDrafts();
+        }
       }
     } catch (err) {
       console.error("Save failed:", err);
@@ -228,6 +241,12 @@ export default function DraftsPage() {
                       <span className="text-[10px] px-2 py-0.5 bg-[#aa00ff]/10 text-[#aa00ff] rounded-full font-medium">
                         <Tag className="w-3 h-3 inline mr-1" />{article.category}
                       </span>
+                      {article.status === "SCHEDULED" && article.scheduledAt && (
+                        <span className="text-[10px] text-amber-300 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Scheduled {new Date(article.scheduledAt).toLocaleString("en-NG")}
+                        </span>
+                      )}
                       <span className="text-[10px] text-slate-500 flex items-center gap-1">
                         <Eye className="w-3 h-3" /> {article.pages?.length || 0} page{article.pages?.length !== 1 ? "s" : ""}
                       </span>
@@ -276,12 +295,20 @@ export default function DraftsPage() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={saveFullEdit}
+                onClick={() => saveFullEdit("DRAFT")}
                 disabled={saving}
                 className="flex items-center gap-1.5 px-4 py-1.5 bg-[#00e676] hover:bg-[#00c853] text-[#060b18] text-xs font-bold rounded-lg transition disabled:opacity-60"
               >
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 {saving ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                onClick={() => saveFullEdit("PUBLISHED")}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-bold rounded-lg border border-emerald-500/30 transition disabled:opacity-60"
+              >
+                <Rocket className="w-3.5 h-3.5" />
+                Publish
               </button>
               <button
                 onClick={closeEditor}
@@ -339,6 +366,24 @@ export default function DraftsPage() {
                     placeholder="Author name"
                     className="w-full px-2.5 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30"
                   />
+                </div>
+
+                <div className="pt-3 border-t border-white/5 space-y-2">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Schedule Publish</label>
+                  <input
+                    type="datetime-local"
+                    value={editScheduledAt}
+                    onChange={(e) => setEditScheduledAt(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30"
+                  />
+                  <button
+                    onClick={() => saveFullEdit("PUBLISHED", editScheduledAt)}
+                    disabled={saving || !editScheduledAt}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-bold rounded-lg border border-amber-500/30 transition disabled:opacity-50"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    Schedule Article
+                  </button>
                 </div>
               </div>
 

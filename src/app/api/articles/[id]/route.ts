@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
@@ -30,11 +32,15 @@ export async function PATCH(
 ) {
   try {
     const data = await request.json();
-    const { status, title, summary, category, author } = data;
+    const { status, title, summary, category, author, scheduledAt } = data;
+    const requestedStatus = status?.toString().toUpperCase();
+    const nextStatus = scheduledAt && requestedStatus === "PUBLISHED" ? "SCHEDULED" : requestedStatus;
 
     if (isDbConfigured()) {
       const updateData: any = {};
-      if (status !== undefined) updateData.status = status;
+      if (status !== undefined) updateData.status = nextStatus;
+      if (scheduledAt !== undefined) updateData.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+      else if (nextStatus === "PUBLISHED") updateData.scheduledAt = null;
       if (title !== undefined) updateData.title = title;
       if (summary !== undefined) updateData.summary = summary;
       if (category !== undefined) updateData.category = category;
@@ -61,47 +67,65 @@ export async function PUT(
 ) {
   try {
     const data = await request.json();
-    const { status, title, summary, category, pages, author } = data;
+      const { status, title, summary, category, pages, author, imageUrl, readTimeMinutes, scheduledAt } = data;
+      const requestedStatus = status?.toString().toUpperCase();
+      const nextStatus = scheduledAt && requestedStatus === "PUBLISHED" ? "SCHEDULED" : requestedStatus;
 
     if (isDbConfigured()) {
-      if (status && !pages) {
-        const updated = await prisma.article.update({
-          where: { id: params.id },
-          data: { status: status as any, author: author || undefined },
-        });
-        return NextResponse.json(updated);
-      } else {
-        await prisma.articlePage.deleteMany({
-          where: { articleId: params.id },
-        });
-
+      // Status-only update (e.g. approve from inbox)
+      if (status && !pages && !title) {
         const updated = await prisma.article.update({
           where: { id: params.id },
           data: {
-            title,
-            summary,
-            category: category as any,
+            status: nextStatus as any,
             author: author || undefined,
-            pages: {
-              create: pages.map((p: any, idx: number) => ({
-                pageNumber: idx + 1,
-                title: p.title || null,
-                content: p.content,
-              })),
-            },
+            scheduledAt: scheduledAt ? new Date(scheduledAt) : nextStatus === "PUBLISHED" ? null : undefined,
           },
-          include: { pages: true },
         });
         return NextResponse.json(updated);
       }
+
+      // Full article update from CMS editor (may include status + pages together)
+      await prisma.articlePage.deleteMany({
+        where: { articleId: params.id },
+      });
+
+      const updateData: any = {
+        ...(title !== undefined && { title }),
+        ...(summary !== undefined && { summary }),
+        ...(category !== undefined && { category: category.toUpperCase() as any }),
+        ...(author !== undefined && { author }),
+        ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
+        ...(readTimeMinutes !== undefined && { readTimeMinutes: Number(readTimeMinutes) || 3 }),
+        ...(status !== undefined && { status: nextStatus as any }),
+        ...(scheduledAt !== undefined && { scheduledAt: scheduledAt ? new Date(scheduledAt) : null }),
+        ...(scheduledAt === undefined && nextStatus === "PUBLISHED" && { scheduledAt: null }),
+      };
+
+      if (pages && pages.length > 0) {
+        updateData.pages = {
+          create: pages.map((p: any, idx: number) => ({
+            pageNumber: idx + 1,
+            title: p.title || null,
+            content: p.content || summary,
+          })),
+        };
+      }
+
+      const updated = await prisma.article.update({
+        where: { id: params.id },
+        data: updateData,
+        include: { pages: { orderBy: { pageNumber: "asc" } } },
+      });
+      return NextResponse.json(updated);
     } else {
-      if (status && !pages) {
+      // Memory DB path
+      if (status && !pages && !title) {
         const updated = await memoryDb.updateArticleStatus(params.id, status);
         return NextResponse.json(updated);
-      } else {
-        const updated = await memoryDb.updateArticlePages(params.id, title, summary, category, pages);
-        return NextResponse.json(updated);
       }
+      const updated = await memoryDb.updateArticlePages(params.id, title, summary, category, pages);
+      return NextResponse.json(updated);
     }
   } catch (error) {
     console.error("PUT Article error:", error);
