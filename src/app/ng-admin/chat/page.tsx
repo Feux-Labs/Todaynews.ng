@@ -16,14 +16,13 @@ import {
   Trash2,
   Copy,
   CheckCircle,
-  AlertCircle,
 } from "lucide-react";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  timestamp: Date;
+  timestamp: string; // Stored as ISO string for reliable JSON serialization
   storyCards?: StoryCard[];
 }
 
@@ -37,6 +36,16 @@ interface StoryCard {
   status: "new" | "sent_to_inbox" | "in_draft";
 }
 
+const LOCAL_STORAGE_KEY = "todaynews_ai_chat_history_v2";
+
+const DEFAULT_WELCOME_MSG: Message = {
+  id: "welcome",
+  role: "assistant",
+  content:
+    "Welcome to the Todaynews.ng AI Editor! 🇳🇬\n\nI can help you:\n• **Scrape** news from any source or topic\n• **Paraphrase** articles for unique content\n• **Find** trending stories across Nigeria\n• **Search** for specific topics (politics, sports, entertainment, etc.)\n\nTry typing a command like: \"Fetch latest Punch NG headlines\" or \"Find trending security news\"",
+  timestamp: new Date().toISOString(),
+};
+
 const SUGGESTIONS = [
   { icon: Search, label: "Fetch trending Nigeria news" },
   { icon: Globe, label: "Scrape Punch NG for latest headlines" },
@@ -45,15 +54,7 @@ const SUGGESTIONS = [
 ];
 
 export default function AIChatPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content:
-        "Welcome to the Todaynews.ng AI Editor! 🇳🇬\n\nI can help you:\n• **Scrape** news from any source or topic\n• **Paraphrase** articles for unique content\n• **Find** trending stories across Nigeria\n• **Search** for specific topics (politics, sports, entertainment, etc.)\n\nTry typing a command like: \"Fetch latest Punch NG headlines\" or \"Find trending security news\"",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([DEFAULT_WELCOME_MSG]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<{ cardId: string; action: string } | null>(null);
@@ -61,10 +62,36 @@ export default function AIChatPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const isInitialMount = useRef(true);
 
+  // ── Load history on mount (LocalStorage first for instant zero-latency load, then API sync)
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load local chat history:", err);
+    }
     fetchHistory();
   }, []);
+
+  // ── Sync messages to LocalStorage whenever messages state changes
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(messages));
+    } catch (err) {
+      console.error("Failed to save local chat history:", err);
+    }
+  }, [messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -81,34 +108,30 @@ export default function AIChatPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.history && data.history.length > 0) {
-          const loaded = data.history.map((m: any) => ({
+          // Merge server history with local history if server has items
+          const serverMsgs = data.history.map((m: any) => ({
             ...m,
-            timestamp: new Date(m.timestamp),
+            timestamp: typeof m.timestamp === "string" ? m.timestamp : new Date(m.timestamp).toISOString(),
           }));
-          setMessages(loaded);
+          
+          setMessages((prev) => {
+            // Keep existing messages if longer, else use server history
+            return serverMsgs.length >= prev.length ? serverMsgs : prev;
+          });
         }
       }
     } catch (err) {
-      console.error("Failed to load chat history:", err);
+      console.error("Failed to load server chat history:", err);
     }
   };
 
   const handleClearHistory = async () => {
     if (!confirm("Are you sure you want to clear the AI Chat conversation history?")) return;
     try {
-      const res = await fetch("/api/admin/chat", { method: "DELETE" });
-      if (res.ok) {
-        setMessages([
-          {
-            id: "welcome",
-            role: "assistant",
-            content:
-              "Welcome to the Todaynews.ng AI Editor! 🇳🇬\n\nI can help you:\n• **Scrape** news from any source or topic\n• **Paraphrase** articles for unique content\n• **Find** trending stories across Nigeria\n• **Search** for specific topics (politics, sports, entertainment, etc.)\n\nTry typing a command like: \"Fetch latest Punch NG headlines\" or \"Find trending security news\"",
-            timestamp: new Date(),
-          },
-        ]);
-        showToast("Chat memory cleared");
-      }
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+      await fetch("/api/admin/chat", { method: "DELETE" });
+      setMessages([DEFAULT_WELCOME_MSG]);
+      showToast("Chat memory cleared");
     } catch (err) {
       console.error("Failed to clear chat memory:", err);
     }
@@ -122,7 +145,7 @@ export default function AIChatPage() {
       id: `msg-${Date.now()}`,
       role: "user",
       content: messageText,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -142,7 +165,7 @@ export default function AIChatPage() {
         id: `msg-${Date.now()}-ai`,
         role: "assistant",
         content: data.reply || "I processed your request.",
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         storyCards: data.stories || [],
       };
 
@@ -154,7 +177,7 @@ export default function AIChatPage() {
           id: `msg-${Date.now()}-err`,
           role: "assistant",
           content: "⚠️ Connection error. Please try again.",
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
       ]);
     } finally {
@@ -209,7 +232,7 @@ export default function AIChatPage() {
         id: `msg-${Date.now()}-action`,
         role: "assistant",
         content: data.reply || `✅ Action completed successfully!`,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         storyCards: data.stories || [],
       };
 
@@ -217,7 +240,7 @@ export default function AIChatPage() {
 
       const toastLabel =
         action === "send_to_inbox"
-          ? "Saved to Inbox (Pending Approval)!"
+          ? "Saved to Inbox (Pending Review)!"
           : action === "add_to_draft"
           ? "Saved to Drafts!"
           : "Paraphrased with AI!";
@@ -280,6 +303,11 @@ export default function AIChatPage() {
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.map((msg) => {
           const hasMarkdown = msg.content.includes("###") || msg.content.includes("**");
+          const displayTime = new Date(msg.timestamp).toLocaleTimeString("en-NG", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
           return (
             <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
               {msg.role === "assistant" && (
@@ -311,9 +339,7 @@ export default function AIChatPage() {
                 )}
 
                 <div className="text-sm whitespace-pre-wrap leading-relaxed pr-6">{msg.content}</div>
-                <p className="text-[9px] text-slate-500 mt-2 font-mono">
-                  {msg.timestamp.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}
-                </p>
+                <p className="text-[9px] text-slate-500 mt-2 font-mono">{displayTime}</p>
 
                 {/* Story Cards */}
                 {msg.storyCards && msg.storyCards.length > 0 && (
