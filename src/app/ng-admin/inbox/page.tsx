@@ -15,7 +15,9 @@ import {
   Loader2,
   Search,
   Globe,
+  Pencil,
 } from "lucide-react";
+import Link from "next/link";
 
 interface InboxArticle {
   id: string;
@@ -284,12 +286,18 @@ export default function InboxPage() {
 
               {/* Action Buttons */}
               {editingId !== article.id && (
-                <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
+                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/5">
+                  <Link
+                    href={`/ng-admin/editor?id=${article.id}`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00e676]/10 text-[#00e676] text-xs font-bold rounded-md hover:bg-[#00e676]/20 transition"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Edit in CMS
+                  </Link>
                   <button
                     onClick={() => startEdit(article)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-300 text-xs font-medium rounded-md hover:bg-white/10 transition"
                   >
-                    <FileEdit className="w-3.5 h-3.5" /> Edit
+                    <FileEdit className="w-3.5 h-3.5" /> Quick Edit
                   </button>
                   <button
                     onClick={() => handleParaphrase(article)}
@@ -305,7 +313,7 @@ export default function InboxPage() {
                   </button>
                   <button
                     onClick={() => handleAction(article.id, "approve")}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00e676]/10 text-[#00e676] text-xs font-medium rounded-md hover:bg-[#00e676]/20 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-medium rounded-md hover:bg-amber-500/20 transition"
                   >
                     <Check className="w-3.5 h-3.5" /> Approve → Draft
                   </button>
