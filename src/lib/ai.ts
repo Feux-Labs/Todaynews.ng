@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { geminiBreaker } from "./circuitBreaker";
+import { sanitizeArticleHtml, textToParagraphHtml } from "./content";
 
 export type AllowedCategory =
   | "POLITICS"
@@ -58,22 +59,22 @@ function localProceduralRewriter(
   pages.push({
     pageNumber: 1,
     title: "Core Developments & Verified Reports",
-    content: `<p class="mb-4">${paragraphs[0] || "Breaking news reports indicate significant developments today as official channels and key stakeholders review preliminary findings."}</p>` +
-             `<p class="mb-4 font-semibold italic text-muted">Note: Details surrounding this incident remain subject to official verification by relevant authorities and emergency response agencies.</p>`,
+    content: textToParagraphHtml(paragraphs[0] || "Breaking news reports indicate significant developments today as official channels and key stakeholders review preliminary findings.") +
+             `<p class="mb-4"><em>Note: Details surrounding this incident remain subject to official verification by relevant authorities and emergency response agencies.</em></p>`,
   });
 
   pages.push({
     pageNumber: 2,
     title: "Why This Matters & Background Context",
     content: `<div class="p-4 bg-paper border-l-4 border-flag my-4 rounded"><h4 class="font-bold text-ink mb-1">🇳🇬 Why This Matters to Nigerians</h4><p class="text-sm text-muted">Economic and social policy shifts directly impact inflation, purchasing power, and local communities across Lagos, Abuja, and key state capitals.</p></div>` +
-             `<p class="mb-4">${paragraphs[1] || "Historical precedents show that similar events in previous quarters led to key policy adjustments and institutional advisories."}</p>`,
+             textToParagraphHtml(paragraphs[1] || "Historical precedents show that similar events in previous quarters led to key policy adjustments and institutional advisories."),
   });
 
   pages.push({
     pageNumber: 3,
     title: "What Happens Next & Expert Outlook",
-    content: `<p class="mb-4">${paragraphs[2] || "Stakeholders and civil society groups are awaiting official press briefings from government representatives to determine next steps."}</p>` +
-             `<p class="mb-4 font-bold">Follow Todaynews.ng for real-time coverage, verified updates, and in-depth analysis on this developing story.</p>`,
+    content: textToParagraphHtml(paragraphs[2] || "Stakeholders and civil society groups are awaiting official press briefings from government representatives to determine next steps.") +
+             `<p class="mb-4"><strong>Follow Todaynews.ng for real-time coverage, verified updates, and in-depth analysis on this developing story.</strong></p>`,
   });
 
   return {
@@ -81,6 +82,22 @@ function localProceduralRewriter(
     summary: paragraphs[0] ? paragraphs[0].substring(0, 160) + "..." : "Verified Nigerian breaking news report from Todaynews.ng editorial desk.",
     category: cleanCategory,
     pages,
+  };
+}
+
+function normalizeParaphrasedResult(result: ParaphrasedResult, fallback: ParaphrasedResult): ParaphrasedResult {
+  const cleanCategory = VALID_CATEGORIES.has(result.category) ? result.category : fallback.category;
+  const pages = Array.isArray(result.pages) && result.pages.length > 0 ? result.pages : fallback.pages;
+
+  return {
+    title: (result.title || fallback.title).trim(),
+    summary: (result.summary || fallback.summary).trim(),
+    category: cleanCategory,
+    pages: pages.map((page, index) => ({
+      pageNumber: index + 1,
+      title: page.title || `Section ${index + 1}`,
+      content: sanitizeArticleHtml(page.content || fallback.pages[index]?.content || fallback.summary),
+    })),
   };
 }
 
@@ -100,12 +117,13 @@ export async function paraphraseNews(
     console.log("Todaynews.ng AI: GEMINI_API_KEY is not configured. Using local fallback.");
     return localProceduralRewriter(rawText, rawTitle, category);
   }
+  const fallback = localProceduralRewriter(rawText, rawTitle, category);
 
   return geminiBreaker.execute(
     async () => {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
-        model: "gemini-3.6-flash",
+        model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
         generationConfig: {
           responseMimeType: "application/json",
         },
@@ -166,16 +184,11 @@ export async function paraphraseNews(
         throw new Error("Empty response from Gemini API");
       }
 
-      const parsedResult = JSON.parse(text) as ParaphrasedResult;
-      // Sanitize category return value
-      if (!VALID_CATEGORIES.has(parsedResult.category)) {
-        parsedResult.category = "POLITICS";
-      }
-      return parsedResult;
+      return normalizeParaphrasedResult(JSON.parse(text) as ParaphrasedResult, fallback);
     },
     () => {
       console.log("Todaynews.ng AI: Circuit is open or request failed. Using local fallback rewriter.");
-      return localProceduralRewriter(rawText, rawTitle, category);
+      return fallback;
     }
   );
 }
@@ -323,4 +336,3 @@ function smartLocalChat(userMessage: string): ChatAiResponse {
     reply: `As the Todaynews.ng AI Editor, I can help you stay informed. Try asking me to:\n• Search for specific news topics (e.g. "find terror news today")\n• Fetch latest stories from a category (e.g. "get latest business news")\n• Scrape trending Nigerian stories (e.g. "what's trending in Nigeria right now")\n\nWhat would you like me to look up?`,
   };
 }
-

@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { adminStore } from "@/app/api/auth/[...nextauth]/options";
-import bcrypt from "bcryptjs";
+import { createAdminUser, listAdminUsers } from "@/lib/adminUsers";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const users = adminStore.getAll();
+    const users = await listAdminUsers();
     return NextResponse.json({ users });
   } catch (err) {
     return NextResponse.json({ error: "Failed to fetch admins" }, { status: 500 });
@@ -21,13 +20,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    const created = adminStore.create({
+    const created = await createAdminUser({
       name,
       email,
-      hashedPassword,
+      password,
       role: role || "EDITOR",
-      active: true,
     });
 
     return NextResponse.json({ user: created }, { status: 201 });

@@ -65,7 +65,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 }
 
 /**
- * Send a "New Story Scraped" alert email with approve/review buttons.
+ * Send a "New Story Scraped" alert email with review/draft buttons.
  */
 export async function sendNewStoryAlert(story: {
   id: string;
@@ -94,11 +94,11 @@ export async function sendNewStoryAlert(story: {
       <div style="text-align: center;">
         <a href="${baseUrl}/api/articles/${story.id}/approve?token=${approveToken}"
            style="display: inline-block; background: #00e676; color: #0a0f1c; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; margin-right: 12px;">
-          ✅ APPROVE & PUBLISH
+          APPROVE TO DRAFT
         </a>
         <a href="${baseUrl}/ng-admin/inbox?highlight=${story.id}"
            style="display: inline-block; background: #334155; color: #f8fafc; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
-          📝 REVIEW STORY
+          REVIEW IN INBOX
         </a>
       </div>
 
@@ -110,7 +110,7 @@ export async function sendNewStoryAlert(story: {
 
   return sendEmail({
     to: adminEmail,
-    subject: `🔥 New Story: ${story.title.substring(0, 60)}`,
+    subject: `New story ready for review: ${story.title.substring(0, 60)}`,
     html,
   });
 }

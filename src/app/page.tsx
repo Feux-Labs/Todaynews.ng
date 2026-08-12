@@ -34,7 +34,7 @@ async function getPublishedArticles(): Promise<ArticleData[]> {
           slug: a.slug,
           summary: a.summary,
           category: a.category,
-          status: a.status,
+          status: "PUBLISHED",
           sourceUrl: a.sourceUrl || undefined,
           sourceName: a.sourceName || undefined,
           imageUrl: a.imageUrl || undefined,

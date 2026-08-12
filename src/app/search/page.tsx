@@ -42,7 +42,7 @@ async function searchArticles(query: string): Promise<ArticleData[]> {
           slug: a.slug,
           summary: a.summary,
           category: a.category,
-          status: a.status,
+          status: "PUBLISHED",
           imageUrl: a.imageUrl || undefined,
           author: a.author,
           readTimeMinutes: a.readTimeMinutes,

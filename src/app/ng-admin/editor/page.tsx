@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   PenTool,
@@ -24,6 +24,7 @@ import {
   X,
   Search,
   ExternalLink,
+  Upload,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -63,6 +64,7 @@ export default function CmsEditorPage() {
   const [summary, setSummary] = useState("");
   const [author, setAuthor] = useState("Gideon Ibitoye");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
   const [readTimeMinutes, setReadTimeMinutes] = useState(3);
   const [pages, setPages] = useState<ArticlePageData[]>([
     { pageNumber: 1, title: "Core Developments & Breaking Report", content: "" },
@@ -88,6 +90,7 @@ export default function CmsEditorPage() {
   const [relatedArticles, setRelatedArticles] = useState<RelatedArticleItem[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
   const [relatedSearch, setRelatedSearch] = useState("");
+  const editorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Load default author name from settings if available
@@ -143,17 +146,31 @@ export default function CmsEditorPage() {
     }
   };
 
-  // Helper to insert HTML tags or links into current page content
+  // Helper to update the saved HTML while keeping the editor visually rendered.
   const updateActivePageContent = (newContent: string) => {
     setPages((prev) =>
       prev.map((p, i) => (i === activePageIndex ? { ...p, content: newContent } : p))
     );
   };
 
-  const insertTag = (startTag: string, endTag: string = "") => {
-    const activeContent = pages[activePageIndex]?.content || "";
-    const updated = activeContent + `${startTag}${endTag}`;
-    updateActivePageContent(updated);
+  const syncEditorContent = () => {
+    updateActivePageContent(editorRef.current?.innerHTML || "");
+  };
+
+  const focusEditor = () => {
+    editorRef.current?.focus();
+  };
+
+  const execEditorCommand = (command: string, value?: string) => {
+    focusEditor();
+    document.execCommand(command, false, value);
+    syncEditorContent();
+  };
+
+  const insertHtmlAtCursor = (html: string) => {
+    focusEditor();
+    document.execCommand("insertHTML", false, html);
+    syncEditorContent();
   };
 
   const handleAddLink = () => {
@@ -161,14 +178,40 @@ export default function CmsEditorPage() {
     const href = linkUrl.startsWith("http") ? linkUrl : `https://${linkUrl.trim()}`;
     const textToDisplay = linkText.trim() || href;
     const linkHtml = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-[#00e676] underline font-medium hover:text-[#00c853]">${textToDisplay}</a>`;
-    
-    const activeContent = pages[activePageIndex]?.content || "";
-    updateActivePageContent(activeContent + " " + linkHtml + " ");
+    insertHtmlAtCursor(` ${linkHtml} `);
     
     setShowLinkModal(false);
     setLinkUrl("");
     setLinkText("");
     showToastMsg("Hyperlink inserted!");
+  };
+
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const fileData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Failed to read image file."));
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch("/api/images/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileData }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error || "Image upload failed.");
+      setImageUrl(data.url);
+      showToastMsg("Featured image uploaded.");
+    } catch (err: any) {
+      console.error("Image upload failed:", err);
+      showToastMsg(err?.message || "Image upload failed.", "error");
+    } finally {
+      setImageUploading(false);
+    }
   };
 
   const fetchRelatedStories = async () => {
@@ -468,7 +511,7 @@ export default function CmsEditorPage() {
               <div className="flex flex-wrap items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/10">
                 <button
                   type="button"
-                  onClick={() => insertTag("<strong>", "</strong>")}
+                onClick={() => execEditorCommand("bold")}
                   className="px-2.5 py-1 text-xs font-bold text-slate-200 bg-white/5 hover:bg-white/10 rounded"
                   title="Bold"
                 >
@@ -476,7 +519,7 @@ export default function CmsEditorPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => insertTag("<em>", "</em>")}
+                onClick={() => execEditorCommand("italic")}
                   className="px-2.5 py-1 text-xs italic font-bold text-slate-200 bg-white/5 hover:bg-white/10 rounded"
                   title="Italic"
                 >
@@ -484,7 +527,7 @@ export default function CmsEditorPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => insertTag("<h3 class=\"text-lg font-bold text-white my-3\">", "</h3>")}
+                onClick={() => execEditorCommand("formatBlock", "h3")}
                   className="px-2.5 py-1 text-xs font-bold text-slate-200 bg-white/5 hover:bg-white/10 rounded"
                   title="Subheading"
                 >
@@ -492,7 +535,7 @@ export default function CmsEditorPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => insertTag("<p class=\"mb-4\">", "</p>")}
+                onClick={() => execEditorCommand("formatBlock", "p")}
                   className="px-2.5 py-1 text-xs text-slate-200 bg-white/5 hover:bg-white/10 rounded"
                   title="Paragraph"
                 >
@@ -522,17 +565,20 @@ export default function CmsEditorPage() {
                 </button>
               </div>
 
-              {/* HTML Editor Textarea */}
-              <textarea
-                value={pages[activePageIndex]?.content || ""}
-                onChange={(e) => updateActivePageContent(e.target.value)}
-                rows={12}
-                placeholder={`Write or paste HTML/Text for Page ${activePageIndex + 1}...`}
-                className="w-full p-4 bg-[#0a0f1d] border border-white/10 rounded-lg text-slate-200 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 resize-y"
+              <div
+                key={activePageIndex}
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={syncEditorContent}
+                onBlur={syncEditorContent}
+                data-placeholder={`Write article content for Page ${activePageIndex + 1}...`}
+                dangerouslySetInnerHTML={{ __html: pages[activePageIndex]?.content || "" }}
+                className="min-h-72 w-full p-4 bg-[#0a0f1d] border border-white/10 rounded-lg text-slate-200 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 prose prose-invert max-w-none prose-a:text-[#00e676] prose-a:underline prose-p:mb-4 empty:before:content-[attr(data-placeholder)] empty:before:text-slate-600"
               />
 
               <p className="text-[11px] text-slate-500">
-                Tip: HTML tags like &lt;p class="mb-4"&gt;, &lt;strong&gt;, and &lt;a&gt; will render styled on the frontend website.
+                Links render as green text in the editor and on the public article.
               </p>
             </div>
           </div>
@@ -642,7 +688,7 @@ export default function CmsEditorPage() {
 
               {/* Featured Image */}
               <div className="space-y-2 pt-2 border-t border-white/5">
-                <label className="text-xs font-semibold text-slate-300 block">Featured Image URL</label>
+                <label className="text-xs font-semibold text-slate-300 block">Featured Image</label>
                 <div className="flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-slate-500 flex-shrink-0" />
                   <input
@@ -652,6 +698,17 @@ export default function CmsEditorPage() {
                     className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
                   />
                 </div>
+                <label className="flex items-center justify-center gap-2 px-3 py-2 bg-[#00e676]/10 hover:bg-[#00e676]/20 text-[#00e676] border border-[#00e676]/30 rounded-lg text-xs font-bold cursor-pointer transition">
+                  {imageUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  {imageUploading ? "Uploading..." : "Upload Image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={imageUploading}
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(e.target.files?.[0])}
+                  />
+                </label>
 
                 {imageUrl.trim() && (
                   <div className="mt-2 rounded-lg overflow-hidden border border-white/10 h-32 bg-black/40">

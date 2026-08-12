@@ -19,6 +19,9 @@ const CATEGORY_MAP: Record<string, string> = {
   sports: "SPORTS",
   security: "SECURITY",
   metro: "METRO",
+  education: "EDUCATION",
+  technology: "TECHNOLOGY",
+  health: "HEALTH",
 };
 
 interface CategoryPageProps {
@@ -59,7 +62,7 @@ async function getCategoryArticles(categoryKey: string): Promise<ArticleData[]> 
           slug: a.slug,
           summary: a.summary,
           category: a.category,
-          status: a.status,
+          status: "PUBLISHED",
           imageUrl: a.imageUrl || undefined,
           author: a.author,
           readTimeMinutes: a.readTimeMinutes,

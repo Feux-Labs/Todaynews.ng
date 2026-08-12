@@ -7,24 +7,30 @@ import {
   appendPersistentChatMessage,
   clearPersistentChatMemory,
   updatePersistentMemoryCardStatus,
+  listPersistentChatSessions,
 } from "@/lib/aiMemory";
 import { getPersistentServerSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const memory = await getPersistentChatMemory();
-    return NextResponse.json({ history: memory });
+    const { searchParams } = new URL(req.url);
+    const sessionId = searchParams.get("sessionId") || undefined;
+    const sessions = await listPersistentChatSessions();
+    const activeSessionId = sessionId || sessions[0]?.id;
+    const memory = await getPersistentChatMemory(activeSessionId);
+    return NextResponse.json({ history: memory, sessions, activeSessionId });
   } catch (err) {
     console.error("GET Chat history failed:", err);
     return NextResponse.json({ history: [] });
   }
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   try {
-    await clearPersistentChatMemory();
+    const { searchParams } = new URL(req.url);
+    await clearPersistentChatMemory(searchParams.get("sessionId") || undefined);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DELETE Chat memory failed:", err);
@@ -56,6 +62,34 @@ function sanitizeCategory(cat?: string): string {
   return "POLITICS";
 }
 
+async function findExistingArticle(sourceUrl?: string, title?: string) {
+  const cleanUrl = sourceUrl?.trim();
+  const cleanTitle = title?.trim();
+  if (!cleanUrl && !cleanTitle) return null;
+
+  if (isDbConfigured()) {
+    try {
+      return await prisma.article.findFirst({
+        where: {
+          OR: [
+            ...(cleanUrl ? [{ sourceUrl: cleanUrl }] : []),
+            ...(cleanTitle ? [{ title: { equals: cleanTitle, mode: "insensitive" as const } }] : []),
+          ],
+        },
+        select: { id: true, status: true, title: true },
+      });
+    } catch (err) {
+      console.error("[AI Chat] Duplicate DB lookup failed; checking memory fallback.", err);
+    }
+  }
+
+  const memoryArticles = await memoryDb.getArticles(undefined, undefined, 1, 100);
+  return (memoryArticles.articles || []).find((article: any) =>
+    (cleanUrl && article.sourceUrl === cleanUrl) ||
+    (cleanTitle && article.title.toLowerCase() === cleanTitle.toLowerCase())
+  ) || null;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -63,6 +97,7 @@ export async function POST(req: Request) {
       message,
       action,
       storyId,
+      sessionId,
       storyTitle,
       storySummary,
       storyContent,
@@ -82,6 +117,21 @@ export async function POST(req: Request) {
 
       if (action === "send_to_inbox" || action === "add_to_draft") {
         const targetStatus = action === "send_to_inbox" ? "AI_PENDING" : "DRAFT";
+        const existing = await findExistingArticle(storySourceUrl, safeTitle);
+        if (existing) {
+          const replyMsg = `This story already exists as "${existing.title}" with status ${existing.status}. I did not create a duplicate.`;
+          if (storyId) {
+            await updatePersistentMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft", sessionId);
+          }
+          await appendPersistentChatMessage({ role: "assistant", content: replyMsg, sessionId });
+          return NextResponse.json({
+            success: true,
+            articleId: existing.id,
+            duplicate: true,
+            newStatus: action === "send_to_inbox" ? "sent_to_inbox" : "in_draft",
+            reply: replyMsg,
+          });
+        }
 
         // Paraphrase article summary to build rich paginated content with 4s fast timeout fallback
         let article: any;
@@ -182,7 +232,7 @@ export async function POST(req: Request) {
         // Update card status in memory JSON
         if (storyId) {
           try {
-            await updatePersistentMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft");
+            await updatePersistentMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft", sessionId);
           } catch {}
         }
 
@@ -197,6 +247,7 @@ export async function POST(req: Request) {
           await appendPersistentChatMessage({
             role: "assistant",
             content: replyMsg,
+            sessionId,
           });
         } catch {}
 
@@ -309,6 +360,7 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
             role: "assistant",
             content: replyMsg,
             storyCards: [paraphrasedCard],
+            sessionId,
           });
         } catch {}
 
@@ -325,14 +377,16 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
       return NextResponse.json({ reply: "Please type a message to start chatting." });
     }
 
-    const history = await getPersistentChatMemory();
+    const history = await getPersistentChatMemory(sessionId);
     const cleanHistory = history.map((h) => ({ role: h.role, content: h.content }));
 
     // Append user message to history
-    await appendPersistentChatMessage({
+    const persistedUserMessage = await appendPersistentChatMessage({
       role: "user",
       content: message,
+      sessionId,
     });
+    const activeSessionId = persistedUserMessage.sessionId || sessionId;
 
     // Invoke Gemini reasoning engine to determine conversational reply or search intent
     const aiResponse = await chatWithAi(message, cleanHistory);
@@ -365,11 +419,13 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
       role: "assistant",
       content: aiResponse.reply,
       storyCards,
+      sessionId: activeSessionId,
     });
 
     return NextResponse.json({
       reply: aiResponse.reply,
       stories: storyCards,
+      sessionId: activeSessionId,
     });
   } catch (err) {
     console.error("[AI Chat API Error]:", err);

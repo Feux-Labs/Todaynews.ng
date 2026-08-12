@@ -16,6 +16,7 @@ import Pagination from "@/components/Pagination";
 import JsonLd from "@/components/JsonLd";
 import PageViewBeacon from "@/components/PageViewBeacon";
 import { ArticleData } from "@/lib/sample-data";
+import { sanitizeArticleHtml } from "@/lib/content";
 
 export const revalidate = 60;
 
@@ -31,20 +32,25 @@ interface ArticlePageProps {
 async function getArticle(slug: string): Promise<ArticleData | null> {
   try {
     if (isDbConfigured()) {
-      // Find article and increment views
-      const dbArticle = await prisma.article.update({
-        where: { slug },
-        data: { views: { increment: 1 } },
+      const publishedArticle = await prisma.article.findFirst({
+        where: { slug, status: "PUBLISHED" },
         include: { pages: { orderBy: { pageNumber: "asc" } } },
       });
-      if (dbArticle && dbArticle.status === "PUBLISHED") {
+
+      if (publishedArticle) {
+        const dbArticle = await prisma.article.update({
+          where: { id: publishedArticle.id },
+          data: { views: { increment: 1 } },
+          include: { pages: { orderBy: { pageNumber: "asc" } } },
+        });
+
         return {
           id: dbArticle.id,
           title: dbArticle.title,
           slug: dbArticle.slug,
           summary: dbArticle.summary,
           category: dbArticle.category,
-          status: dbArticle.status,
+          status: "PUBLISHED",
           imageUrl: dbArticle.imageUrl || undefined,
           author: dbArticle.author,
           readTimeMinutes: dbArticle.readTimeMinutes,
@@ -194,7 +200,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
           {/* ================= ARTICLE BODY ================= */}
           <div
             className="text-base text-ink leading-relaxed font-body space-y-4 pt-2"
-            dangerouslySetInnerHTML={{ __html: currentPageData?.content || "" }}
+            dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(currentPageData?.content || "") }}
           />
 
           {/* YARPP / Contextual related stories injected mid-way on multi-pages */}

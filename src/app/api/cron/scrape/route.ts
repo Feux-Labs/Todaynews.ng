@@ -7,6 +7,31 @@ import { getPersistentServerSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
+async function storyAlreadyExists(sourceUrl: string, title: string) {
+  if (isDbConfigured()) {
+    try {
+      const existing = await prisma.article.findFirst({
+        where: {
+          OR: [
+            { sourceUrl },
+            { title: { equals: title, mode: "insensitive" as const } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (existing) return true;
+    } catch (err) {
+      console.error("[Cron Scraper] Duplicate DB check failed; using memory fallback.", err);
+    }
+  }
+
+  const memoryArticles = await memoryDb.getArticles(undefined, undefined, 1, 100);
+  return (memoryArticles.articles || []).some((article: any) =>
+    article.sourceUrl === sourceUrl ||
+    article.title.toLowerCase() === title.toLowerCase()
+  );
+}
+
 /**
  * 30-Minute Automated Cron Job Endpoint
  * Triggered by Vercel Cron or manual GET request.
@@ -49,6 +74,11 @@ export async function GET(req: Request) {
     const savedStories = [];
 
     for (const story of stories) {
+      if (await storyAlreadyExists(story.sourceUrl, story.title)) {
+        console.log(`[Cron Scraper] Skipping duplicate story: ${story.title}`);
+        continue;
+      }
+
       // Paraphrase with Gemini AI
       const paraphrased = await paraphraseNews(story.content, story.title, story.category);
 

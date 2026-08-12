@@ -27,18 +27,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: r === "" ? 1.0 : 0.8,
   }));
 
-  try {
-    let articles: any[] = [];
-    if (isDbConfigured()) {
+  let articles: any[] = [];
+
+  if (isDbConfigured()) {
+    try {
       articles = await prisma.article.findMany({
         where: { status: "PUBLISHED" },
         select: { slug: true, updatedAt: true },
       });
-    } else {
-      const res = await memoryDb.getArticles(undefined, "PUBLISHED", 1, 100);
-      articles = res.articles || (res as any);
+    } catch (e) {
+      console.error("Failed to query sitemap articles from DB; using memory fallback:", e);
     }
+  }
 
+  if (articles.length === 0) {
+    const res = await memoryDb.getArticles(undefined, "PUBLISHED", 1, 100);
+    articles = res.articles || (res as any);
+  }
+
+  try {
     const articleSitemaps: MetadataRoute.Sitemap = articles.map((art: any) => ({
       url: `${baseUrl}/article/${art.slug}`,
       lastModified: art.updatedAt ? new Date(art.updatedAt) : new Date(),

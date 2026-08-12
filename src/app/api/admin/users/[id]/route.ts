@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { adminStore } from "@/app/api/auth/[...nextauth]/options";
+import { deleteAdminUser, updateAdminUser } from "@/lib/adminUsers";
+
+export const dynamic = "force-dynamic";
 
 export async function PATCH(
   req: Request,
@@ -7,7 +9,7 @@ export async function PATCH(
 ) {
   try {
     const body = await req.json();
-    const updated = adminStore.update(params.id, {
+    const updated = await updateAdminUser(params.id, {
       name: body.name,
       role: body.role,
       active: body.active,
@@ -29,7 +31,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const deleted = adminStore.delete(params.id);
+    const deleted = await deleteAdminUser(params.id);
     if (!deleted) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }

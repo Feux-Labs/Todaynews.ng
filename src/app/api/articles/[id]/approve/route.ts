@@ -4,8 +4,10 @@ import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 /**
  * One-click Email Approval Endpoint
  * Hits when admin clicks "APPROVE NOW" inside the ZeptoMail alert email.
- * Sets story status from AI_PENDING to PUBLISHED immediately.
+ * Moves story from AI_PENDING into DRAFT so editors can review before publishing.
  */
+export const dynamic = "force-dynamic";
+
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
@@ -16,16 +18,15 @@ export async function GET(
     if (isDbConfigured()) {
       await prisma.article.update({
         where: { id },
-        data: { status: "PUBLISHED" as any },
+        data: { status: "DRAFT" as any },
       });
     } else {
-      await memoryDb.updateArticleStatus(id, "PUBLISHED");
+      await memoryDb.updateArticleStatus(id, "DRAFT");
     }
 
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
-    // Redirect to admin published tab with success message
-    return NextResponse.redirect(`${baseUrl}/ng-admin/published?approved=${id}`);
+    return NextResponse.redirect(`${baseUrl}/ng-admin/drafts?approved=${id}`);
   } catch (err) {
     console.error("[Email Approve Error]:", err);
     return NextResponse.json({ error: "Approval failed" }, { status: 500 });

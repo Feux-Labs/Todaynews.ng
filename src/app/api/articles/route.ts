@@ -27,30 +27,33 @@ export async function GET(req: Request) {
         .filter(Boolean);
       where.status = statuses.length > 1 ? { in: statuses } : statuses[0];
 
-      const total = await prisma.article.count({ where });
-      const articles = await prisma.article.findMany({
-        where,
-        take: limit,
-        skip: (page - 1) * limit,
-        orderBy: { createdAt: "desc" },
-        include: { pages: { orderBy: { pageNumber: "asc" } } },
-      });
+      try {
+        const total = await prisma.article.count({ where });
+        const articles = await prisma.article.findMany({
+          where,
+          take: limit,
+          skip: (page - 1) * limit,
+          orderBy: { createdAt: "desc" },
+          include: { pages: { orderBy: { pageNumber: "asc" } } },
+        });
 
-      const response = NextResponse.json({
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        hasMore: (page - 1) * limit + limit < total,
-        articles,
-      });
+        const response = NextResponse.json({
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          hasMore: (page - 1) * limit + limit < total,
+          articles,
+        });
 
-      // System Design: Add Edge Caching Headers for Public Published Articles
-      if (status === "PUBLISHED" || !status) {
-        response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+        if (status === "PUBLISHED" || !status) {
+          response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+        }
+
+        return response;
+      } catch (dbErr) {
+        console.error("[API Articles GET DB fallback]:", dbErr);
       }
-
-      return response;
     }
 
     // Memory fallback paginated response
@@ -124,29 +127,33 @@ export async function POST(req: Request) {
       : [{ pageNumber: 1, content: summary }];
 
     if (isDbConfigured()) {
-      const created = await prisma.article.create({
-        data: {
-          title,
-          slug: uniqueSlug,
-          summary,
-          category: category.toUpperCase() as any,
-          status: resolvedStatus as any,
-          scheduledAt: resolvedScheduledAt,
-          imageUrl: imageUrl || undefined,
-          sourceName: sourceName || "Manual Editorial",
-          author: resolvedAuthor,
-          readTimeMinutes: resolvedReadTime,
-          pages: {
-            create: resolvedPages.map((p: any, idx: number) => ({
-              pageNumber: idx + 1,
-              title: p.title || null,
-              content: p.content || summary,
-            })),
+      try {
+        const created = await prisma.article.create({
+          data: {
+            title,
+            slug: uniqueSlug,
+            summary,
+            category: category.toUpperCase() as any,
+            status: resolvedStatus as any,
+            scheduledAt: resolvedScheduledAt,
+            imageUrl: imageUrl || undefined,
+            sourceName: sourceName || "Manual Editorial",
+            author: resolvedAuthor,
+            readTimeMinutes: resolvedReadTime,
+            pages: {
+              create: resolvedPages.map((p: any, idx: number) => ({
+                pageNumber: idx + 1,
+                title: p.title || null,
+                content: p.content || summary,
+              })),
+            },
           },
-        },
-        include: { pages: { orderBy: { pageNumber: "asc" } } },
-      });
-      return NextResponse.json(created, { status: 201 });
+          include: { pages: { orderBy: { pageNumber: "asc" } } },
+        });
+        return NextResponse.json(created, { status: 201 });
+      } catch (dbErr) {
+        console.error("[API Articles POST DB fallback]:", dbErr);
+      }
     }
 
     const created = await memoryDb.createArticle({

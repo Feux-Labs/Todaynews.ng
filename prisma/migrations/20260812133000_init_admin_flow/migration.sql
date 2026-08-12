@@ -48,12 +48,23 @@ CREATE TABLE "Article" (
 -- CreateTable
 CREATE TABLE "AiChatMessage" (
     "id" TEXT NOT NULL,
+    "sessionId" TEXT,
     "role" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "storyCards" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "AiChatMessage_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AiChatSession" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "AiChatSession_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -133,7 +144,13 @@ CREATE INDEX "Article_category_idx" ON "Article"("category");
 CREATE INDEX "Article_slug_idx" ON "Article"("slug");
 
 -- CreateIndex
+CREATE INDEX "AiChatMessage_sessionId_createdAt_idx" ON "AiChatMessage"("sessionId", "createdAt");
+
+-- CreateIndex
 CREATE INDEX "AiChatMessage_createdAt_idx" ON "AiChatMessage"("createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "AiChatSession_updatedAt_idx" ON "AiChatSession"("updatedAt" DESC);
 
 -- CreateIndex
 CREATE INDEX "ArticlePage_articleId_idx" ON "ArticlePage"("articleId");
@@ -155,6 +172,9 @@ CREATE INDEX "PageView_visitedAt_articleSlug_idx" ON "PageView"("visitedAt", "ar
 
 -- CreateIndex
 CREATE INDEX "PageView_category_idx" ON "PageView"("category");
+
+-- AddForeignKey
+ALTER TABLE "AiChatMessage" ADD CONSTRAINT "AiChatMessage_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "AiChatSession"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ArticlePage" ADD CONSTRAINT "ArticlePage_articleId_fkey" FOREIGN KEY ("articleId") REFERENCES "Article"("id") ON DELETE CASCADE ON UPDATE CASCADE;

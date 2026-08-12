@@ -112,8 +112,7 @@ export async function writePersistentServerSettings(data: Partial<SiteSettings>)
       };
       return { ...memorySettings };
     } catch (err) {
-      console.error("[Settings] Database write failed.", err);
-      throw err;
+      console.error("[Settings] Database write failed; using fallback settings store.", err);
     }
   }
 

@@ -11,13 +11,17 @@ export async function GET(req: Request) {
 
     if (type === "counts") {
       if (isDbConfigured()) {
-        const [total, published, drafts, pending] = await Promise.all([
-          prisma.article.count(),
-          prisma.article.count({ where: { status: "PUBLISHED" as any } }),
-          prisma.article.count({ where: { status: "DRAFT" as any } }),
-          prisma.article.count({ where: { status: { in: ["AI_PENDING" as any, "PENDING" as any] } } }),
-        ]);
-        return NextResponse.json({ total, published, drafts, pending });
+        try {
+          const [total, published, drafts, pending] = await Promise.all([
+            prisma.article.count(),
+            prisma.article.count({ where: { status: "PUBLISHED" as any } }),
+            prisma.article.count({ where: { status: "DRAFT" as any } }),
+            prisma.article.count({ where: { status: { in: ["AI_PENDING" as any, "PENDING" as any] } } }),
+          ]);
+          return NextResponse.json({ total, published, drafts, pending });
+        } catch (err) {
+          console.error("[Analytics Counts] DB query failed; using memory fallback.", err);
+        }
       }
 
       const counts = await memoryDb.getArticleCount();
@@ -25,30 +29,34 @@ export async function GET(req: Request) {
     }
 
     if (isDbConfigured()) {
-      // Aggregate stats from DB PageView table
-      const totalViews = await (prisma as any).pageView.count();
-      const topArticles = await prisma.article.findMany({
-        take: 10,
-        orderBy: { views: "desc" },
-        select: { slug: true, views: true },
-      });
+      try {
+        // Aggregate stats from DB PageView table
+        const totalViews = await (prisma as any).pageView.count();
+        const topArticles = await prisma.article.findMany({
+          take: 10,
+          orderBy: { views: "desc" },
+          select: { slug: true, views: true },
+        });
 
-      return NextResponse.json({
-        totalViews,
-        totalArticles: await prisma.article.count({ where: { status: "PUBLISHED" as any } }),
-        topArticles,
-        categoryBreakdown: [
-          { category: "POLITICS", count: 42 },
-          { category: "NAIRA", count: 28 },
-          { category: "ENTERTAINMENT", count: 35 },
-          { category: "SPORTS", count: 19 },
-          { category: "SECURITY", count: 24 },
-        ],
-        hourlyViews: Array.from({ length: 24 }, (_, i) => ({
-          hour: `${i}:00`,
-          views: Math.floor(Math.random() * 400) + 50,
-        })),
-      });
+        return NextResponse.json({
+          totalViews,
+          totalArticles: await prisma.article.count({ where: { status: "PUBLISHED" as any } }),
+          topArticles,
+          categoryBreakdown: [
+            { category: "POLITICS", count: 42 },
+            { category: "NAIRA", count: 28 },
+            { category: "ENTERTAINMENT", count: 35 },
+            { category: "SPORTS", count: 19 },
+            { category: "SECURITY", count: 24 },
+          ],
+          hourlyViews: Array.from({ length: 24 }, (_, i) => ({
+            hour: `${i}:00`,
+            views: Math.floor(Math.random() * 400) + 50,
+          })),
+        });
+      } catch (err) {
+        console.error("[Analytics Stats] DB query failed; using memory fallback.", err);
+      }
     }
 
     const stats = await memoryDb.getViewStats(period);

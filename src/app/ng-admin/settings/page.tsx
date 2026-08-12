@@ -51,19 +51,18 @@ export default function AdminSettingsPage() {
         const merged = { ...DEFAULT_SETTINGS, ...data };
         setSettings(merged);
         try { localStorage.setItem("todaynews_site_settings", JSON.stringify(merged)); } catch {}
-        return;
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Failed to load settings from server.");
       }
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || "Failed to load settings from server.");
     } catch (err) {
       console.error("Failed to load settings from server:", err);
       setError("Failed to load settings from server.");
-    }
-    try {
-      const cached = localStorage.getItem("todaynews_site_settings");
-      if (cached) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(cached) });
-    } catch {}
-    finally {
+      try {
+        const cached = localStorage.getItem("todaynews_site_settings");
+        if (cached) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(cached) });
+      } catch {}
+    } finally {
       setFetchLoading(false);
     }
   };

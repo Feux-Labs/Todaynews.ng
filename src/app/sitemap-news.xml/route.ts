@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { memoryDb } from "@/lib/db";
+import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,25 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://todaynews.ng";
-  const { articles: publishedArticles } = await memoryDb.getArticles(undefined, "PUBLISHED", 1, 100);
+  let publishedArticles: any[] = [];
+
+  try {
+    if (isDbConfigured()) {
+      publishedArticles = await prisma.article.findMany({
+        where: { status: "PUBLISHED" },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+        select: { slug: true, title: true, createdAt: true },
+      });
+    }
+  } catch (err) {
+    console.error("[News Sitemap] DB query failed; using memory fallback.", err);
+  }
+
+  if (publishedArticles.length === 0) {
+    const memoryResult = await memoryDb.getArticles(undefined, "PUBLISHED", 1, 100);
+    publishedArticles = memoryResult.articles || [];
+  }
 
   // Filter for articles published within the last 48 hours (or fall back to recent top 50)
   const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
@@ -59,3 +77,4 @@ export async function GET() {
     },
   });
 }
+

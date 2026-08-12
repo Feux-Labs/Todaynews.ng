@@ -38,6 +38,12 @@ interface StoryCard {
   status: "new" | "sent_to_inbox" | "in_draft";
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  updatedAt: string;
+}
+
 const LOCAL_STORAGE_KEY = "todaynews_ai_chat_history_v2";
 
 const DEFAULT_WELCOME_MSG: Message = {
@@ -62,6 +68,8 @@ export default function AIChatPage() {
   const [actionLoading, setActionLoading] = useState<{ cardId: string; action: string } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isInitialMount = useRef(true);
@@ -104,11 +112,13 @@ export default function AIChatPage() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const fetchHistory = async () => {
+  const fetchHistory = async (sessionId?: string | null) => {
     try {
-      const res = await fetch("/api/admin/chat");
+      const res = await fetch(`/api/admin/chat${sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : ""}`);
       if (res.ok) {
         const data = await res.json();
+        setSessions(data.sessions || []);
+        if (data.activeSessionId) setSelectedSessionId(data.activeSessionId);
         if (data.history && data.history.length > 0) {
           // Merge server history with local history if server has items
           const serverMsgs = data.history.map((m: any) => ({
@@ -116,10 +126,9 @@ export default function AIChatPage() {
             timestamp: typeof m.timestamp === "string" ? m.timestamp : new Date(m.timestamp).toISOString(),
           }));
           
-          setMessages((prev) => {
-            // Keep existing messages if longer, else use server history
-            return serverMsgs.length >= prev.length ? serverMsgs : prev;
-          });
+          setMessages(serverMsgs);
+        } else if (data.activeSessionId) {
+          setMessages([DEFAULT_WELCOME_MSG]);
         }
       }
     } catch (err) {
@@ -131,8 +140,10 @@ export default function AIChatPage() {
     if (!confirm("Are you sure you want to clear the AI Chat conversation history?")) return;
     try {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
-      await fetch("/api/admin/chat", { method: "DELETE" });
+      await fetch(`/api/admin/chat${selectedSessionId ? `?sessionId=${encodeURIComponent(selectedSessionId)}` : ""}`, { method: "DELETE" });
       setMessages([DEFAULT_WELCOME_MSG]);
+      setSelectedSessionId(null);
+      await fetchHistory();
       showToast("Chat memory cleared");
     } catch (err) {
       console.error("Failed to clear chat memory:", err);
@@ -157,11 +168,13 @@ export default function AIChatPage() {
     try {
       const res = await fetch("/api/admin/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: messageText }),
+          headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: messageText, sessionId: selectedSessionId }),
       });
 
       const data = await res.json();
+      if (data.sessionId) setSelectedSessionId(data.sessionId);
+      if (data.sessionId) fetchHistory(data.sessionId).catch(() => {});
 
       const aiMsg: Message = {
         id: `msg-${Date.now()}-ai`,
@@ -198,6 +211,7 @@ export default function AIChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action,
+          sessionId: selectedSessionId,
           storyId: card.id,
           storyTitle: card.title,
           storySummary: card.summary,
@@ -288,6 +302,31 @@ export default function AIChatPage() {
           <p className="text-[11px] text-slate-400">Scrape, paraphrase, and publish with AI</p>
         </div>
         <div className="ml-auto flex items-center gap-4">
+          <button
+            onClick={() => {
+              setSelectedSessionId(null);
+              setMessages([DEFAULT_WELCOME_MSG]);
+              setInput("");
+            }}
+            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold rounded-lg transition"
+            title="Start New Session"
+          >
+            New Session
+          </button>
+          {sessions.length > 0 && (
+            <select
+              value={selectedSessionId || ""}
+              onChange={(e) => fetchHistory(e.target.value)}
+              className="max-w-56 bg-white/5 border border-white/10 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+              title="Past AI Sessions"
+            >
+              {sessions.map((session) => (
+                <option key={session.id} value={session.id} className="bg-[#0a0f1c]">
+                  {session.title}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             onClick={handleClearHistory}
             className="flex items-center gap-1 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-lg transition"

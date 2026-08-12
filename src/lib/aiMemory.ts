@@ -4,6 +4,7 @@ import { isDbConfigured, prisma } from "./db";
 
 export interface ChatMessageMemory {
   id: string;
+  sessionId?: string;
   role: "user" | "assistant";
   content: string;
   timestamp: string;
@@ -18,6 +19,13 @@ export interface ChatMessageMemory {
     imageUrl?: string;
     status: "new" | "sent_to_inbox" | "in_draft" | "paraphrasing";
   }[];
+}
+
+export interface AiChatSessionMemory {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 type StoryCardStatus = "new" | "sent_to_inbox" | "in_draft" | "paraphrasing";
@@ -65,17 +73,86 @@ export function getChatMemory(): ChatMessageMemory[] {
   return globalForMemory._aiChatMemory || [];
 }
 
-export async function getPersistentChatMemory(): Promise<ChatMessageMemory[]> {
+function sessionTitleFromText(text?: string) {
+  const title = (text || "AI News Session").replace(/\s+/g, " ").trim();
+  return title.length > 70 ? `${title.slice(0, 67)}...` : title;
+}
+
+export async function listPersistentChatSessions(): Promise<AiChatSessionMemory[]> {
+  if (!isDbConfigured()) {
+    const history = getChatMemory();
+    if (history.length === 0) return [];
+    return [{
+      id: "local",
+      title: "Local AI Session",
+      createdAt: history[0].timestamp,
+      updatedAt: history[history.length - 1].timestamp,
+    }];
+  }
+
+  try {
+    const sessions = await (prisma as any).aiChatSession.findMany({
+      orderBy: { updatedAt: "desc" },
+      take: 30,
+    });
+
+    return sessions.map((session: any) => ({
+      id: session.id,
+      title: session.title,
+      createdAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
+    }));
+  } catch (err) {
+    console.error("Failed to list persistent AI sessions:", err);
+    return [];
+  }
+}
+
+export async function createPersistentChatSession(title?: string): Promise<AiChatSessionMemory | null> {
+  if (!isDbConfigured()) return null;
+
+  try {
+    const created = await (prisma as any).aiChatSession.create({
+      data: { title: sessionTitleFromText(title) },
+    });
+    return {
+      id: created.id,
+      title: created.title,
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString(),
+    };
+  } catch (err) {
+    console.error("Failed to create persistent AI session:", err);
+    return null;
+  }
+}
+
+async function ensurePersistentSession(sessionId?: string, title?: string): Promise<string | undefined> {
+  if (!isDbConfigured()) return undefined;
+  if (sessionId) {
+    const existing = await (prisma as any).aiChatSession.findUnique({ where: { id: sessionId } });
+    if (existing) return existing.id;
+  }
+  const created = await createPersistentChatSession(title);
+  return created?.id;
+}
+
+export async function getPersistentChatMemory(sessionId?: string): Promise<ChatMessageMemory[]> {
   if (!isDbConfigured()) return getChatMemory();
 
   try {
+    const resolvedSessionId = sessionId || (await listPersistentChatSessions())[0]?.id;
+    if (!resolvedSessionId) return [];
+
     const rows = await (prisma as any).aiChatMessage.findMany({
+      where: { sessionId: resolvedSessionId },
       orderBy: { createdAt: "asc" },
       take: MAX_MEMORY_ITEMS,
     });
 
     return rows.map((row: any) => ({
       id: row.id,
+      sessionId: row.sessionId || undefined,
       role: row.role,
       content: row.content,
       timestamp: row.createdAt.toISOString(),
@@ -113,13 +190,15 @@ export function appendChatMessage(
 }
 
 export async function appendPersistentChatMessage(
-  msg: Omit<ChatMessageMemory, "id" | "timestamp"> & { timestamp?: string }
+  msg: Omit<ChatMessageMemory, "id" | "timestamp"> & { timestamp?: string; sessionId?: string }
 ): Promise<ChatMessageMemory> {
   if (!isDbConfigured()) return appendChatMessage(msg);
 
   try {
+    const sessionId = await ensurePersistentSession(msg.sessionId, msg.role === "user" ? msg.content : undefined);
     const created = await (prisma as any).aiChatMessage.create({
       data: {
+        sessionId,
         role: msg.role,
         content: msg.content,
         storyCards: msg.storyCards || undefined,
@@ -128,6 +207,7 @@ export async function appendPersistentChatMessage(
     });
 
     const excess = await (prisma as any).aiChatMessage.findMany({
+      where: { sessionId },
       orderBy: { createdAt: "desc" },
       skip: MAX_MEMORY_ITEMS,
       select: { id: true },
@@ -138,8 +218,16 @@ export async function appendPersistentChatMessage(
       });
     }
 
+    if (sessionId) {
+      await (prisma as any).aiChatSession.update({
+        where: { id: sessionId },
+        data: { updatedAt: new Date() },
+      });
+    }
+
     return {
       id: created.id,
+      sessionId: created.sessionId || undefined,
       role: created.role,
       content: created.content,
       timestamp: created.createdAt.toISOString(),
@@ -186,12 +274,14 @@ export function updateMemoryCardStatus(
 
 export async function updatePersistentMemoryCardStatus(
   cardId: string,
-  newStatus: Exclude<StoryCardStatus, "new" | "paraphrasing">
+  newStatus: Exclude<StoryCardStatus, "new" | "paraphrasing">,
+  sessionId?: string
 ): Promise<boolean> {
   if (!isDbConfigured()) return updateMemoryCardStatus(cardId, newStatus);
 
   try {
     const rows = await (prisma as any).aiChatMessage.findMany({
+      where: sessionId ? { sessionId } : undefined,
       orderBy: { createdAt: "desc" },
       take: MAX_MEMORY_ITEMS,
     });
@@ -235,11 +325,16 @@ export function clearChatMemory(): boolean {
   }
 }
 
-export async function clearPersistentChatMemory(): Promise<boolean> {
+export async function clearPersistentChatMemory(sessionId?: string): Promise<boolean> {
   if (!isDbConfigured()) return clearChatMemory();
 
   try {
-    await (prisma as any).aiChatMessage.deleteMany({});
+    if (sessionId) {
+      await (prisma as any).aiChatSession.delete({ where: { id: sessionId } });
+    } else {
+      await (prisma as any).aiChatMessage.deleteMany({});
+      await (prisma as any).aiChatSession.deleteMany({});
+    }
     clearChatMemory();
     return true;
   } catch (err) {
