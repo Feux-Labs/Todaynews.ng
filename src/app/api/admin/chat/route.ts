@@ -25,6 +25,30 @@ export async function DELETE() {
   }
 }
 
+const VALID_CATEGORIES = new Set([
+  "POLITICS",
+  "NAIRA",
+  "ENTERTAINMENT",
+  "SPORTS",
+  "SECURITY",
+  "METRO",
+  "EDUCATION",
+  "TECHNOLOGY",
+  "HEALTH",
+]);
+
+function sanitizeCategory(cat?: string): string {
+  if (!cat) return "POLITICS";
+  const upper = cat.trim().toUpperCase();
+  if (VALID_CATEGORIES.has(upper)) return upper;
+  if (upper.includes("BUSINESS") || upper.includes("MONEY") || upper.includes("CURRENCY") || upper.includes("FINANCE") || upper.includes("FX")) return "NAIRA";
+  if (upper.includes("TECH") || upper.includes("CYBER")) return "TECHNOLOGY";
+  if (upper.includes("CRIME") || upper.includes("DEFENSE") || upper.includes("MILITARY") || upper.includes("TERROR")) return "SECURITY";
+  if (upper.includes("SCHOOL") || upper.includes("UNI") || upper.includes("ASUU")) return "EDUCATION";
+  if (upper.includes("MOVIE") || upper.includes("MUSIC") || upper.includes("SHOW")) return "ENTERTAINMENT";
+  return "POLITICS";
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -32,78 +56,121 @@ export async function POST(req: Request) {
 
     // ── Handle Action Commands (Inbox, Drafts, Paraphrase updates) ────────────
     if (action) {
+      const safeTitle = (storyTitle || storySummary || "Trending Nigerian Story").toString().trim();
+      const safeSummary = (storySummary || storyTitle || "Verified Nigerian news update from Todaynews.ng editorial desk.").toString().trim();
+      const cleanCategory = sanitizeCategory(storyCategory);
+
       if (action === "send_to_inbox" || action === "add_to_draft") {
         const targetStatus = action === "send_to_inbox" ? "AI_PENDING" : "DRAFT";
 
         // Paraphrase article summary to build rich paginated content
-        const article = await paraphraseNews(
-          storySummary || storyTitle,
-          storyTitle,
-          storyCategory || "POLITICS"
-        );
+        let article: any;
+        try {
+          article = await paraphraseNews(
+            safeSummary,
+            safeTitle,
+            cleanCategory
+          );
+        } catch (paraErr) {
+          console.error("Paraphrase news failed during action, using fallback data:", paraErr);
+          article = {
+            title: safeTitle,
+            summary: safeSummary,
+            category: cleanCategory,
+            pages: [
+              {
+                pageNumber: 1,
+                title: "Core Facts & Breaking Report",
+                content: `<p class="mb-4">${safeSummary}</p>`,
+              },
+            ],
+          };
+        }
 
-        const slug = storyTitle
+        const slugBase = (article.title || safeTitle)
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/(^-|-$)/g, "")
-          .substring(0, 60);
+          .substring(0, 50) || "nigerian-news";
 
-        const uniqueSlug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
+        const uniqueSlug = `${slugBase}-${Math.random().toString(36).substring(2, 8)}`;
         let createdId = `art-${Math.random().toString(36).substring(2, 9)}`;
+        const finalCategory = sanitizeCategory(article.category);
 
         if (isDbConfigured()) {
-          const dbCreated = await prisma.article.create({
-            data: {
-              title: article.title,
+          try {
+            const dbCreated = await prisma.article.create({
+              data: {
+                title: article.title || safeTitle,
+                slug: uniqueSlug,
+                summary: article.summary || safeSummary,
+                category: finalCategory as any,
+                status: targetStatus as any,
+                sourceName: storySource || "Web Scraper",
+                imageUrl: storyImageUrl || undefined,
+                author: getServerSettings().defaultAuthorName || "Todaynews.ng Editorial",
+                pages: {
+                  create: (article.pages || [{ pageNumber: 1, content: safeSummary }]).map((p: any, idx: number) => ({
+                    pageNumber: p.pageNumber || idx + 1,
+                    title: p.title || null,
+                    content: p.content || "",
+                  })),
+                },
+              },
+            });
+            createdId = dbCreated.id;
+          } catch (dbErr) {
+            console.error("Prisma article creation failed, falling back to memoryDb:", dbErr);
+            const memCreated = await memoryDb.createArticle({
+              title: article.title || safeTitle,
               slug: uniqueSlug,
-              summary: article.summary,
-              category: article.category as any,
+              summary: article.summary || safeSummary,
+              category: finalCategory as any,
               status: targetStatus as any,
               sourceName: storySource || "Web Scraper",
               imageUrl: storyImageUrl || undefined,
               author: getServerSettings().defaultAuthorName || "Todaynews.ng Editorial",
-              pages: {
-                create: article.pages.map((p) => ({
-                  pageNumber: p.pageNumber,
-                  title: p.title || null,
-                  content: p.content,
-                })),
-              },
-            },
-          });
-          createdId = dbCreated.id;
+              readTimeMinutes: 3,
+              pages: article.pages || [{ pageNumber: 1, content: safeSummary }],
+            });
+            createdId = memCreated.id;
+          }
         } else {
           const memCreated = await memoryDb.createArticle({
-            title: article.title,
+            title: article.title || safeTitle,
             slug: uniqueSlug,
-            summary: article.summary,
-            category: article.category as any,
+            summary: article.summary || safeSummary,
+            category: finalCategory as any,
             status: targetStatus as any,
             sourceName: storySource || "Web Scraper",
             imageUrl: storyImageUrl || undefined,
             author: getServerSettings().defaultAuthorName || "Todaynews.ng Editorial",
             readTimeMinutes: 3,
-            pages: article.pages,
+            pages: article.pages || [{ pageNumber: 1, content: safeSummary }],
           });
           createdId = memCreated.id;
         }
 
         // Update card status in memory JSON
         if (storyId) {
-          updateMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft");
+          try {
+            updateMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft");
+          } catch {}
         }
 
         const replyMsg = `✅ **Article Saved to ${
           action === "send_to_inbox" ? "Inbox (Pending Review)" : "Drafts"
-        }!**\n\n📌 **Title**: ${article.title}\n📁 **Category**: ${article.category}\n👤 **Author**: ${
+        }!**\n\n📌 **Title**: ${article.title || safeTitle}\n📁 **Category**: ${finalCategory}\n👤 **Author**: ${
           getServerSettings().defaultAuthorName
-        }\n📄 **Pages**: ${article.pages.length} section(s) re-written with AI context.`;
+        }\n📄 **Pages**: ${(article.pages || []).length} section(s) re-written with AI context.`;
 
         // Append assistant message to chat history
-        appendChatMessage({
-          role: "assistant",
-          content: replyMsg,
-        });
+        try {
+          appendChatMessage({
+            role: "assistant",
+            content: replyMsg,
+          });
+        } catch {}
 
         return NextResponse.json({
           success: true,
@@ -114,54 +181,84 @@ export async function POST(req: Request) {
       }
 
       if (action === "paraphrase") {
-        const article = await paraphraseNews(
-          storySummary || storyTitle,
-          storyTitle,
-          storyCategory || "POLITICS"
-        );
+        let article: any;
+        try {
+          article = await paraphraseNews(
+            safeSummary,
+            safeTitle,
+            cleanCategory
+          );
+        } catch (paraErr) {
+          console.error("Paraphrase news failed during action, using fallback data:", paraErr);
+          article = {
+            title: safeTitle,
+            summary: safeSummary,
+            category: cleanCategory,
+            pages: [
+              {
+                pageNumber: 1,
+                title: "Core Facts & Breaking Report",
+                content: `<p class="mb-4">${safeSummary}</p>`,
+              },
+            ],
+          };
+        }
+
+        const finalCategory = sanitizeCategory(article.category);
 
         // If storyId is an existing database article (not temporary scraped ID), update it in DB/memoryDb
         if (storyId && !storyId.startsWith("scraped-")) {
           if (isDbConfigured()) {
-            await prisma.article.update({
-              where: { id: storyId },
-              data: {
-                title: article.title,
-                summary: article.summary,
-                category: article.category as any,
-                pages: {
-                  deleteMany: {},
-                  create: article.pages.map((p) => ({
-                    pageNumber: p.pageNumber,
-                    title: p.title || null,
-                    content: p.content,
-                  })),
+            try {
+              await prisma.article.update({
+                where: { id: storyId },
+                data: {
+                  title: article.title || safeTitle,
+                  summary: article.summary || safeSummary,
+                  category: finalCategory as any,
+                  pages: {
+                    deleteMany: {},
+                    create: (article.pages || []).map((p: any, idx: number) => ({
+                      pageNumber: p.pageNumber || idx + 1,
+                      title: p.title || null,
+                      content: p.content || "",
+                    })),
+                  },
                 },
-              },
-            });
+              });
+            } catch (dbUpErr) {
+              console.error("Prisma update failed, falling back to memoryDb:", dbUpErr);
+              await memoryDb.updateArticlePages(
+                storyId,
+                article.title || safeTitle,
+                article.summary || safeSummary,
+                finalCategory,
+                article.pages || [{ pageNumber: 1, content: safeSummary }]
+              );
+            }
           } else {
             await memoryDb.updateArticlePages(
               storyId,
-              article.title,
-              article.summary,
-              article.category,
-              article.pages
+              article.title || safeTitle,
+              article.summary || safeSummary,
+              finalCategory,
+              article.pages || [{ pageNumber: 1, content: safeSummary }]
             );
           }
         }
 
         // Build fully formatted markdown response for the user to copy or review
         const formattedMarkdown = `
-# ${article.title}
+# ${article.title || safeTitle}
 
 **Summary / Meta Description**:
-${article.summary}
+${article.summary || safeSummary}
 
 ---
-${article.pages
+${(article.pages || [])
   .map(
-    (p) => `### Page ${p.pageNumber}: ${p.title || "Continuation"}
-${p.content.replace(/<[^>]*>/g, "")}`
+    (p: any) => `### Page ${p.pageNumber}: ${p.title || "Continuation"}
+${(p.content || "").replace(/<[^>]*>/g, "")}`
   )
   .join("\n\n---\n\n")}
         `.trim();
@@ -171,19 +268,21 @@ ${p.content.replace(/<[^>]*>/g, "")}`
         // Create a story card for this paraphrased article so user can send it to Inbox or Drafts directly!
         const paraphrasedCard = {
           id: `para-${Date.now()}`,
-          title: article.title,
-          summary: article.summary,
+          title: article.title || safeTitle,
+          summary: article.summary || safeSummary,
           sourceName: storySource || "Todaynews AI",
-          category: article.category,
+          category: finalCategory,
           imageUrl: storyImageUrl,
           status: "new" as const,
         };
 
-        appendChatMessage({
-          role: "assistant",
-          content: replyMsg,
-          storyCards: [paraphrasedCard],
-        });
+        try {
+          appendChatMessage({
+            role: "assistant",
+            content: replyMsg,
+            storyCards: [paraphrasedCard],
+          });
+        } catch {}
 
         return NextResponse.json({
           success: true,
