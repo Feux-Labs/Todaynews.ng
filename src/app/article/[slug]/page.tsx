@@ -18,7 +18,8 @@ import PageViewBeacon from "@/components/PageViewBeacon";
 import { ArticleData } from "@/lib/sample-data";
 import { sanitizeArticleHtml } from "@/lib/content";
 
-export const revalidate = 60;
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 interface ArticlePageProps {
   params: {
@@ -30,42 +31,52 @@ interface ArticlePageProps {
 }
 
 async function getArticle(slug: string): Promise<ArticleData | null> {
+  // 1. Try Prisma DB if configured
   try {
     if (isDbConfigured()) {
       const publishedArticle = await prisma.article.findFirst({
-        where: { slug, status: "PUBLISHED" },
+        where: {
+          OR: [{ slug }, { id: slug }],
+          status: "PUBLISHED",
+        },
         include: { pages: { orderBy: { pageNumber: "asc" } } },
       });
 
       if (publishedArticle) {
-        const dbArticle = await prisma.article.update({
-          where: { id: publishedArticle.id },
-          data: { views: { increment: 1 } },
-          include: { pages: { orderBy: { pageNumber: "asc" } } },
-        });
+        try {
+          await prisma.article.update({
+            where: { id: publishedArticle.id },
+            data: { views: { increment: 1 } },
+          });
+        } catch {}
 
         return {
-          id: dbArticle.id,
-          title: dbArticle.title,
-          slug: dbArticle.slug,
-          summary: dbArticle.summary,
-          category: dbArticle.category,
+          id: publishedArticle.id,
+          title: publishedArticle.title,
+          slug: publishedArticle.slug,
+          summary: publishedArticle.summary,
+          category: publishedArticle.category,
           status: "PUBLISHED",
-          imageUrl: dbArticle.imageUrl || undefined,
-          author: dbArticle.author,
-          readTimeMinutes: dbArticle.readTimeMinutes,
-          views: dbArticle.views,
-          createdAt: dbArticle.createdAt.toISOString(),
-          pages: dbArticle.pages,
+          imageUrl: publishedArticle.imageUrl || undefined,
+          author: publishedArticle.author,
+          readTimeMinutes: publishedArticle.readTimeMinutes,
+          views: publishedArticle.views + 1,
+          createdAt: publishedArticle.createdAt.toISOString(),
+          pages: publishedArticle.pages,
         };
       }
     }
   } catch (err) {
-    console.error("DB Query failed in article page, falling back to memory:", err);
+    console.error("DB Query failed in article page, proceeding with memory DB:", err);
   }
 
-  // Fallback memory
-  return (await memoryDb.getArticleBySlug(slug)) as any;
+  // 2. Fallback to memoryDb
+  const memBySlug = await memoryDb.getArticleBySlug(slug);
+  if (memBySlug) return memBySlug as any;
+  const memById = await memoryDb.getArticleById(slug);
+  if (memById) return memById as any;
+
+  return null;
 }
 
 export async function generateMetadata({ params, searchParams }: ArticlePageProps) {

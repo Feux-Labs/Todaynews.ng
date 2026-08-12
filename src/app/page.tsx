@@ -11,7 +11,8 @@ import AdSlot from "@/components/AdSlot";
 import { ArticleData } from "@/lib/sample-data";
 import { ShieldCheck, Clock, ArrowRight, Zap, TrendingUp, Flame } from "lucide-react";
 
-export const revalidate = 60; // Revalidate every 60 seconds
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 export const metadata = generateSeoMetadata({
   title: "Todaynews.ng — Breaking Nigerian News, Security Alerts & Naira Rates",
@@ -20,15 +21,18 @@ export const metadata = generateSeoMetadata({
 });
 
 async function getPublishedArticles(): Promise<ArticleData[]> {
+  const articlesMap = new Map<string, ArticleData>();
+
+  // 1. Fetch from Postgres DB if configured
   try {
     if (isDbConfigured()) {
       const dbArticles = await prisma.article.findMany({
         where: { status: "PUBLISHED" },
-        include: { pages: true },
+        include: { pages: { orderBy: { pageNumber: "asc" } } },
         orderBy: { createdAt: "desc" },
       });
-      if (dbArticles.length > 0) {
-        return dbArticles.map((a: any) => ({
+      for (const a of dbArticles) {
+        articlesMap.set(a.id, {
           id: a.id,
           title: a.title,
           slug: a.slug,
@@ -43,15 +47,29 @@ async function getPublishedArticles(): Promise<ArticleData[]> {
           views: a.views,
           createdAt: a.createdAt.toISOString(),
           pages: a.pages,
-        }));
+        });
       }
     }
   } catch (err) {
-    console.error("Database connection failed, falling back to memory database:", err);
+    console.error("Database query failed in homepage, proceeding with memory DB:", err);
   }
 
-  const res = await memoryDb.getArticles(undefined, "PUBLISHED", 1, 50);
-  return (res.articles || (res as any)) as any;
+  // 2. Fetch from memoryDb as fallback or supplementary store
+  try {
+    const res = await memoryDb.getArticles(undefined, "PUBLISHED", 1, 50);
+    const memArticles = (res.articles || []) as ArticleData[];
+    for (const a of memArticles) {
+      if (!articlesMap.has(a.id) && !Array.from(articlesMap.values()).some((item) => item.slug === a.slug)) {
+        articlesMap.set(a.id, a);
+      }
+    }
+  } catch (err) {
+    console.error("MemoryDb query failed in homepage:", err);
+  }
+
+  const combined = Array.from(articlesMap.values());
+  combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return combined;
 }
 
 export default async function HomePage() {
