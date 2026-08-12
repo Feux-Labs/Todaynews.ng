@@ -9,18 +9,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file data provided" }, { status: 400 });
     }
 
-    const uploaded = await uploadImage(fileData);
-
-    if (!uploaded) {
-      return NextResponse.json({ error: "Cloudinary upload failed" }, { status: 500 });
+    // Try Cloudinary upload if configured
+    if (
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    ) {
+      const uploaded = await uploadImage(fileData);
+      if (uploaded?.url) {
+        return NextResponse.json({
+          url: uploaded.url,
+          publicId: uploaded.publicId,
+          storage: "cloudinary",
+        });
+      }
     }
 
+    // Fallback: If Cloudinary is not configured or fails, return base64 Data URL so image upload NEVER fails
     return NextResponse.json({
-      url: uploaded.url,
-      publicId: uploaded.publicId,
+      url: fileData,
+      publicId: `data-img-${Date.now()}`,
+      storage: "local-base64",
     });
   } catch (err) {
     console.error("[Image Upload API Error]:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    // Even on error, fallback to base64 data if available in body
+    try {
+      const body = await req.clone().json();
+      if (body?.fileData) {
+        return NextResponse.json({
+          url: body.fileData,
+          publicId: `data-img-${Date.now()}`,
+          storage: "local-base64",
+        });
+      }
+    } catch {}
+
+    return NextResponse.json({ error: "Failed to process image upload" }, { status: 500 });
   }
 }
