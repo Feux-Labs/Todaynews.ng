@@ -28,7 +28,7 @@ export async function DELETE() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { message, action, storyId, storyTitle, storySummary, storyCategory, storySource } = body;
+    const { message, action, storyId, storyTitle, storySummary, storyCategory, storySource, storyImageUrl } = body;
 
     // ── Handle Action Commands (Inbox, Drafts, Paraphrase updates) ────────────
     if (action) {
@@ -49,9 +49,10 @@ export async function POST(req: Request) {
           .substring(0, 60);
 
         const uniqueSlug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
+        let createdId = `art-${Math.random().toString(36).substring(2, 9)}`;
 
         if (isDbConfigured()) {
-          await prisma.article.create({
+          const dbCreated = await prisma.article.create({
             data: {
               title: article.title,
               slug: uniqueSlug,
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
               category: article.category as any,
               status: targetStatus as any,
               sourceName: storySource || "Web Scraper",
+              imageUrl: storyImageUrl || undefined,
               author: getServerSettings().defaultAuthorName || "Todaynews.ng Editorial",
               pages: {
                 create: article.pages.map((p) => ({
@@ -69,18 +71,21 @@ export async function POST(req: Request) {
               },
             },
           });
+          createdId = dbCreated.id;
         } else {
-          await memoryDb.createArticle({
+          const memCreated = await memoryDb.createArticle({
             title: article.title,
             slug: uniqueSlug,
             summary: article.summary,
             category: article.category as any,
             status: targetStatus as any,
             sourceName: storySource || "Web Scraper",
+            imageUrl: storyImageUrl || undefined,
             author: getServerSettings().defaultAuthorName || "Todaynews.ng Editorial",
             readTimeMinutes: 3,
             pages: article.pages,
           });
+          createdId = memCreated.id;
         }
 
         // Update card status in memory JSON
@@ -88,10 +93,23 @@ export async function POST(req: Request) {
           updateMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft");
         }
 
+        const replyMsg = `✅ **Article Saved to ${
+          action === "send_to_inbox" ? "Inbox (Pending Review)" : "Drafts"
+        }!**\n\n📌 **Title**: ${article.title}\n📁 **Category**: ${article.category}\n👤 **Author**: ${
+          getServerSettings().defaultAuthorName
+        }\n📄 **Pages**: ${article.pages.length} section(s) re-written with AI context.`;
+
+        // Append assistant message to chat history
+        appendChatMessage({
+          role: "assistant",
+          content: replyMsg,
+        });
+
         return NextResponse.json({
-          reply: `✅ Successfully processed! Story "${article.title}" saved to ${
-            action === "send_to_inbox" ? "Inbox (Pending Approval)" : "Drafts"
-          }.`,
+          success: true,
+          articleId: createdId,
+          newStatus: action === "send_to_inbox" ? "sent_to_inbox" : "in_draft",
+          reply: replyMsg,
         });
       }
 
@@ -102,7 +120,37 @@ export async function POST(req: Request) {
           storyCategory || "POLITICS"
         );
 
-        // Build fully formatted markdown response for the user to copy
+        // If storyId is an existing database article (not temporary scraped ID), update it in DB/memoryDb
+        if (storyId && !storyId.startsWith("scraped-")) {
+          if (isDbConfigured()) {
+            await prisma.article.update({
+              where: { id: storyId },
+              data: {
+                title: article.title,
+                summary: article.summary,
+                category: article.category as any,
+                pages: {
+                  deleteMany: {},
+                  create: article.pages.map((p) => ({
+                    pageNumber: p.pageNumber,
+                    title: p.title || null,
+                    content: p.content,
+                  })),
+                },
+              },
+            });
+          } else {
+            await memoryDb.updateArticlePages(
+              storyId,
+              article.title,
+              article.summary,
+              article.category,
+              article.pages
+            );
+          }
+        }
+
+        // Build fully formatted markdown response for the user to copy or review
         const formattedMarkdown = `
 # ${article.title}
 
@@ -113,13 +161,34 @@ ${article.summary}
 ${article.pages
   .map(
     (p) => `### Page ${p.pageNumber}: ${p.title || "Continuation"}
-${p.content.replace(/<[^>]*>/g, "")}` // Strip tags for display copy
+${p.content.replace(/<[^>]*>/g, "")}`
   )
   .join("\n\n---\n\n")}
         `.trim();
 
+        const replyMsg = `✨ **Article Paraphrased & Re-written Successfully!**\n\n${formattedMarkdown}`;
+
+        // Create a story card for this paraphrased article so user can send it to Inbox or Drafts directly!
+        const paraphrasedCard = {
+          id: `para-${Date.now()}`,
+          title: article.title,
+          summary: article.summary,
+          sourceName: storySource || "Todaynews AI",
+          category: article.category,
+          imageUrl: storyImageUrl,
+          status: "new" as const,
+        };
+
+        appendChatMessage({
+          role: "assistant",
+          content: replyMsg,
+          storyCards: [paraphrasedCard],
+        });
+
         return NextResponse.json({
-          reply: `✨ **Article Paraphrased & Re-written Successfully!**\n\n${formattedMarkdown}`,
+          success: true,
+          reply: replyMsg,
+          stories: [paraphrasedCard],
         });
       }
     }

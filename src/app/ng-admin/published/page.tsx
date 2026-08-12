@@ -60,7 +60,7 @@ export default function PublishedPage() {
       await fetch(`/api/articles/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "UNPUBLISHED" }),
+        body: JSON.stringify({ status: "DRAFT" }),
       });
       setArticles((prev) => prev.filter((a) => a.id !== id));
     } catch (err) {
