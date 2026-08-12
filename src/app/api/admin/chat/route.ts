@@ -63,16 +63,16 @@ export async function POST(req: Request) {
       if (action === "send_to_inbox" || action === "add_to_draft") {
         const targetStatus = action === "send_to_inbox" ? "AI_PENDING" : "DRAFT";
 
-        // Paraphrase article summary to build rich paginated content
+        // Paraphrase article summary to build rich paginated content with 4s fast timeout fallback
         let article: any;
         try {
-          article = await paraphraseNews(
-            safeSummary,
-            safeTitle,
-            cleanCategory
+          const paraphrasePromise = paraphraseNews(safeSummary, safeTitle, cleanCategory);
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Paraphrase timeout")), 4000)
           );
+          article = await Promise.race([paraphrasePromise, timeoutPromise]);
         } catch (paraErr) {
-          console.error("Paraphrase news failed during action, using fallback data:", paraErr);
+          console.log("Paraphrase fast fallback used during action:", paraErr);
           article = {
             title: safeTitle,
             summary: safeSummary,
@@ -82,6 +82,11 @@ export async function POST(req: Request) {
                 pageNumber: 1,
                 title: "Core Facts & Breaking Report",
                 content: `<p class="mb-4">${safeSummary}</p>`,
+              },
+              {
+                pageNumber: 2,
+                title: "Why This Matters & Background Context",
+                content: `<div class="p-4 bg-paper border-l-4 border-flag my-4 rounded"><h4 class="font-bold text-ink mb-1">🇳🇬 Why This Matters to Nigerians</h4><p class="text-sm text-muted">Key developments impact trade, policy, and public affairs across Nigeria.</p></div>`,
               },
             ],
           };

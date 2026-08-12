@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import {
   Eye,
   FileText,
@@ -10,6 +11,7 @@ import {
   Clock,
   BarChart3,
   Activity,
+  PenTool,
 } from "lucide-react";
 import {
   AreaChart,
@@ -115,21 +117,31 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Period Selector */}
-        <div className="flex bg-white/5 rounded-lg border border-white/10 overflow-hidden">
-          {(["today", "week", "month"] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-4 py-2 text-xs font-medium capitalize transition ${
-                period === p
-                  ? "bg-[#00e676]/20 text-[#00e676]"
-                  : "text-slate-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {p === "today" ? "Today" : p === "week" ? "This Week" : "This Month"}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <Link
+            href="/ng-admin/editor"
+            className="flex items-center gap-2 px-4 py-2 bg-[#00e676] hover:bg-[#00c853] text-black font-bold text-xs rounded-lg shadow-lg shadow-[#00e676]/20 transition"
+          >
+            <PenTool className="w-4 h-4 text-black" />
+            Create News (CMS)
+          </Link>
+
+          {/* Period Selector */}
+          <div className="flex bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+            {(["today", "week", "month"] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-4 py-2 text-xs font-medium capitalize transition ${
+                  period === p
+                    ? "bg-[#00e676]/20 text-[#00e676]"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                {p === "today" ? "Today" : p === "week" ? "This Week" : "This Month"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

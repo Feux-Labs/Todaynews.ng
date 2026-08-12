@@ -11,6 +11,8 @@ export const config = {
     "/ng-admin",
     "/ng-admin/dashboard",
     "/ng-admin/dashboard/:path*",
+    "/ng-admin/editor",
+    "/ng-admin/editor/:path*",
     "/ng-admin/chat",
     "/ng-admin/chat/:path*",
     "/ng-admin/inbox",

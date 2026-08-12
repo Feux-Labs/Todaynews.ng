@@ -15,11 +15,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  PenTool,
 } from "lucide-react";
 import { useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/ng-admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/ng-admin/editor", label: "Create News (CMS)", icon: PenTool },
   { href: "/ng-admin/chat", label: "Chat with AI", icon: MessageSquare, badge: true },
   { href: "/ng-admin/inbox", label: "Inbox", icon: Inbox, badge: true },
   { href: "/ng-admin/drafts", label: "Drafts", icon: FileEdit },
