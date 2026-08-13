@@ -26,7 +26,7 @@ const config: Config = {
         body: ["var(--font-body)", "Inter", "sans-serif"],
       },
       animation: {
-        ticker: "ticker 35s linear infinite",
+        ticker: "ticker 55s linear infinite",
         pulseFast: "pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
       keyframes: {

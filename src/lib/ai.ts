@@ -42,7 +42,7 @@ interface ParaphrasedResult {
  */
 /**
  * Strips all duplicate [BREAKING] from a title.
- * Returns clean headline matching Punch News style.
+ * Returns clean headline matching Punchng.com News style.
  */
 function cleanAndFormatTitle(rawTitle: string): string {
   if (!rawTitle) return "New Trending Nigerian News Alert";

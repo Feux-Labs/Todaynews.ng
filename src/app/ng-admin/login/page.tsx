@@ -99,7 +99,7 @@ function LoginForm() {
 
       <div className="mt-6 pt-4 border-t border-white/5">
         <p className="text-xs text-slate-500 text-center">
-          Default: <code className="bg-white/5 px-1.5 py-0.5 rounded text-slate-400">admin@todaynews.ng</code> / <code className="bg-white/5 px-1.5 py-0.5 rounded text-slate-400">todaynews2026</code>
+          Default: <code className="bg-white/5 px-1.5 py-0.5 rounded text-slate-400"></code> / <code className="bg-white/5 px-1.5 py-0.5 rounded text-slate-400"></code>
         </p>
       </div>
     </div>
