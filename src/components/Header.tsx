@@ -22,6 +22,9 @@ const CATEGORIES = [
 export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentDate, setCurrentDate] = useState("");
+  const [breakingNews, setBreakingNews] = useState<string>(
+    "Loading breaking news..."
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -33,6 +36,34 @@ export default function Header() {
         day: "numeric",
       })
     );
+  }, []);
+
+  // Fetch latest articles for breaking news ticker
+  useEffect(() => {
+    const fetchBreakingNews = async () => {
+      try {
+        const response = await fetch("/api/articles?limit=10&status=PUBLISHED");
+        const data = await response.json();
+        
+        if (data.articles && data.articles.length > 0) {
+          // Build ticker text from article titles with bullet separator
+          const tickerText = data.articles
+            .slice(0, 8)
+            .map((article: any) => article.title)
+            .join(" • ");
+          
+          setBreakingNews(tickerText || "Breaking news updates coming soon...");
+        }
+      } catch (err) {
+        console.error("Failed to fetch breaking news:", err);
+        // Keep default placeholder if fetch fails
+      }
+    };
+
+    fetchBreakingNews();
+    // Refresh every 2 minutes
+    const interval = setInterval(fetchBreakingNews, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -80,7 +111,7 @@ export default function Header() {
           </span>
           <div className="flex-1 overflow-hidden relative h-4">
             <div className="absolute animate-ticker whitespace-nowrap text-[11px] font-semibold">
-              Naira trades steady at ₦1,595/$1 on official window • Security forces rescue 9 kidnapped victims in Kogi • NBTE launches 1-year top-up degree programme for HND holders • Big Brother Naija nominations spark online debate • Super Eagles coach releases World Cup qualifier list
+              {breakingNews}
             </div>
           </div>
         </div>
