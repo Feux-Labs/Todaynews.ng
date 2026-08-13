@@ -8,7 +8,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/about",
     "/editorial-standards",
     "/contact",
-    "/author/gideon-ibitoye",
+    "/author/Todaynews-Team & AI",
     "/category/politics",
     "/category/naira",
     "/category/entertainment",

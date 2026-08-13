@@ -65,7 +65,7 @@ The platform implements SEO practices for Google News and search visibility:
 
 ## 🛠 Editorial Review Workflow
 
-Gideon maintains control over the automated ingestion pipeline:
+The team maintains control over the automated ingestion pipeline:
 1. **Ingest**: Pasting a source article in the **Editor Portal** (`/admin`) triggers the Gemini AI engine.
 2. **Paraphrase**: The AI rewrites the news in a high-CTR, punchy Nigerian style and splits it into pages.
 3. **Draft Queue**: The article is saved with status `PENDING`. It is NOT visible to public visitors.
