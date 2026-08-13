@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Search, Calendar, ShieldCheck, Rss, Bell } from "lucide-react";
 import SocialHandles from "./SocialHandles";
@@ -90,9 +91,14 @@ export default function Header() {
         {/* Left Side: Brand Logo */}
         <div className="text-center md:text-left">
           <Link href="/" className="inline-block">
-            <h1 className="font-display font-black text-4xl md:text-5xl tracking-tight text-ink hover:opacity-95 transition-opacity">
-              Todaynews<span className="text-flag">.ng</span>
-            </h1>
+            <Image
+              src="/images/logo.png"
+              alt="Todaynews.ng - Nigeria's AI-Powered Independent News Channel"
+              width={300}
+              height={80}
+              priority
+              className="h-auto w-auto max-w-xs hover:opacity-95 transition-opacity"
+            />
           </Link>
           <div className="flex items-center justify-center md:justify-start gap-2 mt-1 text-[10px] text-muted font-black uppercase tracking-widest">
             <ShieldCheck className="h-3.5 w-3.5 text-flag fill-current" />

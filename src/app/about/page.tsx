@@ -15,7 +15,7 @@ export default function AboutPage() {
     "@type": "NewsMediaOrganization",
     "name": "Todaynews.ng",
     "url": "https://todaynews.ng",
-    "logo": "https://todaynews.ng/logo.png",
+    "logo": "https://todaynews.ng/images/logo.png",
     "sameAs": [
       "https://facebook.com/todaynewsng",
       "https://twitter.com/todaynewsng",
