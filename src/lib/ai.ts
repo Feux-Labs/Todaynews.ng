@@ -280,57 +280,58 @@ export interface ChatAiResponse {
   reply: string;
 }
 
+/**
+ * General-purpose wise AI chat, embedded in Todaynews.ng.
+ * The AI is NOT limited to news — it can reason about any topic like a
+ * genuinely intelligent general-purpose assistant. It only routes to
+ * "search" when the user explicitly wants live news/current events fetched.
+ */
 export async function chatWithAi(
   userMessage: string,
   history: { role: "user" | "assistant"; content: string }[]
 ): Promise<ChatAiResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
 
-  // Only skip Gemini if key is genuinely missing or is the example placeholder
   if (!apiKey || apiKey === "AIzaSyYourGeminiKeyHere") {
     return smartLocalChat(userMessage);
   }
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.6-flash",
+      model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
       generationConfig: {
         responseMimeType: "application/json",
       },
     });
 
     const conversationContext = history
-      .slice(-12) // past 12 messages for rich memory context
-      .map((h) => `${h.role === "user" ? "User" : "Editor"}: ${h.content}`)
+      .slice(-20) // more memory for real continuity
+      .map((h) => `${h.role === "user" ? "User" : "AI"}: ${h.content}`)
       .join("\n");
 
     const prompt = `
-    You are the Chief Editor and Special Intelligence Specialist at Todaynews.ng 🇳🇬.
-    You possess full, deep Gemini AI intelligence, wisdom, and conversational ability. You speak with high intellect, natural authority, and genuine insight, tailored to Nigerian news, security algorithms, parallel exchange rates, education (ASUU, JAMB, NBTE), politics, and national affairs.
+You are a genuinely intelligent, broadly capable AI assistant — comparable to a top-tier general-purpose AI. You happen to be embedded inside Todaynews.ng, a Nigerian news platform, and you have deep expertise in Nigerian news, politics, economics, and culture. But you are NOT limited to news. You can discuss anything: philosophy, business, science, coding, relationships, strategy, creative writing, math, history, whatever the user brings up. Think and respond the way a sharp, well-read, emotionally intelligent human expert would — not like a scripted customer service bot.
 
-    CRITICAL INSTRUCTION:
-    Maintain your full AI intelligence and conversational depth. Do NOT act like a rigid script or repetitive template. Answer questions thoughtfully and wisely, offering deep context and analysis like a world-class editor and AI assistant.
+RULES FOR YOUR REPLIES:
+- Reason properly. Don't give surface-level filler. Give real, substantive, specific answers with structure when useful (lists, examples, steps) but plain conversational prose when that fits better.
+- Match the user's tone. If they're casual, be casual. If they ask something deep, go deep.
+- Don't force a Nigerian-news angle onto topics that have nothing to do with news.
+- Only classify intent as "search" if the user is CLEARLY asking you to fetch/find/scrape live news or current events. Everything else — no matter the topic — is "chat".
+- If intent is "search", extract a clean search query into "searchQuery" and write a short, natural intro sentence as "reply" (not the news brief itself, just a lead-in).
+- If intent is "chat", put your full, thoughtful answer directly in "reply" — this can be as long and detailed as the question deserves.
 
-    Your current task is to interpret the user's latest message and classify their intent into one of these actions:
-    1. "search" - The user wants to find, scrape, search, or get live news updates on topics (e.g. security, terror, business, ASUU, education, Naira, BBNaija, general news bulletin).
-    2. "chat" - The user is asking an open-ended question, sharing thoughts, testing your wisdom, or engaging in conversation.
+Return ONLY a valid JSON object matching this schema:
+{
+  "intent": "chat" or "search",
+  "searchQuery": "extracted search term or empty string",
+  "reply": "Your actual response — substantive if chat, short intro if search"
+}
 
-    Guidelines:
-    - If intent is "search", extract the core search topic into "searchQuery" (e.g., "security terror", "business economy", "education school ASUU", "naira exchange", or general topic). Write a sharp, authoritative editor response introducing the news scan.
-    - If intent is "chat", write a deeply intelligent, wise, natural conversational response addressing their message in full detail.
+Conversation so far:
+${conversationContext}
 
-    Return response strictly as a JSON object matching this schema:
-    {
-      "intent": "chat" or "search",
-      "searchQuery": "extracted search term or empty",
-      "reply": "Your wise, highly intelligent response"
-    }
-
-    Conversation History:
-    ${conversationContext}
-
-    Latest User Message: "${userMessage}"
-    `;
+Latest message: "${userMessage}"
+`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -343,13 +344,23 @@ export async function chatWithAi(
     return JSON.parse(text) as ChatAiResponse;
   } catch (err) {
     console.error("Gemini Chat AI Error, falling back:", err);
-    return smartLocalChat(userMessage);
+    try {
+      // second-tier fallback: plain non-JSON call, more resilient to formatting issues
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-3.6-flash" });
+      const simplePrompt = `You are a wise, broadly knowledgeable AI assistant embedded in a Nigerian news app, but you can discuss any topic intelligently, not just news. Respond naturally and substantively to: "${userMessage}"`;
+      const result = await model.generateContent(simplePrompt);
+      const text = result.response.text();
+      return { intent: "chat", reply: text || smartLocalChat(userMessage).reply };
+    } catch {
+      return smartLocalChat(userMessage);
+    }
   }
 }
 
 /**
  * Smart local chat fallback — keyword-aware intent parser.
- * Used when Gemini API is unavailable or key is invalid.
+ * Used only when Gemini API is unavailable entirely (no key, or both tiers failed).
  * Actually triggers searches and returns meaningful replies.
  */
 function smartLocalChat(userMessage: string): ChatAiResponse {
@@ -360,7 +371,7 @@ function smartLocalChat(userMessage: string): ChatAiResponse {
   if (greetings.some((g) => text.startsWith(g) || text === g)) {
     return {
       intent: "chat",
-      reply: `Good to hear from you! I'm the Todaynews.ng AI Editor — your intelligence partner for Nigerian news.\n\nI can search for breaking news, scrape the latest from Punch, Daily Trust, Vanguard, and more. Try commands like:\n• "Search terror news today"\n• "Find business and economy news"\n• "Get latest Naira rates"\n• "Scrape BBNaija trending stories"`,
+      reply: `Good to hear from you! I'm your AI assistant here on Todaynews.ng — happy to talk about anything, not just news.\n\nI can also search for breaking Nigerian news if you want. Try commands like:\n• "Search terror news today"\n• "Find business and economy news"\n• "Get latest Naira rates"\n• Or just ask me anything on your mind.`,
     };
   }
 
@@ -387,7 +398,7 @@ function smartLocalChat(userMessage: string): ChatAiResponse {
     t.keywords.some((kw) => text.includes(kw))
   );
 
-  if (isSearchIntent || matchedTopics.length > 0) {
+  if (isSearchIntent && matchedTopics.length > 0) {
     let query = "";
     let topicLabels = "";
 
@@ -411,9 +422,10 @@ function smartLocalChat(userMessage: string): ChatAiResponse {
     };
   }
 
-  // General knowledge / editorial fallback
+  // General knowledge / editorial fallback — this only triggers when Gemini is
+  // fully unavailable, so keep it honest about its limits rather than pretending to be smart.
   return {
     intent: "chat",
-    reply: `As the Todaynews.ng AI Editor, I can help you stay informed. Try asking me to:\n• Search for specific news topics (e.g. "find terror news today")\n• Fetch latest stories from a category (e.g. "get latest business news")\n• Scrape trending Nigerian stories (e.g. "what's trending in Nigeria right now")\n\nWhat would you like me to look up?`,
+    reply: `I'm running in a limited offline mode right now (my main AI connection is down), so I can't give you a fully thought-out answer to that. Once the connection is back I'll respond properly. In the meantime I can still search for Nigerian news — try "find business news today" or similar.`,
   };
 }
