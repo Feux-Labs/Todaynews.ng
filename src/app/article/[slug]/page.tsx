@@ -145,7 +145,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
   ]);
 
   return (
-    <div className="space-y-6 font-body">
+    <div className="space-y-3 font-body">
       <PageViewBeacon slug={article.slug} category={article.category} />
       <JsonLd schema={articleJsonLd} />
       <JsonLd schema={breadcrumbsJsonLd} />
@@ -161,9 +161,9 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
         <span className="truncate max-w-[200px] sm:max-w-xs">{article.title}</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left/Center Column: Article Content */}
-        <div className="lg:col-span-2 bg-white border border-ink/5 p-5 md:p-8 rounded shadow-sm">
+        <div className="lg:col-span-2 bg-white border border-ink/5 p-4 md:p-6 rounded shadow-sm">
           
           {/* Headline & Category badge */}
           <span className="bg-flag text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded font-mono">
@@ -294,7 +294,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
         </div>
 
         {/* Right Column: Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           <TrendingSidebar />
           <WhatsAppBanner />
           <AdSlot id="sidebar-display-article" type="sidebar-native" />

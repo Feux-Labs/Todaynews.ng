@@ -87,7 +87,7 @@ export default function Header() {
       </div>
 
       {/* --- MASTHEAD LOGO ROW --- */}
-      <div className="max-w-6xl mx-auto px-4 py-5 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto px-4 py-2 flex flex-col md:flex-row items-center justify-between gap-3">
         {/* Left Side: Brand Logo */}
         <div className="text-center md:text-left">
           <Link href="/" className="inline-block">

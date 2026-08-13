@@ -6,6 +6,7 @@ import ArticleCard from "@/components/ArticleCard";
 import TrendingSidebar from "@/components/TrendingSidebar";
 import NairaRateWidget from "@/components/NairaRateWidget";
 import NativeSponsoredFeed from "@/components/NativeSponsoredFeed";
+import NewsletterBox from "@/components/NewsletterBox";
 import WhatsAppBanner from "@/components/WhatsAppBanner";
 import AdSlot from "@/components/AdSlot";
 import { ArticleData } from "@/lib/sample-data";
@@ -103,7 +104,7 @@ export default async function HomePage() {
   };
 
   return (
-    <div className="space-y-10 font-body">
+    <div className="space-y-4 font-body">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(newsOrgJsonLd) }}
@@ -111,7 +112,7 @@ export default async function HomePage() {
 
       {/* ================= HERO SPOTLIGHT GRID (PUNCH STYLE) ================= */}
       {heroArticle && (
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Main Large Hero Spotlight Feature */}
           <div className="lg:col-span-2 bg-white border-2 border-ink rounded overflow-hidden shadow-sm hover:shadow transition-shadow group flex flex-col justify-between">
             <div>
@@ -156,7 +157,7 @@ export default async function HomePage() {
           </div>
 
           {/* Secondary Hero Sidebar (Punch 2-Card Stack) */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3">
             {sideArticles.map((article) => (
               <div
                 key={article.slug}
@@ -230,9 +231,9 @@ export default async function HomePage() {
       </section>
 
       {/* ================= MAIN CONTENT COLUMNS (LATEST NEWS + SIDEBAR) ================= */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left Column: Latest News Feed */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           <div className="border-b-4 border-ink pb-2 flex items-center justify-between">
             <h2 className="font-display font-black text-xl md:text-2xl uppercase tracking-tight flex items-center gap-2">
               <Zap className="h-5 w-5 text-flag fill-current" />
@@ -286,6 +287,11 @@ export default async function HomePage() {
       {/* ================= NATIVE SPONSORED RECOMMENDATIONS FEED ================= */}
       <section>
         <NativeSponsoredFeed />
+      </section>
+
+      {/* ================= EMAIL NEWSLETTER SUBSCRIPTION BOX ================= */}
+      <section>
+        <NewsletterBox />
       </section>
     </div>
   );

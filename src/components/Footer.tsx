@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import NewsletterBox from "./NewsletterBox";
 import SocialHandles from "./SocialHandles";
 
 export default function Footer() {
@@ -28,7 +29,13 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="border-t-4 border-ink bg-paper pt-12 pb-6 mt-16 font-body">
+    <footer className="border-t-4 border-ink bg-paper pt-6 pb-6 mt-8 font-body">
+      {/* Newsletter Subscription Section */}
+      <div className="max-w-6xl mx-auto px-4 pb-8">
+        <NewsletterBox />
+      </div>
+
+      {/* Main Footer Links Grid */}
       <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8 pb-8 border-b border-ink/10">
 
         {/* Column 1 & 2: Brand & Mission Statement */}
