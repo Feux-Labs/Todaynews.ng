@@ -41,18 +41,18 @@ interface ParaphrasedResult {
  * Ensures strict compliance with Nigerian editorial rules, hedging terms, and category validation.
  */
 /**
- * Strips all duplicate [BREAKING] and "What We Know" suffixes from a title.
- * Ensures the final title is formatted exactly once.
+ * Strips all duplicate [BREAKING] from a title.
+ * Returns clean headline matching Punch News style.
  */
 function cleanAndFormatTitle(rawTitle: string): string {
   if (!rawTitle) return "New Trending Nigerian News Alert";
-  // Remove ALL occurrences of [BREAKING] and trailing suffixes (handles triple duplication)
+  // Remove ALL occurrences of [BREAKING] and trailing suffixes
   let clean = rawTitle
     .replace(/\[BREAKING\]\s*/gi, "")
     .replace(/\s*[—\-–]\s*What We Know So Far\s*/gi, "")
     .replace(/\s*[—\-–]\s*What We Know\s*/gi, "")
     .trim();
-  return clean ? `[BREAKING] ${clean} — What We Know So Far` : "New Trending Nigerian News Alert";
+  return clean || "New Trending Nigerian News Alert";
 }
 
 function localProceduralRewriter(
@@ -221,7 +221,7 @@ export async function paraphraseNews(
          - Page 2 "Why This Matters & Background Context": Deep analysis of implications for Nigeria — economic, social, governance, security impact. Include historical comparisons and expert angles.
          - Page 3 "What Happens Next & Expert Outlook": Forward-looking analysis, anticipated government response, international reactions, citizen impact, timeline of expected developments.
       3. LEGAL HEDGING: Use "allegedly", "according to reports", "unconfirmed accounts indicate", "subject to official confirmation" appropriately throughout.
-      4. HIGH-CTR HEADLINE: Create a compelling, search-optimised headline WITHOUT adding [BREAKING] prefix — just write the clean headline.
+      4. PUNCH NEWS HEADLINE STYLE: Create a compelling, direct headline in the style of Punch Newspaper — sharp, impactful, and search-optimised. NO prefixes like [BREAKING], NO suffixes like "What We Know So Far". Example: "Naira hits new low as CBN holds emergency meeting" or "Court orders EFCC to release former governor within 48 hours". The headline should BE the story.
       5. META SUMMARY: Write a compelling 2-3 sentence meta description for Google Search indexing. Make it specific and informative.
       6. CATEGORY: Pick exactly ONE from: POLITICS, NAIRA, ENTERTAINMENT, SPORTS, SECURITY, METRO, EDUCATION, TECHNOLOGY, HEALTH.
       7. HTML FORMATTING: Use rich HTML inside page content: <p class="mb-4">, <ul><li>, <strong>, <em>, <blockquote>, <h4>.

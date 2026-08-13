@@ -42,21 +42,23 @@ export default function Header() {
   useEffect(() => {
     const fetchBreakingNews = async () => {
       try {
-        const response = await fetch("/api/articles?limit=10&status=PUBLISHED");
+        const response = await fetch("/api/articles?limit=8&status=PUBLISHED");
         const data = await response.json();
         
-        if (data.articles && data.articles.length > 0) {
+        if (data?.articles && Array.isArray(data.articles) && data.articles.length > 0) {
           // Build ticker text from article titles with bullet separator
           const tickerText = data.articles
-            .slice(0, 8)
-            .map((article: any) => article.title)
+            .map((article: any) => article?.title || "")
+            .filter(Boolean)
             .join(" • ");
           
-          setBreakingNews(tickerText || "Breaking news updates coming soon...");
+          if (tickerText.trim()) {
+            setBreakingNews(tickerText);
+            return;
+          }
         }
       } catch (err) {
-        console.error("Failed to fetch breaking news:", err);
-        // Keep default placeholder if fetch fails
+        console.error("[Breaking News] Fetch failed:", err);
       }
     };
 
