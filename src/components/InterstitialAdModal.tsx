@@ -40,35 +40,50 @@ export default function InterstitialAdModal() {
       injectedRef.current = true;
       containerRef.current.innerHTML = "";
 
-      // Set config for Adsterra interstitial
-      (window as any).atOptions = {
-        key: "9ae93b69d11e842af1c5c33415214763",
-        format: "fullpage",
-        height: 600,
-        width: 800,
-        params: {},
-      };
-
-      // Config script
-      const configScript = document.createElement("script");
-      configScript.type = "text/javascript";
-      configScript.text = `
-        window.atOptions = {
-          'key' : '9ae93b69d11e842af1c5c33415214763',
-          'format' : 'fullpage',
-          'height' : 600,
-          'width' : 800,
-          'params' : {}
+      // Only inject if interstitial key is configured in env
+      const interstitialKey = process.env.NEXT_PUBLIC_ADSTERRA_INTERSTITIAL_KEY;
+      
+      if (interstitialKey) {
+        // Set config for Adsterra interstitial
+        (window as any).atOptions = {
+          key: interstitialKey,
+          format: "fullpage",
+          height: 600,
+          width: 800,
+          params: {},
         };
-      `;
-      containerRef.current.appendChild(configScript);
 
-      // Invoke script
-      const invokeScript = document.createElement("script");
-      invokeScript.type = "text/javascript";
-      invokeScript.src = "https://wailsilence.com/9ae93b69d11e842af1c5c33415214763/invoke.js";
-      invokeScript.async = true;
-      containerRef.current.appendChild(invokeScript);
+        // Config script
+        const configScript = document.createElement("script");
+        configScript.type = "text/javascript";
+        configScript.text = `
+          window.atOptions = {
+            'key' : '${interstitialKey}',
+            'format' : 'fullpage',
+            'height' : 600,
+            'width' : 800,
+            'params' : {}
+          };
+        `;
+        containerRef.current.appendChild(configScript);
+
+        // Invoke script
+        const invokeScript = document.createElement("script");
+        invokeScript.type = "text/javascript";
+        invokeScript.src = `https://wailsilence.com/${interstitialKey}/invoke.js`;
+        invokeScript.async = true;
+        containerRef.current.appendChild(invokeScript);
+      } else {
+        // Fallback: Show placeholder if no key configured
+        containerRef.current.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-family: Arial, sans-serif; text-align: center;">
+            <div>
+              <h2 style="margin: 0 0 10px 0; font-size: 24px;">Advertisement Space</h2>
+              <p style="margin: 0; font-size: 14px; opacity: 0.9;">Configure NEXT_PUBLIC_ADSTERRA_INTERSTITIAL_KEY in .env to activate ads</p>
+            </div>
+          </div>
+        `;
+      }
     }
   }, [show]);
 
