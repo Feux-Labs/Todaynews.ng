@@ -1,31 +1,38 @@
 import React from "react";
 import Link from "next/link";
-import { INITIAL_ARTICLES } from "../lib/sample-data";
+import { ArticleData, INITIAL_ARTICLES } from "../lib/sample-data";
 
-export default function TrendingSidebar() {
-  // Sort articles by views count descending
-  const topArticles = [...INITIAL_ARTICLES]
-    .sort((a, b) => b.views - a.views)
+interface TrendingSidebarProps {
+  articles?: ArticleData[];
+}
+
+export default function TrendingSidebar({ articles }: TrendingSidebarProps) {
+  const sourceArticles = articles && articles.length > 0 ? articles : INITIAL_ARTICLES;
+  
+  // Sort articles by views count descending, take top 5
+  const topArticles = [...sourceArticles]
+    .sort((a, b) => (b.views || 0) - (a.views || 0))
     .slice(0, 5);
 
   return (
-    <div className="border-2 border-ink p-5 rounded bg-white font-body shadow-sm">
-      <h3 className="font-display font-black text-sm uppercase tracking-wider text-ink border-b-2 border-ink pb-2 mb-4 flex items-center gap-1">
+    <div className="border-2 border-ink p-5 rounded-lg bg-white font-body shadow-sm">
+      <h3 className="font-display font-black text-sm uppercase tracking-wider text-ink border-b-2 border-ink pb-2 mb-4 flex items-center justify-between">
         <span>Trending Topics</span>
-        <span className="text-signal text-xs animate-bounce font-mono bg-signal/10 px-1 py-0.5 rounded">
+        <span className="text-signal text-xs font-mono bg-signal/10 px-2 py-0.5 rounded font-black">
           Top 5
         </span>
       </h3>
 
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {topArticles.map((article, idx) => {
+          const views = article.views || 1200 + (5 - idx) * 350;
           const formattedViews =
-            article.views >= 1000
-              ? `${(article.views / 1000).toFixed(1)}k`
-              : article.views;
+            views >= 1000
+              ? `${(views / 1000).toFixed(1)}k`
+              : views;
 
           return (
-            <div key={article.slug} className="flex gap-3 group items-start">
+            <div key={article.slug || article.id || idx} className="flex gap-3 group items-start">
               {/* Leaderboard Number Badge */}
               <div className="w-6 h-6 rounded-full bg-ink text-paper text-xs font-black flex items-center justify-center shrink-0 font-mono">
                 {idx + 1}
@@ -33,7 +40,7 @@ export default function TrendingSidebar() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-[9px] uppercase font-black tracking-widest text-flag">
+                  <span className="text-[9px] uppercase font-black tracking-widest text-flag font-mono">
                     {article.category}
                   </span>
                   <span className="text-[9px] font-bold text-muted flex items-center gap-0.5">

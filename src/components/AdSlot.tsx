@@ -42,7 +42,8 @@ export default function AdSlot({
       !injectedRef.current
     ) {
       injectedRef.current = true;
-      containerRef.current.innerHTML = "";
+      const target = containerRef.current;
+      target.innerHTML = "";
 
       const isWide = type === "banner-top";
       const width = isWide ? 728 : 300;
@@ -54,7 +55,7 @@ export default function AdSlot({
         ? "https://wailsilence.com/f1676b31bf7fb91f65c368c428768a54/invoke.js"
         : "https://wailsilence.com/baec4ba691aee8e6facd331480c3ff7a/invoke.js";
 
-      // STEP 1 — Set config on window synchronously BEFORE inject script
+      // 1. Synchronously set window.atOptions
       (window as any).atOptions = {
         key,
         format: "iframe",
@@ -63,10 +64,10 @@ export default function AdSlot({
         params: {},
       };
 
-      // STEP 2 — Inline <script> to ensure atOptions is declared in the same tick
+      // 2. Add inline config script to the DOM element
       const configScript = document.createElement("script");
       configScript.type = "text/javascript";
-      configScript.text = `
+      configScript.innerHTML = `
         window.atOptions = {
           'key' : '${key}',
           'format' : 'iframe',
@@ -75,17 +76,18 @@ export default function AdSlot({
           'params' : {}
         };
       `;
-      containerRef.current.appendChild(configScript);
+      target.appendChild(configScript);
 
-      // STEP 3 — Only after config script is appended, inject invoke script
+      // 3. Inject invoke script
       const invokeScript = document.createElement("script");
       invokeScript.type = "text/javascript";
       invokeScript.src = src;
-      invokeScript.async = false; // synchronous load order critical
+      invokeScript.async = true;
       invokeScript.onload = () => setAdLoaded(true);
-      invokeScript.onerror = () => setAdLoaded(true); // hide placeholder even on error
+      invokeScript.onerror = () => setAdLoaded(true);
 
-      containerRef.current.appendChild(invokeScript);
+      target.appendChild(invokeScript);
+      setAdLoaded(true);
     }
   }, [type]);
 
@@ -93,20 +95,22 @@ export default function AdSlot({
   useEffect(() => {
     if ((type === "native" || type === "sidebar-native") && containerRef.current && !injectedRef.current) {
       injectedRef.current = true;
-      containerRef.current.innerHTML = "";
+      const target = containerRef.current;
+      target.innerHTML = "";
+
+      const nativeDiv = document.createElement("div");
+      nativeDiv.id = "container-f98e29f0e52639872d03cd647118ee6b";
+      target.appendChild(nativeDiv);
 
       const nativeScript = document.createElement("script");
       nativeScript.async = true;
       nativeScript.setAttribute("data-cfasync", "false");
-      nativeScript.src =
-        "https://wailsilence.com/f98e29f0e52639872d03cd647118ee6b/invoke.js";
+      nativeScript.src = "https://wailsilence.com/f98e29f0e52639872d03cd647118ee6b/invoke.js";
       nativeScript.onload = () => setAdLoaded(true);
+      nativeScript.onerror = () => setAdLoaded(true);
 
-      const nativeDiv = document.createElement("div");
-      nativeDiv.id = "container-f98e29f0e52639872d03cd647118ee6b";
-
-      containerRef.current.appendChild(nativeScript);
-      containerRef.current.appendChild(nativeDiv);
+      target.appendChild(nativeScript);
+      setAdLoaded(true);
     }
   }, [type]);
 
@@ -117,7 +121,7 @@ export default function AdSlot({
         href={smartlinkUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className={`my-4 flex items-center justify-between p-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white font-bold rounded-xl shadow-lg hover:brightness-110 transition-all text-sm group ${className}`}
+        className={`my-3 flex items-center justify-between p-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white font-bold rounded-xl shadow-md hover:brightness-110 transition-all text-sm group ${className}`}
       >
         <span className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 bg-amber-300 rounded-full animate-ping" />
@@ -150,32 +154,18 @@ export default function AdSlot({
   const isTopBanner = type === "banner-top";
 
   return (
-    <div className={`w-full my-4 flex flex-col items-center justify-center ${className}`}>
+    <div className={`w-full my-2 flex flex-col items-center justify-center overflow-hidden ${className}`}>
       <span className="text-[9px] uppercase font-bold tracking-widest text-muted/60 mb-1 font-mono">
         Sponsored Advertisement
       </span>
-      {/* Loading placeholder — visible until ad iframe loads */}
-      {!adLoaded && (
-        <div
-          className={`animate-pulse bg-ink/5 border border-ink/10 rounded-lg flex items-center justify-center ${
-            isTopBanner
-              ? "w-full max-w-[728px] h-[90px]"
-              : "w-[300px] h-[250px]"
-          }`}
-        >
-          <span className="text-[10px] text-muted/40 font-mono uppercase tracking-widest">
-            Advertisement
-          </span>
-        </div>
-      )}
       <div
         id={id}
         ref={containerRef}
-        className={`w-full flex items-center justify-center overflow-x-auto rounded-lg bg-paper border border-ink/5 shadow-sm transition-all ${
+        className={`w-full flex items-center justify-center overflow-hidden rounded-lg bg-paper border border-ink/5 shadow-sm transition-all ${
           isTopBanner
             ? "min-h-[90px] max-w-[728px] mx-auto p-1"
             : "min-h-[250px] min-w-[300px]"
-        } ${!adLoaded ? "hidden" : ""}`}
+        }`}
       />
     </div>
   );

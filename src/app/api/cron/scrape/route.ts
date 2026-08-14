@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
-import { scrapeRSSFeeds, scrapeScholarships, scrapeJapa, scrapeMakeMoneyOnline, enrichAndRankStories, resolveStoryImage } from "@/lib/scraper";
-import { paraphraseNews } from "@/lib/ai";
+import { scrapeRSSFeeds, scrapeScholarships, scrapeJapa, scrapeMakeMoneyOnline, enrichAndRankStories, resolveStoryImage, stripCompetitorLinksAndBoilerplate } from "@/lib/scraper";
+import { paraphraseNews, localProceduralRewriter, cleanAndFormatTitle } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { sendNewStoryAlert } from "@/lib/mailer";
 import { getPersistentServerSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
+
+function isAuthorized(req: Request): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  // If no secret is configured, allow (local dev / Vercel internal)
+  if (!cronSecret) return true;
+  const authHeader = req.headers.get("authorization") || "";
+  const cronKey = req.headers.get("x-cron-key") || "";
+  return authHeader === `Bearer ${cronSecret}` || cronKey === cronSecret;
+}
 
 async function storyAlreadyExists(sourceUrl: string, title: string) {
   if (isDbConfigured()) {
@@ -38,10 +47,15 @@ async function storyAlreadyExists(sourceUrl: string, title: string) {
  * Scrapes fresh Nigerian news → Paraphrases with Gemini → Saves to AI_PENDING inbox → Mails Admin.
  */
 export async function GET(req: Request) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     console.log("[Cron Scraper] Starting 30-minute auto-scrape cycle...");
     const settings = await getPersistentServerSettings();
     let publishedScheduled = 0;
+    let autoPublished = 0;
 
     if (isDbConfigured()) {
       try {
@@ -58,6 +72,26 @@ export async function GET(req: Request) {
         publishedScheduled = due.count;
       } catch (err) {
         console.error("[Cron Scraper] Scheduled publish check skipped:", err);
+      }
+    }
+
+    // Auto-publish articles that have been in AI_PENDING for more than 60 minutes
+    if (isDbConfigured()) {
+      try {
+        const sixtyMinsAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const autoPublish = await prisma.article.updateMany({
+          where: {
+            status: "AI_PENDING" as any,
+            createdAt: { lte: sixtyMinsAgo },
+          },
+          data: { status: "PUBLISHED" as any },
+        });
+        autoPublished = autoPublish.count;
+        if (autoPublished > 0) {
+          console.log(`[Cron Scraper] Auto-published ${autoPublished} pending articles older than 60 mins.`);
+        }
+      } catch (err) {
+        console.error("[Cron Scraper] Auto-publish step failed:", err);
       }
     }
 
@@ -90,8 +124,18 @@ export async function GET(req: Request) {
         continue;
       }
 
-      // Paraphrase with Gemini AI
-      const paraphrased = await paraphraseNews(story.content, story.title, story.category);
+      // Clean competitor links before paraphrasing
+      const cleanTitle = cleanAndFormatTitle(story.title);
+      const cleanContent = stripCompetitorLinksAndBoilerplate(story.content);
+
+      // Paraphrase with Gemini AI, fall back to local rewriter on error
+      let paraphrased: any;
+      try {
+        paraphrased = await paraphraseNews(cleanContent, cleanTitle, story.category);
+      } catch (paraErr) {
+        console.log(`[Cron Scraper] Gemini failed for "${cleanTitle}", using local rewriter.`, paraErr);
+        paraphrased = localProceduralRewriter(cleanContent, cleanTitle, story.category);
+      }
       const finalImageUrl = await resolveStoryImage(story.imageUrl, paraphrased.title, paraphrased.category);
 
       const slug = paraphrased.title
@@ -112,12 +156,12 @@ export async function GET(req: Request) {
             summary: paraphrased.summary,
             category: paraphrased.category as any,
             status: "AI_PENDING" as any,
-            sourceName: story.sourceName,
+            sourceName: "Todaynews AI",
             sourceUrl: story.sourceUrl,
             imageUrl: finalImageUrl,
             author: settings.defaultAuthorName,
             pages: {
-              create: paraphrased.pages.map((p) => ({
+              create: paraphrased.pages.map((p: { pageNumber: number; title?: string | null; content: string }) => ({
                 pageNumber: p.pageNumber,
                 title: p.title || null,
                 content: p.content,
@@ -133,7 +177,7 @@ export async function GET(req: Request) {
           summary: paraphrased.summary,
           category: paraphrased.category as any,
           status: "AI_PENDING" as any,
-          sourceName: story.sourceName,
+          sourceName: "Todaynews AI",
           sourceUrl: story.sourceUrl,
           imageUrl: finalImageUrl,
           author: settings.defaultAuthorName,
@@ -149,17 +193,18 @@ export async function GET(req: Request) {
       await sendNewStoryAlert({
         id: savedArticleId,
         title: paraphrased.title,
-        sourceName: story.sourceName,
+        sourceName: "Todaynews AI",
         category: paraphrased.category,
       });
     }
 
-    console.log(`[Cron Scraper] Completed cycle. Saved & notified ${savedStories.length} stories.`);
+    console.log(`[Cron Scraper] Completed cycle. Saved ${savedStories.length} stories. Auto-published ${autoPublished} pending.`);
 
     return NextResponse.json({
       success: true,
       count: savedStories.length,
       publishedScheduled,
+      autoPublished,
       stories: savedStories,
     });
   } catch (err) {

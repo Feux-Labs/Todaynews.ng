@@ -7,10 +7,13 @@
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+html,
 body {
   background-color: #F7F4EC;
   color: #141312;
   font-family: var(--font-body);
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 .hazard-stripe {

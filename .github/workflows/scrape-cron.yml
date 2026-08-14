@@ -1,4 +1,4 @@
-name: 30-Min Free Auto-Scraper Cron
+name: 30-Min Auto-Scraper + Auto-Publish
 
 on:
   schedule:
@@ -9,6 +9,16 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Todaynews.ng Scraper API
+      - name: Trigger Todaynews.ng Scraper
         run: |
-          curl -X GET "https://todaynews.ng/api/cron/scrape" || true
+          curl -f -X GET "https://todaynews.ng/api/cron/scrape" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "x-cron-key: ${{ secrets.CRON_SECRET }}" \
+            --max-time 60 || echo "Scrape job failed or timed out, continuing..."
+
+      - name: Trigger Auto-Publish Check
+        run: |
+          curl -f -X GET "https://todaynews.ng/api/cron/auto-publish" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "x-cron-key: ${{ secrets.CRON_SECRET }}" \
+            --max-time 30 || echo "Auto-publish check failed, continuing..."

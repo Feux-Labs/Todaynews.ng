@@ -16,6 +16,10 @@ import {
   Plus,
   Save,
   Maximize2,
+  Camera,
+  Check,
+  Sparkles,
+  Link as LinkIcon,
 } from "lucide-react";
 
 interface ArticlePage {
@@ -43,6 +47,19 @@ const CATEGORIES = [
   "SCHOLARSHIP", "JAPA", "MAKE_MONEY_ONLINE",
 ];
 
+const PRESET_IMAGES = [
+  { label: "Nigeria Politics / Government", url: "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80" },
+  { label: "Naira / Economy & Central Bank", url: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80" },
+  { label: "Nigeria Metro & Lagos City", url: "https://images.unsplash.com/photo-1577975882846-431adc8c2009?auto=format&fit=crop&w=1200&q=80" },
+  { label: "Security & Law Enforcement", url: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80" },
+  { label: "Sports & Football", url: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80" },
+  { label: "Entertainment & Afrobeats", url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80" },
+  { label: "Technology & AI", url: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80" },
+  { label: "Scholarships & Study", url: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80" },
+  { label: "Japa & Visa Relocation", url: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1200&q=80" },
+  { label: "Online Business & Fintech", url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80" },
+];
+
 export default function DraftsPage() {
   const [articles, setArticles] = useState<DraftArticle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,10 +68,16 @@ export default function DraftsPage() {
   const [editSummary, setEditSummary] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editAuthor, setEditAuthor] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
   const [editPages, setEditPages] = useState<ArticlePage[]>([]);
   const [activePageIdx, setActivePageIdx] = useState(0);
   const [saving, setSaving] = useState(false);
   const [editScheduledAt, setEditScheduledAt] = useState("");
+
+  // Quick Image Modal State
+  const [imageModalArticle, setImageModalArticle] = useState<DraftArticle | null>(null);
+  const [modalImageUrl, setModalImageUrl] = useState("");
+  const [savingModalImage, setSavingModalImage] = useState(false);
 
   useEffect(() => {
     fetchDrafts();
@@ -103,6 +126,7 @@ export default function DraftsPage() {
     setEditTitle(article.title);
     setEditSummary(article.summary);
     setEditCategory(article.category);
+    setEditImageUrl(article.imageUrl || "");
     setEditAuthor((article as any).author || "");
     setEditScheduledAt(article.scheduledAt ? article.scheduledAt.slice(0, 16) : "");
     setEditPages(
@@ -158,6 +182,7 @@ export default function DraftsPage() {
           title: editTitle,
           summary: editSummary,
           category: editCategory,
+          imageUrl: editImageUrl,
           author: editAuthor,
           status: targetStatus,
           scheduledAt,
@@ -166,7 +191,6 @@ export default function DraftsPage() {
       });
 
       if (res.ok) {
-        const updated = await res.json();
         setArticles((prev) =>
           prev.map((a) =>
             a.id === editingArticle.id
@@ -175,15 +199,16 @@ export default function DraftsPage() {
                   title: editTitle,
                   summary: editSummary,
                   category: editCategory,
+                  imageUrl: editImageUrl,
                   pages: editPages,
                 }
               : a
           )
         );
-        closeEditor();
-        if (targetStatus === "PUBLISHED") {
-          await fetchDrafts();
+        if (targetStatus === "PUBLISHED" && !scheduledAt) {
+          setArticles((prev) => prev.filter((a) => a.id !== editingArticle.id));
         }
+        closeEditor();
       }
     } catch (err) {
       console.error("Save failed:", err);
@@ -192,100 +217,154 @@ export default function DraftsPage() {
     }
   };
 
+  const openQuickImageModal = (article: DraftArticle) => {
+    setImageModalArticle(article);
+    setModalImageUrl(article.imageUrl || "");
+  };
+
+  const saveQuickModalImage = async () => {
+    if (!imageModalArticle) return;
+    setSavingModalImage(true);
+    try {
+      await fetch(`/api/articles/${imageModalArticle.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: modalImageUrl }),
+      });
+      setArticles((prev) =>
+        prev.map((a) => (a.id === imageModalArticle.id ? { ...a, imageUrl: modalImageUrl } : a))
+      );
+      setImageModalArticle(null);
+    } catch (err) {
+      console.error("Failed to update draft image:", err);
+    } finally {
+      setSavingModalImage(false);
+    }
+  };
+
   return (
-    <>
-      <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-6 lg:p-8 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <FileEdit className="w-6 h-6 text-[#aa00ff]" />
-            Drafts
+            Drafts & Scheduled Articles
             {articles.length > 0 && (
               <span className="ml-2 px-2.5 py-0.5 bg-[#aa00ff]/10 text-[#aa00ff] text-sm font-bold rounded-full">
                 {articles.length}
               </span>
             )}
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Approved articles ready for editing and publishing</p>
+          <p className="text-slate-400 text-sm mt-1">
+            Articles in progress, scheduled queue, or awaiting final review
+          </p>
         </div>
+      </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-[#00e676]" />
-          </div>
-        ) : articles.length === 0 ? (
-          <div className="text-center py-20">
-            <FileEdit className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400">No drafts</p>
-            <p className="text-slate-500 text-sm mt-1">Approve stories from the Inbox to see them here.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {articles.map((article) => (
-              <div
-                key={article.id}
-                className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-5 hover:border-white/10 transition-all"
-              >
-                <div className="flex gap-4">
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-[#aa00ff]" />
+        </div>
+      ) : articles.length === 0 ? (
+        <div className="text-center py-20">
+          <FileEdit className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+          <p className="text-slate-400">No drafts or scheduled articles found</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {articles.map((article) => (
+            <div
+              key={article.id}
+              className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-5 hover:border-white/10 transition-all"
+            >
+              <div className="flex gap-4">
+                {/* Thumbnail with Click to Change Image */}
+                <div
+                  onClick={() => openQuickImageModal(article)}
+                  className="group relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer border border-white/10 bg-white/5"
+                  title="Click to Change Featured Image"
+                >
                   {article.imageUrl ? (
-                    <img src={article.imageUrl} alt="" className="w-20 h-20 rounded-lg object-cover flex-shrink-0" />
+                    <img
+                      src={article.imageUrl}
+                      alt=""
+                      className="w-full h-full object-cover group-hover:scale-105 transition"
+                    />
                   ) : (
-                    <div className="w-20 h-20 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                    <div className="w-full h-full flex items-center justify-center">
                       <ImageIcon className="w-8 h-8 text-slate-600" />
                     </div>
                   )}
-
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-semibold text-white leading-tight">{article.title}</h3>
-                    <p className="text-sm text-slate-400 mt-1 line-clamp-2">{article.summary}</p>
-
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-[10px] px-2 py-0.5 bg-[#aa00ff]/10 text-[#aa00ff] rounded-full font-medium">
-                        <Tag className="w-3 h-3 inline mr-1" />{article.category}
-                      </span>
-                      {article.status === "SCHEDULED" && article.scheduledAt && (
-                        <span className="text-[10px] text-amber-300 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          Scheduled {new Date(article.scheduledAt).toLocaleString("en-NG")}
-                        </span>
-                      )}
-                      <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                        <Eye className="w-3 h-3" /> {article.pages?.length || 0} page{article.pages?.length !== 1 ? "s" : ""}
-                      </span>
-                      <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {new Date(article.createdAt).toLocaleDateString("en-NG")}
-                      </span>
-                    </div>
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition gap-1 text-[10px] text-white font-bold">
+                    <Camera className="w-4 h-4 text-[#00e676]" />
+                    <span>Change</span>
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
-                  <button
-                    onClick={() => openEditor(article)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-300 text-xs font-medium rounded-md hover:bg-white/10 transition"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" /> Edit Content
-                  </button>
-                  <button
-                    onClick={() => publishArticle(article.id)}
-                    className="flex items-center gap-1.5 px-4 py-1.5 bg-[#00e676]/10 text-[#00e676] text-xs font-bold rounded-md hover:bg-[#00e676]/20 transition"
-                  >
-                    <Rocket className="w-3.5 h-3.5" /> Publish Now
-                  </button>
-                  <button
-                    onClick={() => deleteArticle(article.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/5 text-red-500/60 text-xs rounded-md hover:bg-red-500/10 transition ml-auto"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
-                  </button>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-semibold text-white leading-tight">
+                    {article.title}
+                  </h3>
+                  <p className="text-sm text-slate-400 mt-1 line-clamp-2">{article.summary}</p>
+
+                  <div className="flex flex-wrap items-center gap-3 mt-2">
+                    <span className="text-[10px] px-2 py-0.5 bg-[#aa00ff]/10 text-purple-300 rounded-full font-medium">
+                      <Tag className="w-3 h-3 inline mr-1" />
+                      {article.category}
+                    </span>
+                    {article.status === "SCHEDULED" ? (
+                      <span className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-full font-medium flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Scheduled: {article.scheduledAt ? new Date(article.scheduledAt).toLocaleString("en-NG") : "Pending"}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-2 py-0.5 bg-slate-500/10 text-slate-400 rounded-full font-medium">
+                        Draft
+                      </span>
+                    )}
+                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                      <Eye className="w-3 h-3" /> {article.pages?.length || 0} page{article.pages?.length !== 1 ? "s" : ""}
+                    </span>
+                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {new Date(article.createdAt).toLocaleDateString("en-NG")}
+                    </span>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Full Content Editor Modal */}
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/5 items-center">
+                <button
+                  onClick={() => openEditor(article)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-300 text-xs font-medium rounded-md hover:bg-white/10 transition"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" /> Edit Content
+                </button>
+                <button
+                  onClick={() => openQuickImageModal(article)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00e676]/10 text-[#00e676] text-xs font-bold rounded-md hover:bg-[#00e676]/20 transition border border-[#00e676]/20"
+                >
+                  <Camera className="w-3.5 h-3.5" /> Change Image
+                </button>
+                <button
+                  onClick={() => publishArticle(article.id)}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#00e676]/10 text-[#00e676] text-xs font-bold rounded-md hover:bg-[#00e676]/20 transition"
+                >
+                  <Rocket className="w-3.5 h-3.5" /> Publish Now
+                </button>
+                <button
+                  onClick={() => deleteArticle(article.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/5 text-red-500/60 text-xs rounded-md hover:bg-red-500/10 transition ml-auto"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Full Content Editor Modal with Featured Image Section */}
       {editingArticle && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col">
           {/* Modal Header */}
@@ -321,11 +400,46 @@ export default function DraftsPage() {
           </div>
 
           <div className="flex-1 flex overflow-hidden">
-            {/* Left Panel — Metadata */}
-            <div className="w-72 shrink-0 border-r border-white/5 bg-[#0a0f1c] overflow-y-auto p-4 space-y-4">
+            {/* Left Panel — Metadata & Featured Image */}
+            <div className="w-80 shrink-0 border-r border-white/5 bg-[#0a0f1c] overflow-y-auto p-4 space-y-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Article Metadata</h3>
 
               <div className="space-y-3">
+                {/* Featured Image Box */}
+                <div>
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">
+                    Featured Image
+                  </label>
+                  <div className="w-full h-28 rounded-lg overflow-hidden bg-black/50 border border-white/10 relative mb-2">
+                    {editImageUrl ? (
+                      <img src={editImageUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs">
+                        No Image Selected
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    value={editImageUrl}
+                    onChange={(e) => setEditImageUrl(e.target.value)}
+                    placeholder="Image URL (https://...)"
+                    className="w-full px-2.5 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30 font-mono mb-2"
+                  />
+                  {/* Preset Buttons */}
+                  <div className="flex flex-wrap gap-1">
+                    {PRESET_IMAGES.slice(0, 4).map((p) => (
+                      <button
+                        key={p.url}
+                        type="button"
+                        onClick={() => setEditImageUrl(p.url)}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 transition"
+                      >
+                        {p.label.split("/")[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Headline</label>
                   <textarea
@@ -418,7 +532,7 @@ export default function DraftsPage() {
                       {editPages.length > 1 && (
                         <span
                           onClick={(e) => { e.stopPropagation(); removePage(idx); }}
-                          className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition ml-1"
+                          className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-red-400 transition"
                         >
                           <X className="w-3 h-3" />
                         </span>
@@ -429,61 +543,166 @@ export default function DraftsPage() {
               </div>
             </div>
 
-            {/* Right Panel — Content Editor */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-[#060b18]">
+            {/* Right Panel — Multi-Page Article Content Editor */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {editPages[activePageIdx] && (
-                <>
-                  {/* Page header */}
-                  <div className="px-6 py-3 border-b border-white/5 bg-[#0a0f1c] shrink-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] font-mono text-slate-500">Page {activePageIdx + 1} Title</span>
+                <div className="space-y-4 max-w-3xl mx-auto">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-purple-400">
+                      Editing Page {activePageIdx + 1} of {editPages.length}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setActivePageIdx(Math.max(0, activePageIdx - 1))}
+                        disabled={activePageIdx === 0}
+                        className="p-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 text-slate-400 hover:text-white transition"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setActivePageIdx(Math.min(editPages.length - 1, activePageIdx + 1))}
+                        disabled={activePageIdx === editPages.length - 1}
+                        className="p-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 text-slate-400 hover:text-white transition"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">
+                      Page Subtitle / Section Header
+                    </label>
                     <input
                       value={editPages[activePageIdx].title || ""}
                       onChange={(e) => updatePageContent(activePageIdx, "title", e.target.value)}
-                      placeholder="Page section title..."
+                      placeholder="e.g. Background and Key Statements"
                       className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30"
                     />
                   </div>
 
-                  {/* Content area */}
-                  <div className="flex-1 flex flex-col p-6 overflow-hidden">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-mono text-slate-500">HTML Content (Page {activePageIdx + 1})</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setActivePageIdx((i) => Math.max(0, i - 1))}
-                          disabled={activePageIdx === 0}
-                          className="p-1 rounded bg-white/5 text-slate-400 hover:text-white disabled:opacity-20 transition"
-                        >
-                          <ChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="text-[10px] text-slate-500 font-mono">{activePageIdx + 1}/{editPages.length}</span>
-                        <button
-                          onClick={() => setActivePageIdx((i) => Math.min(editPages.length - 1, i + 1))}
-                          disabled={activePageIdx === editPages.length - 1}
-                          className="p-1 rounded bg-white/5 text-slate-400 hover:text-white disabled:opacity-20 transition"
-                        >
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">
+                      Page Content (HTML or Plain Text)
+                    </label>
                     <textarea
                       value={editPages[activePageIdx].content}
                       onChange={(e) => updatePageContent(activePageIdx, "content", e.target.value)}
-                      placeholder='<p class="mb-4">Start writing content here... Use HTML tags for formatting.</p>'
-                      className="flex-1 w-full px-4 py-3 bg-[#0a0f1c] border border-white/5 rounded-xl text-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30 resize-none leading-relaxed"
+                      rows={14}
+                      placeholder="Write or edit article content for this page..."
+                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30 font-mono text-xs leading-relaxed resize-none"
                     />
-                    <p className="text-[10px] text-slate-600 mt-2">
-                      Use HTML tags: &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;h3&gt;, &lt;blockquote&gt;, &lt;div class="..."&gt;
-                    </p>
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
-    </>
+
+      {/* Quick Image Picker Modal */}
+      {imageModalArticle && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0b1329] border border-white/10 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#aa00ff]/10 text-purple-400 flex items-center justify-center">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Change Featured Image</h3>
+                  <p className="text-xs text-slate-400 line-clamp-1">{imageModalArticle.title}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setImageModalArticle(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Live Preview */}
+            <div className="w-full h-44 rounded-xl overflow-hidden bg-black/50 border border-white/10 relative">
+              {modalImageUrl ? (
+                <img
+                  src={modalImageUrl}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80";
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-2">
+                  <ImageIcon className="w-8 h-8" />
+                  <span className="text-xs">No image URL specified</span>
+                </div>
+              )}
+            </div>
+
+            {/* URL Input */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <LinkIcon className="w-3.5 h-3.5 text-purple-400" />
+                Image URL (Direct link)
+              </label>
+              <input
+                type="text"
+                value={modalImageUrl}
+                onChange={(e) => setModalImageUrl(e.target.value)}
+                placeholder="https://images.unsplash.com/... or direct web link"
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:border-purple-400/50 font-mono"
+              />
+            </div>
+
+            {/* Preset Library */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                Curated High-Res Nigerian Editorial Presets
+              </label>
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
+                {PRESET_IMAGES.map((preset) => (
+                  <button
+                    key={preset.url}
+                    type="button"
+                    onClick={() => setModalImageUrl(preset.url)}
+                    className={`flex items-center gap-2 p-1.5 rounded-lg border text-left text-[11px] transition ${
+                      modalImageUrl === preset.url
+                        ? "bg-[#aa00ff]/15 border-[#aa00ff] text-white font-semibold"
+                        : "bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <img src={preset.url} alt="" className="w-7 h-7 rounded object-cover flex-shrink-0" />
+                    <span className="truncate">{preset.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={saveQuickModalImage}
+                disabled={savingModalImage || !modalImageUrl.trim()}
+                className="flex-1 py-2.5 bg-[#aa00ff] text-white font-bold text-xs rounded-xl hover:bg-[#aa00ff]/90 transition flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-lg shadow-purple-900/30"
+              >
+                {savingModalImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Apply & Save Image
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageModalArticle(null)}
+                className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 text-xs rounded-xl transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

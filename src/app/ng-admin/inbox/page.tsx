@@ -69,8 +69,8 @@ export default function InboxPage() {
     }
   };
 
-  const handleAction = async (id: string, action: "approve" | "reject" | "delete") => {
-    const statusMap = { approve: "DRAFT", reject: "REJECTED", delete: "DELETE" };
+  const handleAction = async (id: string, action: "approve" | "publish" | "reject" | "delete") => {
+    const statusMap = { approve: "DRAFT", publish: "PUBLISHED", reject: "REJECTED", delete: "DELETE" };
 
     try {
       if (action === "delete") {
@@ -265,8 +265,8 @@ export default function InboxPage() {
                       <Tag className="w-3 h-3 inline mr-1" />
                       {article.category}
                     </span>
-                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                      <Globe className="w-3 h-3" /> {article.sourceName}
+                    <span className="text-[10px] text-emerald-400/80 flex items-center gap-1 font-mono">
+                      <Globe className="w-3 h-3 text-[#00e676]" /> Todaynews AI
                     </span>
                     <span className="text-[10px] text-slate-500 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
@@ -312,10 +312,16 @@ export default function InboxPage() {
                     Re-paraphrase
                   </button>
                   <button
+                    onClick={() => handleAction(article.id, "publish")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00e676]/15 text-[#00e676] text-xs font-bold rounded-md hover:bg-[#00e676]/25 border border-[#00e676]/30 transition"
+                  >
+                    <Check className="w-3.5 h-3.5" /> 🚀 Instant Publish
+                  </button>
+                  <button
                     onClick={() => handleAction(article.id, "approve")}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-400 text-xs font-medium rounded-md hover:bg-amber-500/20 transition"
                   >
-                    <Check className="w-3.5 h-3.5" /> Approve → Draft
+                    <Check className="w-3.5 h-3.5" /> Move to Drafts
                   </button>
                   <button
                     onClick={() => handleAction(article.id, "reject")}

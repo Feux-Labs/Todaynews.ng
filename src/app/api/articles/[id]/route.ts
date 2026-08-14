@@ -35,7 +35,7 @@ export async function PATCH(
 ) {
   try {
     const data = await request.json();
-    const { status, title, summary, category, author, scheduledAt } = data;
+    const { status, title, summary, category, author, scheduledAt, imageUrl } = data;
     const requestedStatus = status?.toString().toUpperCase();
     const nextStatus = scheduledAt && requestedStatus === "PUBLISHED" ? "SCHEDULED" : requestedStatus;
 
@@ -49,6 +49,7 @@ export async function PATCH(
         if (summary !== undefined) updateData.summary = summary;
         if (category !== undefined) updateData.category = category;
         if (author !== undefined) updateData.author = author;
+        if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
 
         const updated = await prisma.article.update({
           where: { id: params.id },

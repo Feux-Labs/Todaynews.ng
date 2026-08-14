@@ -723,6 +723,32 @@ export default function CmsEditorPage() {
                   />
                 </label>
 
+                {/* Curated Presets */}
+                <div className="space-y-1 pt-1">
+                  <span className="text-[10px] text-slate-400 font-semibold block">Quick Curated Presets:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      { label: "Politics", url: "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80" },
+                      { label: "Naira", url: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80" },
+                      { label: "Metro", url: "https://images.unsplash.com/photo-1577975882846-431adc8c2009?auto=format&fit=crop&w=1200&q=80" },
+                      { label: "Security", url: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80" },
+                      { label: "Sports", url: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80" },
+                      { label: "Afrobeats", url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80" },
+                      { label: "Tech", url: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80" },
+                      { label: "Japa", url: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1200&q=80" },
+                    ].map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => setImageUrl(p.url)}
+                        className="text-[9px] px-2 py-0.5 rounded bg-white/5 hover:bg-[#00e676]/20 text-slate-300 hover:text-[#00e676] transition border border-white/5 hover:border-[#00e676]/30"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {imageUrl.trim() && (
                   <div className="mt-2 rounded-lg overflow-hidden border border-white/10 h-32 bg-black/40">
                     <img src={imageUrl} alt="Featured Preview" className="w-full h-full object-cover" />

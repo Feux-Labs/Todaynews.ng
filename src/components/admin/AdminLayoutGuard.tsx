@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import AdminSidebar from "@/components/admin/Sidebar";
+import AgentPanel from "@/components/admin/AgentPanel";
 import { Loader2 } from "lucide-react";
 
 export default function AdminLayoutGuard({
@@ -56,13 +57,14 @@ export default function AdminLayoutGuard({
     );
   }
 
-  // Authenticated admin view
+  // Authenticated admin view with global AgentPanel
   return (
     <div className="min-h-screen bg-[#060b18] text-slate-200">
       <AdminSidebar />
       <main className="ml-[260px] min-h-screen p-6 transition-all duration-300">
         {children}
       </main>
+      <AgentPanel />
     </div>
   );
 }
