@@ -82,10 +82,31 @@ export function localProceduralRewriter(
     return out;
   };
 
-  const chunks = chunk(sentences, Math.max(2, Math.floor(sentences.length / 3)));
-  const part1 = chunks[0] || sentences;
-  const part2 = chunks[1] || sentences;
-  const part3 = chunks[2] || sentences;
+  const pageCount = sentences.length <= 3 ? 1 : sentences.length <= 7 ? 2 : 3;
+  const chunks = chunk(sentences, Math.max(2, Math.ceil(sentences.length / pageCount)));
+
+  const CREATIVE_TITLES_P1 = [
+    "Core Development & Incident Breakdown",
+    "The Emerging Situation & Verified Facts",
+    "Key Event Timeline & First Reports",
+  ];
+  const CREATIVE_TITLES_P2 = [
+    "How This Affects Everyday Nigerians",
+    "The Editor's View & Strategic Analysis",
+    "Underlying Undercurrents & Economic Fallout",
+    "Governance, Security & Regional Impact",
+  ];
+  const CREATIVE_TITLES_P3 = [
+    "Icing on the Cake: Key Takeaways",
+    "What Lies Ahead & Policy Repercussions",
+    "Strategic Outlook & Accountability Watch",
+  ];
+
+  const pickTitle = (list: string[], seed: string) => {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) hash += seed.charCodeAt(i);
+    return list[hash % list.length];
+  };
 
   const toHtml = (lines: string[]) =>
     lines.map((l) => `<p class="mb-4">${l}</p>`).join("\n");
@@ -93,56 +114,61 @@ export function localProceduralRewriter(
   const coreSentence = sentences[0] || `${headline}. Official channels and key stakeholders are currently assessing the situation as developments unfold.`;
 
   const pages: { pageNumber: number; title: string; content: string }[] = [];
+
+  // Page 1
+  const p1Text = chunks[0] || sentences;
   pages.push({
     pageNumber: 1,
-    title: "Core Facts & Breaking Report",
+    title: pickTitle(CREATIVE_TITLES_P1, headline),
     content:
       `<p class="mb-4"><strong>${headline}</strong> — ${coreSentence}</p>` +
       toHtml(
-        part1.length >= 3
-          ? part1.slice(1)
+        p1Text.length >= 2
+          ? p1Text.slice(1)
           : [
-            "Credible sources confirm that the situation is being closely monitored by relevant authorities and emergency response agencies. Early accounts suggest a sequence of events that demands immediate attention from both citizens and policymakers.",
-            "Todaynews.ng is tracking this story in real time. Multiple government agencies have been briefed and are expected to issue an official follow-up statement before end of day.",
-            "Subject to official confirmation, preliminary accounts indicate that this development may have wide-reaching implications across key sectors. The full scope of the situation is still being assessed on the ground.",
-          ]
-      ) +
-      `<p class="mb-4"><em>Note: Details surrounding this report remain subject to official verification by relevant authorities and emergency response agencies. Todaynews.ng is committed to accurate, verified reporting.</em></p>`,
-  });
-
-  pages.push({
-    pageNumber: 2,
-    title: "Why This Matters & Background Context",
-    content:
-      `<div class="p-4 bg-paper border-l-4 border-flag my-4 rounded"><h4 class="font-bold text-ink mb-1">🇳🇬 Why This Matters to Nigerians</h4><p class="text-sm text-muted">This development carries direct implications for governance, security, and the affected communities across Nigeria.</p></div>` +
-      toHtml(
-        part2.length >= 3
-          ? part2
-          : [
-            "Historical precedent shows that developments of this nature have led to significant policy adjustments and operational reviews. The Nigerian authorities have previously responded to similar triggers with specialized taskforce deployments and judicial reviews.",
-            "Legal and security analysts noted in a recent briefing that proactive institutional responses play a critical role in preventing unnecessary public distress and ensuring justice is served.",
-            "Civil society organisations and community advocates have begun weighing in on the matter, calling for transparency, due process, and timely disclosure from the appropriate authorities.",
-            "Institutional lessons from previous cycles highlight the necessity of clear, verified reporting — a principle Todaynews.ng consistently upholds.",
+            "Credible sources confirm that the situation is being closely monitored by relevant authorities and emergency response agencies as developments unfold.",
+            "Todaynews.ng is tracking this story in real time. Official statements and administrative briefings are expected as further verified facts emerge.",
           ]
       ),
   });
 
-  pages.push({
-    pageNumber: 3,
-    title: "What Happens Next & Expert Outlook",
-    content:
-      toHtml(
-        part3.length >= 3
-          ? part3
-          : [
-            "Stakeholders, civil society groups, and community representatives are awaiting official updates from administrative representatives to determine subsequent measures.",
-            "Legal and policy experts expect that the relevant authorities will convene an assessment review in the coming 48 to 72 hours to formally communicate their findings.",
-            "Relevant agencies remain on alert to ensure due process and public order are maintained as the situation progresses.",
-            "Diplomatic and human rights observers are reportedly monitoring developments closely, with a formal statement expected as more verified facts emerge.",
-          ]
-      ) +
-      `<p class="mb-4"><strong>📌 Todaynews.ng will continue to provide real-time, verified updates on this developing story. Bookmark this page and follow our Breaking News ticker for the latest.</strong></p>`,
-  });
+  // Page 2 (if story warrants 2 or 3 pages)
+  if (pageCount >= 2) {
+    const p2Text = chunks[1] || [];
+    pages.push({
+      pageNumber: 2,
+      title: pickTitle(CREATIVE_TITLES_P2, headline),
+      content:
+        `<div class="p-4 bg-paper border-l-4 border-flag my-4 rounded"><h4 class="font-bold text-ink mb-1">🇳🇬 The Analytical View</h4><p class="text-sm text-muted">A critical assessment of the wider institutional, economic, and community implications across Nigeria.</p></div>` +
+        toHtml(
+          p2Text.length >= 2
+            ? p2Text
+            : [
+              "Historical precedent shows that developments of this nature carry significant public interest and demand proactive institutional transparency.",
+              "Analysts and civic stakeholders note that timely responses are essential in addressing public concerns and ensuring accountability.",
+            ]
+        ),
+    });
+  }
+
+  // Page 3 (if rich multi-page investigative story)
+  if (pageCount >= 3) {
+    const p3Text = chunks[2] || [];
+    pages.push({
+      pageNumber: 3,
+      title: pickTitle(CREATIVE_TITLES_P3, headline),
+      content:
+        toHtml(
+          p3Text.length >= 2
+            ? p3Text
+            : [
+              "Stakeholders and community representatives are tracking ongoing communications from official channels to evaluate subsequent measures.",
+              "Further policy reviews and institutional statements are anticipated as relevant agencies complete their assessments.",
+            ]
+        ) +
+        `<p class="mb-4"><strong>📌 Todaynews.ng will continue to provide real-time updates as verified facts emerge.</strong></p>`,
+    });
+  }
 
   const summaryText = sentences[0]
     ? sentences[0].substring(0, 200) + (sentences[0].length > 200 ? "..." : "")
@@ -185,12 +211,14 @@ function normalizeParaphrasedResult(result: ParaphrasedResult, fallback: Paraphr
  * Each page must have 4-5 substantial paragraphs — NOT one-liners.
  */
 const CANDIDATE_MODELS = [
-  process.env.GEMINI_MODEL,
+  "gemini-3.5-flash",
   "gemini-3.7-flash",
-  "gemini-flash-latest",
-  "gemini-3.5-flash-lite",
   "gemini-3.6-flash",
-].filter(Boolean) as string[];
+  "gemini-flash-latest",
+  "gemini-3.1-flash-lite",
+  "gemini-3.1-pro-preview",
+  "gemini-pro-latest",
+];
 
 export async function paraphraseNews(
   rawText: string,
@@ -210,48 +238,54 @@ export async function paraphraseNews(
       const cleanInputText = stripCompetitorLinksAndBoilerplate(rawText);
 
       const prompt = `
-      You are Chief Editor and Mass Communication Specialist for "Todaynews.ng", writing in the authoritative long-form style of Punch Newspaper, BBC Africa, Premium Times, and Guardian Nigeria.
+      You are Chief Editor and Mass Communication Specialist for "Todaynews.ng", writing in the authoritative, engaging journalistic style of Punch Newspaper, Financial Times, BBC Africa, Premium Times, and Guardian Nigeria.
       
-      CORE MISSION:
-      Todaynews.ng is Nigeria's AI-powered news channel dedicated to reducing misinformation and combating news censorship. Every article must be deeply informative, richly written, and genuinely valuable to Nigerian readers.
+      CORE EDITORIAL MISSION:
+      Todaynews.ng is Nigeria's AI-powered news channel dedicated to reducing misinformation, combating news censorship, and delivering high-IQ, deeply insightful journalism.
 
-      CRITICAL CONTENT REQUIREMENTS — READ CAREFULLY:
-      1. LONG-FORM CONTENT: Each page MUST contain at minimum 4 to 5 substantial paragraphs (each paragraph 3-5 sentences long). Do NOT write single-sentence pages. Pages should read like a full newspaper article section — thorough, intelligent, and contextualised.
-      2. ORIGINAL VALUE ADDITION: You MUST include three distinct full-length sections:
-         - Page 1 "Core Facts & Breaking Report": Full factual account with all known details, source attribution, timeline of events, official statements quoted.
-         - Page 2 "Why This Matters & Background Context": Deep analysis of implications for Nigeria — economic, social, governance, security impact. Include historical comparisons and expert angles.
-         - Page 3 "What Happens Next & Expert Outlook": Forward-looking analysis, anticipated government response, international reactions, citizen impact, timeline of expected developments.
-      3. LEGAL HEDGING: Use "allegedly", "according to reports", "unconfirmed accounts indicate", "subject to official confirmation" appropriately throughout.
-      4. PUNCH NEWS HEADLINE STYLE: Create a compelling, direct headline in the style of Punch Newspaper — sharp, impactful, and search-optimised. NO prefixes like [BREAKING], NO suffixes like "What We Know So Far". Example: "Naira hits new low as CBN holds emergency meeting" or "Court orders EFCC to release former governor within 48 hours". The headline should BE the story.
-      5. META SUMMARY: Write a compelling 2-3 sentence meta description for Google Search indexing. Make it specific and informative.
-      6. CATEGORY HANDLING: 
-         - Pick exactly ONE from: POLITICS, NAIRA, ENTERTAINMENT, SPORTS, SECURITY, METRO, EDUCATION, TECHNOLOGY, HEALTH, SCHOLARSHIP, JAPA, MAKE_MONEY_ONLINE
-         - For SCHOLARSHIP articles: Focus on eligibility, application deadlines, funding details, and how to apply
-         - For JAPA articles: Highlight visa requirements, timeline, cost, and verification of legitimacy
-         - For MAKE_MONEY_ONLINE articles: Emphasize legitimate methods, real experiences, and WARNING against scams
-      7. HTML FORMATTING: Use rich HTML inside page content: <p class="mb-4">, <ul><li>, <strong>, <em>, <blockquote>, <h4>.
-      8. STRICT PROHIBITION ON COMPETITOR LINKS: NEVER include external links, competitor website names (Punch, Vanguard, Daily Trust, Sahara Reporters, etc.), or phrases like "Read More: https://..." in the content or summary. Todaynews.ng is the sole publisher.
+      CRITICAL CONTENT REQUIREMENTS:
+      1. FLEXIBLE PAGE LENGTH (1, 2, OR 3 PAGES):
+         - Match the page count to the natural weight and depth of the story.
+         - Short breaking updates or concise alerts can be 1 or 2 pages.
+         - Major investigative, political, or economic stories should be 2 or 3 pages.
+         - Each page must have 3 to 5 substantial, well-crafted paragraphs. No empty one-liners.
 
-      Return ONLY a valid JSON object matching this exact schema:
+      2. CREATIVE, CONTEXTUAL SECTION TITLES (NO COOKIE-CUTTER HEADINGS):
+         - Do NOT use rigid, repetitive titles like "Core Facts" or "Why This Matters" for every article.
+         - Use varied, intelligent, and context-specific headings such as:
+           • "How This Affects Everyday Nigerians"
+           • "The Editor's View & Strategic Analysis"
+           • "Icing on the Cake: Key Takeaways"
+           • "Underlying Undercurrents & Behind the Scenes"
+           • "The Road Ahead & Policy Repercussions"
+           • "Financial Fallout & Market Implications"
+           • Or titles directly describing the story's development.
+
+      3. LEGAL HEDGING: Use "allegedly", "according to reports", "unconfirmed accounts indicate", "subject to official confirmation" appropriately where facts are still evolving.
+
+      4. PUNCH-STYLE HEADLINES: Create a compelling, sharp, search-optimized headline in the classic style of Punch Newspaper and Premium Times. NO prefixes like [BREAKING], NO suffixes like "What We Know So Far".
+
+      5. META SUMMARY: Write a compelling 2-3 sentence meta summary for Google Search indexing and social previews.
+
+      6. STRICT PROHIBITION ON COMPETITOR LINKS: NEVER include external competitor links, competitor website names (Punch, Vanguard, Daily Trust, Sahara Reporters, etc.), or "Read More: https://...". Todaynews.ng is the primary publisher.
+
+      7. HTML FORMATTING: Use clean HTML inside page content: <p class="mb-4">, <ul><li>, <strong>, <em>, <blockquote>.
+
+      Return ONLY a valid JSON object matching this schema:
       {
-        "title": "Clean compelling headline without [BREAKING] prefix",
-        "summary": "Compelling 2-3 sentence meta description for Google Search with key facts.",
+        "title": "Sharp compelling Nigerian headline without [BREAKING] prefix",
+        "summary": "Compelling 2-3 sentence meta summary with key facts.",
         "category": "POLITICS",
         "pages": [
           {
             "pageNumber": 1,
-            "title": "Core Facts & Breaking Report",
-            "content": "<p class=\\"mb-4\\">Full detailed paragraph 1 with facts, quotes, timeline and should not be too short must be a bout 2 to 3 paragraphs, crisply written...</p><p class=\\"mb-4\\">Paragraph 2 with more context...</p><p class=\\"mb-4\\">Paragraph 3...</p><p class=\\"mb-4\\">Paragraph 4...</p><p class=\\"mb-4\\">Paragraph 5 with attribution and note...</p>"
+            "title": "Engaging Section Title (e.g. Critical Incident Breakdown)",
+            "content": "<p class=\\"mb-4\\">Richly written paragraphs...</p>"
           },
           {
             "pageNumber": 2,
-            "title": "Why This Matters & Background Context",
-            "content": "<div class=\\"p-4 bg-paper border-l-4 border-flag my-4 rounded\\"><h4 class=\\"font-bold text-ink mb-1\\">🇳🇬 Why This Matters to Nigerians and should not be too short must be a bout 1 to 2 paragraphs, crisply written</h4><p class=\\"text-sm text-muted\\">Analysis paragraph...</p></div><p class=\\"mb-4\\">Deep analysis paragraph 1...</p><p class=\\"mb-4\\">Historical context paragraph 2...</p><p class=\\"mb-4\\">Economic/social impact paragraph 3...</p><p class=\\"mb-4\\">Expert perspective paragraph 4...</p>"
-          },
-          {
-            "pageNumber": 3,
-            "title": "What Happens Next & Expert Outlook",
-            "content": "<p class=\\"mb-4\\">Forward outlook paragraph 1...</p><p class=\\"mb-4\\">Government response expectation paragraph 2...</p><p class=\\"mb-4\\">Citizen impact paragraph 3...</p><p class=\\"mb-4\\">International reaction paragraph 4...</p><p class=\\"mb-4\\"><strong>📌 Todaynews.ng will continue tracking this story live.</strong></p>"
+            "title": "Creative Contextual Heading (e.g. How This Affects Nigerians / The Editor's View)",
+            "content": "<p class=\\"mb-4\\">Analytical paragraphs with depth and clarity...</p>"
           }
         ]
       }
