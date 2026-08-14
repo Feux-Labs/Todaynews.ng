@@ -175,22 +175,26 @@ export default function AIChatPage() {
       const data = await res.json();
       if (data.sessionId) setSelectedSessionId(data.sessionId);
 
+      if (!res.ok && !data.reply) {
+        throw new Error(data.error || "AI service encountered an issue.");
+      }
+
       const aiMsg: Message = {
         id: `msg-${Date.now()}-ai`,
         role: "assistant",
-        content: data.reply || "I processed your request.",
+        content: data.reply || "I received your message.",
         timestamp: new Date().toISOString(),
         storyCards: data.stories || [],
       };
 
       setMessages((prev) => [...prev, aiMsg]);
-    } catch (err) {
+    } catch (err: any) {
       setMessages((prev) => [
         ...prev,
         {
           id: `msg-${Date.now()}-err`,
           role: "assistant",
-          content: "⚠️ Connection error. Please try again.",
+          content: err?.message ? `⚠️ ${err.message}` : "⚠️ Connection error. Please try again.",
           timestamp: new Date().toISOString(),
         },
       ]);

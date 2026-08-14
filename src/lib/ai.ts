@@ -181,6 +181,14 @@ function normalizeParaphrasedResult(result: ParaphrasedResult, fallback: Paraphr
  * legal disclaimers ("allegedly"), and multi-page pagination splitting.
  * Each page must have 4-5 substantial paragraphs — NOT one-liners.
  */
+const CANDIDATE_MODELS = [
+  process.env.GEMINI_MODEL,
+  "gemini-3.7-flash",
+  "gemini-flash-latest",
+  "gemini-3.5-flash-lite",
+  "gemini-3.6-flash",
+].filter(Boolean) as string[];
+
 export async function paraphraseNews(
   rawText: string,
   rawTitle: string,
@@ -195,13 +203,6 @@ export async function paraphraseNews(
   return geminiBreaker.execute(
     async () => {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
-        generationConfig: {
-          responseMimeType: "application/json",
-        },
-      });
-
       const cleanInputTitle = rawTitle
         .replace(/\[BREAKING\]\s*/gi, "")
         .replace(/\s*[-\u2014\u2013]\s*What We Know So Far\s*/gi, "")
@@ -259,14 +260,27 @@ export async function paraphraseNews(
       ${rawText}
       `;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
-
-      if (!text) {
-        throw new Error("Empty response from Gemini API");
+      let lastError: any = null;
+      for (const modelName of CANDIDATE_MODELS) {
+        try {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              responseMimeType: "application/json",
+            },
+          });
+          const result = await model.generateContent(prompt);
+          const text = result.response.text();
+          if (text) {
+            return normalizeParaphrasedResult(JSON.parse(text) as ParaphrasedResult, localProceduralRewriter(rawText, rawTitle, category));
+          }
+        } catch (err) {
+          lastError = err;
+          console.warn(`[Gemini Paraphrase] Model ${modelName} failed, trying next candidate:`, (err as any)?.message || err);
+        }
       }
 
-      return normalizeParaphrasedResult(JSON.parse(text) as ParaphrasedResult, localProceduralRewriter(rawText, rawTitle, category));
+      throw lastError || new Error("All Gemini models failed during paraphrasing.");
     },
     async () => {
       throw new Error("Live Gemini AI is unavailable and fallback behavior is disabled.");
@@ -276,7 +290,7 @@ export async function paraphraseNews(
 }
 
 // ============================================================
-// CHAT AI — now with live Google Search grounding
+// CHAT AI — now with live Google Search grounding & fallback
 // ============================================================
 
 export interface GroundingSource {
@@ -292,17 +306,9 @@ export interface ChatAiResponse {
 }
 
 /**
- * General-purpose wise AI chat, embedded in Todaynews.ng — with live
- * Google Search grounding. Gemini decides on its own whether a query needs
- * a real-time search, runs it, and returns an answer grounded in current
- * results with citations. No manual keyword-based intent classification needed.
- *
- * IMPORTANT: Google Search grounding is NOT reliably compatible with strict
- * JSON response mode on Gemini — older models 400 on the combination, and
- * even on newer models there are open bug reports of truncated JSON output
- * when grounding fires. So this call intentionally does NOT set
- * responseMimeType: "application/json" (unlike paraphraseNews above, which
- * never grounds and is safe to keep in JSON mode).
+ * General-purpose wise AI chat, embedded in Todaynews.ng.
+ * Attempts live Google Search grounding first. If search grounding hits rate/quota limits (429),
+ * it seamlessly falls back to conversational generation across available models without crashing.
  */
 export async function chatWithAi(
   userMessage: string,
@@ -314,29 +320,22 @@ export async function chatWithAi(
     throw new Error("Live Gemini AI is required and is not configured.");
   }
 
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
-      tools: [{ googleSearch: {} } as any], // enable live Google Search grounding
-      // NOTE: no responseMimeType here — see comment above.
-    });
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const conversationContext = history
+    .slice(-20)
+    .map((h) => `${h.role === "user" ? "User" : "AI"}: ${h.content}`)
+    .join("\n");
 
-    const conversationContext = history
-      .slice(-20) // more memory for real continuity
-      .map((h) => `${h.role === "user" ? "User" : "AI"}: ${h.content}`)
-      .join("\n");
-
-    const prompt = `
+  const prompt = `
 You are a genuinely intelligent, broadly capable AI assistant — comparable to a top-tier general-purpose AI. You happen to be embedded inside Todaynews.ng, a Nigerian news platform, and you have deep expertise in Nigerian news, politics, economics, and culture. But you are NOT limited to news. You can discuss anything: philosophy, business, science, coding, relationships, strategy, creative writing, math, history, whatever the user brings up. Think and respond the way a sharp, well-read, emotionally intelligent human expert would — not like a scripted customer service bot.
 
-You have live Google Search access. Use it whenever the answer depends on current facts, recent events, prices, scores, schedules, or anything that could have changed since your training — don't guess or rely on stale memory for those. For timeless questions (general knowledge, reasoning, advice, creative writing), just answer directly without searching.
+You have live search capabilities when needed. Use recent context whenever the answer depends on current facts, recent events, prices, scores, schedules, or anything that could have changed since your training. For timeless questions (general knowledge, reasoning, advice, creative writing), answer directly.
 
 RULES FOR YOUR REPLIES:
 - Reason properly. Don't give surface-level filler. Give real, substantive, specific answers with structure when useful (lists, examples, steps) but plain conversational prose when that fits better.
 - Match the user's tone. If they're casual, be casual. If they ask something deep, go deep.
 - Don't force a Nigerian-news angle onto topics that have nothing to do with news.
-- When you do search and use results, write naturally — don't dump raw headlines, synthesize them into an actual answer.
+- Synthesize information into an actual thoughtful answer.
 
 Conversation so far:
 ${conversationContext}
@@ -344,49 +343,61 @@ ${conversationContext}
 Latest message: "${userMessage}"
 `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    if (!text) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    // Pull grounding metadata if the model actually searched
-    const groundingMetadata = (response as any).candidates?.[0]?.groundingMetadata;
-    const webSearchQueries: string[] = groundingMetadata?.webSearchQueries || [];
-    const groundingChunks: any[] = groundingMetadata?.groundingChunks || [];
-
-    const sources: GroundingSource[] = groundingChunks
-      .map((chunk) => chunk?.web)
-      .filter(Boolean)
-      .map((web: any) => ({ title: web.title, uri: web.uri }));
-
-    return {
-      intent: webSearchQueries.length > 0 ? "search" : "chat",
-      searchQuery: webSearchQueries.join(", ") || undefined,
-      reply: text,
-      sources: sources.length > 0 ? sources : undefined,
-    };
-  } catch (err) {
-    console.error("Gemini Chat AI Error (grounded), falling back:", err);
+  // Attempt 1: Try grounded search on top candidate models
+  for (const modelName of CANDIDATE_MODELS) {
     try {
-      // second-tier fallback: same grounding, resilient to transient errors —
-      // no JSON parsing involved now, so this mostly guards against network blips.
-      const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+        model: modelName,
         tools: [{ googleSearch: {} } as any],
       });
-      const simplePrompt = `You are a wise, broadly knowledgeable AI assistant with live Google Search access, embedded in a Nigerian news app, but you can discuss any topic intelligently, not just news. Respond naturally and substantively to: "${userMessage}"`;
-      const result = await model.generateContent(simplePrompt);
-      const text = result.response.text();
-      return { intent: "chat", reply: text || smartLocalChat(userMessage).reply };
-    } catch (innerErr) {
-      console.error("Gemini Chat AI Error (grounded, final attempt failed):", innerErr);
-      throw new Error("Live Gemini AI is unavailable. Fallback chat is disabled.");
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      if (text) {
+        const groundingMetadata = (response as any).candidates?.[0]?.groundingMetadata;
+        const webSearchQueries: string[] = groundingMetadata?.webSearchQueries || [];
+        const groundingChunks: any[] = groundingMetadata?.groundingChunks || [];
+
+        const sources: GroundingSource[] = groundingChunks
+          .map((chunk) => chunk?.web)
+          .filter(Boolean)
+          .map((web: any) => ({ title: web.title, uri: web.uri }));
+
+        return {
+          intent: webSearchQueries.length > 0 ? "search" : "chat",
+          searchQuery: webSearchQueries.join(", ") || undefined,
+          reply: text,
+          sources: sources.length > 0 ? sources : undefined,
+        };
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini Chat Grounded] Model ${modelName} with grounding failed:`, err?.message || err);
+      // If 429 quota or tool failure, continue to try standard generation
     }
   }
+
+  // Attempt 2: Direct ungrounded generation fallback across candidate models
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      if (text) {
+        return {
+          intent: "chat",
+          reply: text,
+        };
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini Chat Standard] Model ${modelName} failed:`, err?.message || err);
+    }
+  }
+
+  // Attempt 3: Local smart chat fallback
+  const local = smartLocalChat(userMessage);
+  return local;
 }
 
 /**
