@@ -305,11 +305,82 @@ export interface ChatAiResponse {
   sources?: GroundingSource[]; // citations, if grounding kicked in
 }
 
-/**
- * General-purpose wise AI chat, embedded in Todaynews.ng.
- * Attempts live Google Search grounding first. If search grounding hits rate/quota limits (429),
- * it seamlessly falls back to conversational generation across available models without crashing.
- */
+// Topic keyword mapping for news detection
+const TOPIC_MAP: { keywords: string[]; query: string; label: string }[] = [
+  { keywords: ["naira", "exchange", "dollar", "forex", "cbn", "currency"], query: "naira exchange rate", label: "Naira & Forex" },
+  { keywords: ["terror", "terrorism", "boko haram", "bandit", "kidnap", "attack", "bomb", "insurgent", "militant"], query: "terrorism security Nigeria", label: "Security & Terror" },
+  { keywords: ["security", "police", "army", "military", "dss", "efcc"], query: "security Nigeria", label: "Security" },
+  { keywords: ["business", "economy", "economic", "trade", "market", "stock", "invest", "inflation", "gdp"], query: "Nigeria business economy", label: "Business & Economy" },
+  { keywords: ["school", "education", "asuu", "university", "student", "waec", "jamb", "neco", "nbte"], query: "Nigeria education school", label: "Education" },
+  { keywords: ["scholarship", "scholarships", "fully funded", "chevening", "ptdf", "study abroad", "mastercard foundation"], query: "Nigeria scholarship opportunities", label: "Scholarships" },
+  { keywords: ["japa", "visa", "relocate", "relocation", "immigration", "abroad"], query: "Nigeria japa visa relocation", label: "Japa" },
+  { keywords: ["make money", "side hustle", "freelance", "remote work", "online income"], query: "Nigeria make money online", label: "Make Money Online" },
+  { keywords: ["politics", "tinubu", "senate", "house of reps", "governor", "election", "aso rock", "presidency", "minister"], query: "Nigeria politics", label: "Politics" },
+  { keywords: ["bbnaija", "big brother", "entertainment", "celebrity", "nollywood", "afrobeats", "music"], query: "Nigeria entertainment bbnaija", label: "Entertainment" },
+  { keywords: ["sports", "super eagles", "super falcons", "football", "npfl", "basketball", "athletics"], query: "Nigeria sports", label: "Sports" },
+  { keywords: ["health", "hospital", "disease", "covid", "malaria", "doctor", "medical"], query: "Nigeria health", label: "Health" },
+  { keywords: ["tech", "technology", "startup", "ai", "fintech", "internet"], query: "Nigeria technology", label: "Technology" },
+];
+
+export function detectNewsSearchIntent(userMessage: string): { isSearch: boolean; query?: string; topicLabel?: string } {
+  const text = userMessage.toLowerCase().trim();
+
+  // If a URL is present
+  if (/https?:\/\/[^\s)]+/i.test(text)) {
+    return { isSearch: true };
+  }
+
+  // Explicit triggers
+  const explicitTriggers = [
+    "fetch trending nigeria news",
+    "fetch trending news",
+    "trending news",
+    "latest news",
+    "top news",
+    "breaking news",
+    "draft inbox",
+    "inbox paraphrase",
+    "get news",
+    "fetch news",
+    "show news",
+    "scrape news",
+    "today news",
+    "news with the draft",
+    "get me some top news",
+    "get me top news",
+    "get me news",
+    "give me news",
+    "bring news",
+    "find news",
+  ];
+
+  if (explicitTriggers.some((t) => text.includes(t))) {
+    return { isSearch: true, topicLabel: "Top Trending Nigerian News" };
+  }
+
+  const searchKeywords = [
+    "search", "find", "fetch", "get", "scrape", "look for", "show me", "give me",
+    "bring", "latest", "trending", "today", "update", "pull", "news", "stories",
+    "headlines", "report", "reports"
+  ];
+  const hasSearchIntent = searchKeywords.some((k) => text.includes(k));
+
+  const matched = TOPIC_MAP.filter((t) => t.keywords.some((kw) => text.includes(kw)));
+  if (matched.length > 0 && hasSearchIntent) {
+    return {
+      isSearch: true,
+      query: matched[0].query,
+      topicLabel: matched.map((m) => m.label).join(", "),
+    };
+  }
+
+  if (hasSearchIntent && (text.includes("news") || text.includes("headline") || text.includes("headlines") || text.includes("story") || text.includes("stories") || text.includes("article"))) {
+    return { isSearch: true, topicLabel: "Latest Verified News" };
+  }
+
+  return { isSearch: false };
+}
+
 export async function chatWithAi(
   userMessage: string,
   history: { role: "user" | "assistant"; content: string }[]
@@ -320,6 +391,23 @@ export async function chatWithAi(
     throw new Error("Live Gemini AI is required and is not configured.");
   }
 
+  // Check if user is asking for news articles/stories/scraping
+  const newsCheck = detectNewsSearchIntent(userMessage);
+  if (newsCheck.isSearch) {
+    const introLines = [
+      `Understood. I've activated the Todaynews.ng intelligence scanner across Punch NG, Daily Trust, Vanguard, and Premium Times for **${newsCheck.topicLabel || "Top Stories"}**.\n\nHere are the latest verified reports ready for your **Inbox**, **Drafts**, or instant **AI Paraphrasing**:`,
+      `Scanning live Nigerian news channels for **${newsCheck.topicLabel || "Breaking Stories"}**. Here is what I found across verified sources — choose an action on any card below to send to inbox, draft, or paraphrase:`,
+      `On it. Cross-referencing active feeds from Punch NG, Daily Trust, and Vanguard for **${newsCheck.topicLabel || "Top Trending Stories"}**:\n\nReview the story cards below:`,
+    ];
+    const intro = introLines[Math.floor(Math.random() * introLines.length)];
+
+    return {
+      intent: "search",
+      searchQuery: newsCheck.query || undefined,
+      reply: intro,
+    };
+  }
+
   const genAI = new GoogleGenerativeAI(apiKey);
   const conversationContext = history
     .slice(-20)
@@ -328,8 +416,6 @@ export async function chatWithAi(
 
   const prompt = `
 You are a genuinely intelligent, broadly capable AI assistant — comparable to a top-tier general-purpose AI. You happen to be embedded inside Todaynews.ng, a Nigerian news platform, and you have deep expertise in Nigerian news, politics, economics, and culture. But you are NOT limited to news. You can discuss anything: philosophy, business, science, coding, relationships, strategy, creative writing, math, history, whatever the user brings up. Think and respond the way a sharp, well-read, emotionally intelligent human expert would — not like a scripted customer service bot.
-
-You have live search capabilities when needed. Use recent context whenever the answer depends on current facts, recent events, prices, scores, schedules, or anything that could have changed since your training. For timeless questions (general knowledge, reasoning, advice, creative writing), answer directly.
 
 RULES FOR YOUR REPLIES:
 - Reason properly. Don't give surface-level filler. Give real, substantive, specific answers with structure when useful (lists, examples, steps) but plain conversational prose when that fits better.
@@ -343,42 +429,7 @@ ${conversationContext}
 Latest message: "${userMessage}"
 `;
 
-  // Attempt 1: Try grounded search on top candidate models
-  for (const modelName of CANDIDATE_MODELS) {
-    try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        tools: [{ googleSearch: {} } as any],
-      });
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-
-      if (text) {
-        const groundingMetadata = (response as any).candidates?.[0]?.groundingMetadata;
-        const webSearchQueries: string[] = groundingMetadata?.webSearchQueries || [];
-        const groundingChunks: any[] = groundingMetadata?.groundingChunks || [];
-
-        const sources: GroundingSource[] = groundingChunks
-          .map((chunk) => chunk?.web)
-          .filter(Boolean)
-          .map((web: any) => ({ title: web.title, uri: web.uri }));
-
-        return {
-          intent: webSearchQueries.length > 0 ? "search" : "chat",
-          searchQuery: webSearchQueries.join(", ") || undefined,
-          reply: text,
-          sources: sources.length > 0 ? sources : undefined,
-        };
-      }
-    } catch (err: any) {
-      console.warn(`[Gemini Chat Grounded] Model ${modelName} with grounding failed:`, err?.message || err);
-      // If 429 quota or tool failure, continue to try standard generation
-    }
-  }
-
-  // Attempt 2: Direct ungrounded generation fallback across candidate models
+  // Attempt 1: Direct generation fallback across candidate models
   for (const modelName of CANDIDATE_MODELS) {
     try {
       const model = genAI.getGenerativeModel({ model: modelName });
@@ -395,15 +446,14 @@ Latest message: "${userMessage}"
     }
   }
 
-  // Attempt 3: Local smart chat fallback
+  // Attempt 2: Local smart chat fallback
   const local = smartLocalChat(userMessage);
   return local;
 }
 
 /**
  * Last-resort local fallback — keyword-aware, used only when Gemini is
- * completely unreachable (no key, or both grounded attempts failed above).
- * Keep this honest about its limits rather than pretending to be smart.
+ * completely unreachable.
  */
 function smartLocalChat(userMessage: string): ChatAiResponse {
   const text = userMessage.toLowerCase();
@@ -417,61 +467,17 @@ function smartLocalChat(userMessage: string): ChatAiResponse {
     };
   }
 
-  // Search / news intent keywords
-  const searchTriggers = ["search", "find", "fetch", "get", "scrape", "look for", "show me", "latest", "news", "trending", "today", "update"];
-  const isSearchIntent = searchTriggers.some((t) => text.includes(t));
-
-  // Topic keyword mapping (broadened to cover all AllowedCategory values,
-  // including SCHOLARSHIP and JAPA which were previously missing)
-  const topicMap: { keywords: string[]; query: string; label: string }[] = [
-    { keywords: ["naira", "exchange", "dollar", "forex", "cbn", "currency"], query: "naira exchange rate", label: "Naira & Forex" },
-    { keywords: ["terror", "terrorism", "boko haram", "bandit", "kidnap", "attack", "bomb", "insurgent", "militant"], query: "terrorism security Nigeria", label: "Security & Terror" },
-    { keywords: ["security", "police", "army", "military", "dss", "efcc"], query: "security Nigeria", label: "Security" },
-    { keywords: ["business", "economy", "economic", "trade", "market", "stock", "invest", "inflation", "gdp"], query: "Nigeria business economy", label: "Business & Economy" },
-    { keywords: ["school", "education", "asuu", "university", "student", "waec", "jamb", "neco", "nbte"], query: "Nigeria education school", label: "Education" },
-    { keywords: ["scholarship", "scholarships", "fully funded", "chevening", "ptdf", "study abroad", "mastercard foundation"], query: "Nigeria scholarship opportunities", label: "Scholarships" },
-    { keywords: ["japa", "visa", "relocate", "relocation", "immigration", "abroad"], query: "Nigeria japa visa relocation", label: "Japa" },
-    { keywords: ["make money", "side hustle", "freelance", "remote work", "online income"], query: "Nigeria make money online", label: "Make Money Online" },
-    { keywords: ["politics", "tinubu", "senate", "house of reps", "governor", "election", "aso rock", "presidency", "minister"], query: "Nigeria politics", label: "Politics" },
-    { keywords: ["bbnaija", "big brother", "entertainment", "celebrity", "nollywood", "afrobeats", "music"], query: "Nigeria entertainment bbnaija", label: "Entertainment" },
-    { keywords: ["sports", "super eagles", "super falcons", "football", "npfl", "basketball", "athletics"], query: "Nigeria sports", label: "Sports" },
-    { keywords: ["health", "hospital", "disease", "covid", "malaria", "doctor", "medical"], query: "Nigeria health", label: "Health" },
-    { keywords: ["tech", "technology", "startup", "ai", "fintech", "internet"], query: "Nigeria technology", label: "Technology" },
-  ];
-
-  // Find all matching topics from the message
-  const matchedTopics = topicMap.filter((t) =>
-    t.keywords.some((kw) => text.includes(kw))
-  );
-
-  if (isSearchIntent && matchedTopics.length > 0) {
-    let query = "";
-    let topicLabels = "";
-
-    if (matchedTopics.length > 0) {
-      // Use the first matched topic as primary query
-      query = matchedTopics[0].query;
-      topicLabels = matchedTopics.map((t) => t.label).join(", ");
-    }
-
-    const introLines = [
-      `Understood. I've activated the Todaynews.ng intelligence scanner across Punch, Daily Trust, Vanguard, and Premium Times for ${topicLabels || "latest Nigerian news"}.`,
-      `On it. Cross-referencing live feeds from Punch NG, BBC Africa Hausa, and Guardian Nigeria for ${topicLabels || "top trending stories"}.`,
-      `Scanning active Nigerian news channels for ${topicLabels || "breaking stories"}. Here's what I found across verified sources:`,
-    ];
-    const intro = introLines[Math.floor(Math.random() * introLines.length)];
-
+  const newsCheck = detectNewsSearchIntent(userMessage);
+  if (newsCheck.isSearch) {
     return {
       intent: "search",
-      searchQuery: query || undefined,
-      reply: intro,
+      searchQuery: newsCheck.query || undefined,
+      reply: `Scanning active Nigerian news channels for **${newsCheck.topicLabel || "breaking stories"}**. Here's what I found across verified sources:`,
     };
   }
 
-  // General knowledge / editorial fallback — this only triggers when Gemini is
-  // fully unavailable, so keep it honest about its limits rather than pretending to be smart.
   return {
     intent: "chat",
-    reply: `I'm running in a limited offline mode right now (my main AI connection is down), so I can't give you a fully thought-out answer to that. Once the connection is back I'll respond properly. In the meantime I can still search for Nigerian news — try "find business news today" or similar.`,
+    reply: `I'm your AI assistant on Todaynews.ng. You can ask me to fetch trending news, search specific topics, or discuss any subject!`,
   };
 }
