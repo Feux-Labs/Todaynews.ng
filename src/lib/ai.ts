@@ -284,17 +284,34 @@ export async function paraphraseNews(
   );
 }
 
+// ============================================================
+// CHAT AI — now with live Google Search grounding
+// ============================================================
+
+export interface GroundingSource {
+  title: string;
+  uri: string;
+}
+
 export interface ChatAiResponse {
   intent: "chat" | "search" | "paraphrase";
-  searchQuery?: string;
+  searchQuery?: string;       // reflects what Gemini itself searched, for UI display
   reply: string;
+  sources?: GroundingSource[]; // citations, if grounding kicked in
 }
 
 /**
- * General-purpose wise AI chat, embedded in Todaynews.ng.
- * The AI is NOT limited to news — it can reason about any topic like a
- * genuinely intelligent general-purpose assistant. It only routes to
- * "search" when the user explicitly wants live news/current events fetched.
+ * General-purpose wise AI chat, embedded in Todaynews.ng — with live
+ * Google Search grounding. Gemini decides on its own whether a query needs
+ * a real-time search, runs it, and returns an answer grounded in current
+ * results with citations. No manual keyword-based intent classification needed.
+ *
+ * IMPORTANT: Google Search grounding is NOT reliably compatible with strict
+ * JSON response mode on Gemini — older models 400 on the combination, and
+ * even on newer models there are open bug reports of truncated JSON output
+ * when grounding fires. So this call intentionally does NOT set
+ * responseMimeType: "application/json" (unlike paraphraseNews above, which
+ * never grounds and is safe to keep in JSON mode).
  */
 export async function chatWithAi(
   userMessage: string,
@@ -305,13 +322,13 @@ export async function chatWithAi(
   if (!apiKey || apiKey === "AIzaSyYourGeminiKeyHere") {
     return smartLocalChat(userMessage);
   }
+
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-      },
+      tools: [{ googleSearch: {} } as any], // enable live Google Search grounding
+      // NOTE: no responseMimeType here — see comment above.
     });
 
     const conversationContext = history
@@ -322,20 +339,13 @@ export async function chatWithAi(
     const prompt = `
 You are a genuinely intelligent, broadly capable AI assistant — comparable to a top-tier general-purpose AI. You happen to be embedded inside Todaynews.ng, a Nigerian news platform, and you have deep expertise in Nigerian news, politics, economics, and culture. But you are NOT limited to news. You can discuss anything: philosophy, business, science, coding, relationships, strategy, creative writing, math, history, whatever the user brings up. Think and respond the way a sharp, well-read, emotionally intelligent human expert would — not like a scripted customer service bot.
 
+You have live Google Search access. Use it whenever the answer depends on current facts, recent events, prices, scores, schedules, or anything that could have changed since your training — don't guess or rely on stale memory for those. For timeless questions (general knowledge, reasoning, advice, creative writing), just answer directly without searching.
+
 RULES FOR YOUR REPLIES:
 - Reason properly. Don't give surface-level filler. Give real, substantive, specific answers with structure when useful (lists, examples, steps) but plain conversational prose when that fits better.
 - Match the user's tone. If they're casual, be casual. If they ask something deep, go deep.
 - Don't force a Nigerian-news angle onto topics that have nothing to do with news.
-- Only classify intent as "search" if the user is CLEARLY asking you to fetch/find/scrape live news or current events. Everything else — no matter the topic — is "chat".
-- If intent is "search", extract a clean search query into "searchQuery" and write a short, natural intro sentence as "reply" (not the news brief itself, just a lead-in).
-- If intent is "chat", put your full, thoughtful answer directly in "reply" — this can be as long and detailed as the question deserves.
-
-Return ONLY a valid JSON object matching this schema:
-{
-  "intent": "chat" or "search",
-  "searchQuery": "extracted search term or empty string",
-  "reply": "Your actual response — substantive if chat, short intro if search"
-}
+- When you do search and use results, write naturally — don't dump raw headlines, synthesize them into an actual answer.
 
 Conversation so far:
 ${conversationContext}
@@ -351,14 +361,33 @@ Latest message: "${userMessage}"
       throw new Error("Empty response from Gemini");
     }
 
-    return JSON.parse(text) as ChatAiResponse;
+    // Pull grounding metadata if the model actually searched
+    const groundingMetadata = (response as any).candidates?.[0]?.groundingMetadata;
+    const webSearchQueries: string[] = groundingMetadata?.webSearchQueries || [];
+    const groundingChunks: any[] = groundingMetadata?.groundingChunks || [];
+
+    const sources: GroundingSource[] = groundingChunks
+      .map((chunk) => chunk?.web)
+      .filter(Boolean)
+      .map((web: any) => ({ title: web.title, uri: web.uri }));
+
+    return {
+      intent: webSearchQueries.length > 0 ? "search" : "chat",
+      searchQuery: webSearchQueries.join(", ") || undefined,
+      reply: text,
+      sources: sources.length > 0 ? sources : undefined,
+    };
   } catch (err) {
-    console.error("Gemini Chat AI Error, falling back:", err);
+    console.error("Gemini Chat AI Error (grounded), falling back:", err);
     try {
-      // second-tier fallback: plain non-JSON call, more resilient to formatting issues
+      // second-tier fallback: same grounding, resilient to transient errors —
+      // no JSON parsing involved now, so this mostly guards against network blips.
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-3.6-flash" });
-      const simplePrompt = `You are a wise, broadly knowledgeable AI assistant embedded in a Nigerian news app, but you can discuss any topic intelligently, not just news. Respond naturally and substantively to: "${userMessage}"`;
+      const model = genAI.getGenerativeModel({
+        model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+        tools: [{ googleSearch: {} } as any],
+      });
+      const simplePrompt = `You are a wise, broadly knowledgeable AI assistant with live Google Search access, embedded in a Nigerian news app, but you can discuss any topic intelligently, not just news. Respond naturally and substantively to: "${userMessage}"`;
       const result = await model.generateContent(simplePrompt);
       const text = result.response.text();
       return { intent: "chat", reply: text || smartLocalChat(userMessage).reply };
@@ -369,9 +398,9 @@ Latest message: "${userMessage}"
 }
 
 /**
- * Smart local chat fallback — keyword-aware intent parser.
- * Used only when Gemini API is unavailable entirely (no key, or both tiers failed).
- * Actually triggers searches and returns meaningful replies.
+ * Last-resort local fallback — keyword-aware, used only when Gemini is
+ * completely unreachable (no key, or both grounded attempts failed above).
+ * Keep this honest about its limits rather than pretending to be smart.
  */
 function smartLocalChat(userMessage: string): ChatAiResponse {
   const text = userMessage.toLowerCase();
@@ -389,16 +418,20 @@ function smartLocalChat(userMessage: string): ChatAiResponse {
   const searchTriggers = ["search", "find", "fetch", "get", "scrape", "look for", "show me", "latest", "news", "trending", "today", "update"];
   const isSearchIntent = searchTriggers.some((t) => text.includes(t));
 
-  // Topic keyword mapping
+  // Topic keyword mapping (broadened to cover all AllowedCategory values,
+  // including SCHOLARSHIP and JAPA which were previously missing)
   const topicMap: { keywords: string[]; query: string; label: string }[] = [
     { keywords: ["naira", "exchange", "dollar", "forex", "cbn", "currency"], query: "naira exchange rate", label: "Naira & Forex" },
     { keywords: ["terror", "terrorism", "boko haram", "bandit", "kidnap", "attack", "bomb", "insurgent", "militant"], query: "terrorism security Nigeria", label: "Security & Terror" },
     { keywords: ["security", "police", "army", "military", "dss", "efcc"], query: "security Nigeria", label: "Security" },
     { keywords: ["business", "economy", "economic", "trade", "market", "stock", "invest", "inflation", "gdp"], query: "Nigeria business economy", label: "Business & Economy" },
     { keywords: ["school", "education", "asuu", "university", "student", "waec", "jamb", "neco", "nbte"], query: "Nigeria education school", label: "Education" },
+    { keywords: ["scholarship", "scholarships", "fully funded", "chevening", "ptdf", "study abroad", "mastercard foundation"], query: "Nigeria scholarship opportunities", label: "Scholarships" },
+    { keywords: ["japa", "visa", "relocate", "relocation", "immigration", "abroad"], query: "Nigeria japa visa relocation", label: "Japa" },
+    { keywords: ["make money", "side hustle", "freelance", "remote work", "online income"], query: "Nigeria make money online", label: "Make Money Online" },
     { keywords: ["politics", "tinubu", "senate", "house of reps", "governor", "election", "aso rock", "presidency", "minister"], query: "Nigeria politics", label: "Politics" },
     { keywords: ["bbnaija", "big brother", "entertainment", "celebrity", "nollywood", "afrobeats", "music"], query: "Nigeria entertainment bbnaija", label: "Entertainment" },
-    { keywords: ["sports", "super eagles", "football", "npfl", "basketball", "athletics"], query: "Nigeria sports", label: "Sports" },
+    { keywords: ["sports", "super eagles", "super falcons", "football", "npfl", "basketball", "athletics"], query: "Nigeria sports", label: "Sports" },
     { keywords: ["health", "hospital", "disease", "covid", "malaria", "doctor", "medical"], query: "Nigeria health", label: "Health" },
     { keywords: ["tech", "technology", "startup", "ai", "fintech", "internet"], query: "Nigeria technology", label: "Technology" },
   ];
