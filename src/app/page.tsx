@@ -283,10 +283,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ================= EMAIL NEWSLETTER SUBSCRIPTION BOX ================= */}
-      <section>
-        <NewsletterBox />
-      </section>
     </div>
   );
 }

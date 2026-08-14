@@ -71,7 +71,7 @@ export default function NewsletterBox() {
       {status === "error" && (
         <div className="flex items-center gap-2 p-3 bg-signal/10 text-signal rounded text-xs font-bold border border-signal/20 mt-3">
           <AlertCircle className="h-4 w-4" />
-          <span>Wahala! Failed to subscribe. Please try again.</span>
+          <span>OOps! Failed to subscribe. Please try again.</span>
         </div>
       )}
     </div>
