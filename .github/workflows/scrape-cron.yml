@@ -6,19 +6,37 @@ on:
   workflow_dispatch:
 
 jobs:
-  scrape:
+  scrape-and-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+
     steps:
       - name: Trigger Todaynews.ng Scraper
         run: |
-          curl -f -X GET "https://todaynews.ng/api/cron/scrape" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "x-cron-key: ${{ secrets.CRON_SECRET }}" \
-            --max-time 60 || echo "Scrape job failed or timed out, continuing..."
+          echo "⏱️ $(date -u) — Triggering /api/cron/scrape..."
+          RESPONSE=$(curl -s -o /tmp/scrape_body.txt -w "%{http_code}" \
+            --max-time 60 \
+            -X GET "https://todaynews.ng/api/cron/scrape" \
+            -H "Accept: application/json")
+          echo "🔁 HTTP Status: $RESPONSE"
+          cat /tmp/scrape_body.txt
+          if [ "$RESPONSE" -ge 400 ]; then
+            echo "⚠️ Scraper returned error $RESPONSE — will still proceed to auto-publish."
+          else
+            echo "✅ Scraper completed successfully."
+          fi
 
       - name: Trigger Auto-Publish Check
         run: |
-          curl -f -X GET "https://todaynews.ng/api/cron/auto-publish" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "x-cron-key: ${{ secrets.CRON_SECRET }}" \
-            --max-time 30 || echo "Auto-publish check failed, continuing..."
+          echo "⏱️ $(date -u) — Triggering /api/cron/auto-publish..."
+          RESPONSE=$(curl -s -o /tmp/pub_body.txt -w "%{http_code}" \
+            --max-time 30 \
+            -X GET "https://todaynews.ng/api/cron/auto-publish" \
+            -H "Accept: application/json")
+          echo "🔁 HTTP Status: $RESPONSE"
+          cat /tmp/pub_body.txt
+          if [ "$RESPONSE" -ge 400 ]; then
+            echo "⚠️ Auto-publish returned error $RESPONSE."
+          else
+            echo "✅ Auto-publish check completed."
+          fi
