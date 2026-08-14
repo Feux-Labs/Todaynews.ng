@@ -18,21 +18,101 @@ const rssParser = new RSSParser({
   },
 });
 
-const FALLBACK_IMAGE_BY_CATEGORY: Record<string, string> = {
-  DEFAULT: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80",
-  POLITICS: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?auto=format&fit=crop&w=1200&q=80",
-  NAIRA: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80",
-  ENTERTAINMENT: "https://images.unsplash.com/photo-1516280440614-abea0f8c6b69?auto=format&fit=crop&w=1200&q=80",
-  SPORTS: "https://images.unsplash.com/photo-1547347298-4074fc3086f0?auto=format&fit=crop&w=1200&q=80",
-  SECURITY: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80",
-  METRO: "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1200&q=80",
-  EDUCATION: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
-  TECHNOLOGY: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
-  HEALTH: "https://images.unsplash.com/photo-1538108149393-fbbd81895977?auto=format&fit=crop&w=1200&q=80",
-  SCHOLARSHIP: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
-  JAPA: "https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=1200&q=80",
-  MAKE_MONEY_ONLINE: "https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=1200&q=80",
+const EDITORIAL_IMAGE_POOLS: Record<string, string[]> = {
+  DEFAULT: [
+    "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80",
+  ],
+  POLITICS: [
+    "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
+  ],
+  SECURITY: [
+    "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1589578527966-fdac0f44566c?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1453873531674-215110116639?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80",
+  ],
+  NAIRA: [
+    "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1565372195458-9de0b320ef04?auto=format&fit=crop&w=1200&q=80",
+  ],
+  METRO: [
+    "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=1200&q=80",
+  ],
+  TECHNOLOGY: [
+    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80",
+  ],
+  SPORTS: [
+    "https://images.unsplash.com/photo-1547347298-4074fc3086f0?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+  ],
+  ENTERTAINMENT: [
+    "https://images.unsplash.com/photo-1516280440614-abea0f8c6b69?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200&q=80",
+  ],
+  EDUCATION: [
+    "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1200&q=80",
+  ],
+  HEALTH: [
+    "https://images.unsplash.com/photo-1538108149393-fbbd81895977?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1200&q=80",
+  ],
+  SCHOLARSHIP: [
+    "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1532649538693-f3a2ec1bf8bd?auto=format&fit=crop&w=1200&q=80",
+  ],
+  JAPA: [
+    "https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1500835556837-99ac94a94552?auto=format&fit=crop&w=1200&q=80",
+  ],
+  MAKE_MONEY_ONLINE: [
+    "https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80",
+  ],
 };
+
+// Fallback constant for backwards compatibility
+const FALLBACK_IMAGE_BY_CATEGORY: Record<string, string> = Object.fromEntries(
+  Object.entries(EDITORIAL_IMAGE_POOLS).map(([k, v]) => [k, v[0]])
+);
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
 
 // RSS Feed sources — Nigerian news sites with active RSS feeds
 const RSS_SOURCES: { name: string; url: string; category: string }[] = [
@@ -50,64 +130,47 @@ const RSS_SOURCES: { name: string; url: string; category: string }[] = [
   { name: "CNN Africa", url: "https://rss.cnn.com/rss/edition_africa.rss", category: "POLITICS" },
 ];
 
-// Keyword-based category detection
-function detectCategory(title: string, content: string): string {
+// Keyword-based category detection with precise word boundaries
+export function detectCategory(title: string, content: string): string {
   const text = `${title} ${content}`.toLowerCase();
 
-  if (/naira|dollar|cbn|forex|exchange rate|inflation|gdp|budget/i.test(text)) return "NAIRA";
-  if (/super eagles|npfl|football|afcon|premier league|champions league|nba|boxing|tennis|athletics/i.test(text)) return "SPORTS";
-  if (/bbnaija|nollywood|davido|wizkid|burna|music|concert|award|movie|celebrity/i.test(text)) return "ENTERTAINMENT";
-  if (/boko haram|bandit|kidnap|insecurity|police|army|military|terrorism|iswap|robbery/i.test(text)) return "SECURITY";
-  if (/lagos|traffic|road|accident|flood|fire|market|okada|danfo/i.test(text)) return "METRO";
-  if (/university|school|jamb|waec|neco|student|education|asuu|lecture/i.test(text)) return "EDUCATION";
-  if (/tech|ai|startup|5g|app|digital|ecommerce|fintech|crypto/i.test(text)) return "TECHNOLOGY";
-  if (/health|hospital|malaria|covid|doctor|who|disease|ebola|cholera/i.test(text)) return "HEALTH";
-  if (/scholarship|grant|sponsor|study abroad|fellowship|masters degree|international student|tuition/i.test(text)) return "SCHOLARSHIP";
-  if (/japa|visa|relocation|emigrate|work permit|green card|canada|uk|usa|abroad|diaspora|migration/i.test(text)) return "JAPA";
-  if (/make money|passive income|side hustle|freelance|online job|work from home|earn online|cryptocurrency|drop shipping|affiliate/i.test(text)) return "MAKE_MONEY_ONLINE";
+  // NAIRA & ECONOMY
+  if (/\b(naira|dollar|cbn|forex|exchange rate|inflation|gdp|budget|crude oil|fuel price|petrol price|refinery|customs|revenue|bank|tax)\b/i.test(text)) return "NAIRA";
+  
+  // SPORTS
+  if (/\b(super eagles|super falcons|npfl|football|soccer|afcon|premier league|champions league|nba|boxing|tennis|athletics|osimhen|boniface)\b/i.test(text)) return "SPORTS";
+  
+  // ENTERTAINMENT
+  if (/\b(bbnaija|nollywood|davido|wizkid|burna|asake|tiwa|rema|afrobeats|actress|actor|celebrity|album|song|grammy|cinema|movie|concert)\b/i.test(text)) return "ENTERTAINMENT";
+  
+  // SECURITY, COURT, JUDICIARY, POLICE, CRIME
+  if (/\b(court|judge|chief judge|justice|cj|inmate|prison|trial|efcc|dss|icpc|police|arrest|arrested|gunmen|kidnap|kidnappers|abduct|bandit|bandits|terror|terrorism|boko haram|iswap|robbery|killing|killed|murder|jail|bail|prosecution|qur'an|quran|desecration)\b/i.test(text)) return "SECURITY";
+  
+  // SCHOLARSHIPS
+  if (/\b(scholarship|scholarships|fully funded|fellowship|grant|ptdf|chevening|study abroad|mastercard foundation|tuition)\b/i.test(text)) return "SCHOLARSHIP";
+  
+  // JAPA & IMMIGRATION
+  if (/\b(japa|visa|visas|relocate|relocation|immigration|emigrate|work permit|green card|canada visa|uk visa|embassy|abroad)\b/i.test(text)) return "JAPA";
+  
+  // HEALTH & MEDICINE
+  if (/\b(health|hospital|disease|covid|malaria|doctor|doctors|medical|cholera|lassa fever|ncdc|who|surgery|vaccine)\b/i.test(text)) return "HEALTH";
+  
+  // EDUCATION
+  if (/\b(university|school|students|student|jamb|waec|neco|education|asuu|lecturer|polytechnic|campus|vc|matriculation)\b/i.test(text)) return "EDUCATION";
+  
+  // TECHNOLOGY & AI (with strict boundaries)
+  if (/\b(artificial intelligence|ai startup|5g network|fintech|software engineering|cybersecurity|crypto|cryptocurrency|telecom|broadband)\b/i.test(text)) return "TECHNOLOGY";
+  
+  // MAKE MONEY ONLINE
+  if (/\b(make money|side hustle|freelance|remote work|online income|passive income|affiliate marketing)\b/i.test(text)) return "MAKE_MONEY_ONLINE";
+  
+  // METRO & REGIONAL
+  if (/\b(lagos|abuja|kano|rivers|ibadan|osun|benue|kebbi|traffic|road|accident|flood|fire|market|okada|danfo|residents|demolition)\b/i.test(text)) return "METRO";
+  
+  // POLITICS & GOVERNANCE
+  if (/\b(tinubu|shettima|senate|house of reps|governor|adeleke|sanwo-olu|election|presidency|minister|apc|pdp|lp|nnpp|inec|bill|policy|petition|senator|accord)\b/i.test(text)) return "POLITICS";
 
   return "POLITICS";
-}
-
-/**
- * Search for related image by topic using free image APIs.
- * Falls back to generic news image if search fails.
- */
-async function findRelatedImage(topic: string): Promise<string | undefined> {
-  try {
-    const searchTerm = (topic || "nigerian news")
-      .replace(/[^a-zA-Z0-9\s-]/g, " ")
-      .trim()
-      .split(/\s+/)
-      .slice(0, 3)
-      .join("+");
-
-    const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-    const unsplashUrl = accessKey
-      ? `https://api.unsplash.com/search/photos?query=${searchTerm}&per_page=1&order_by=relevance&client_id=${accessKey}`
-      : undefined;
-
-    if (unsplashUrl) {
-      const response = await fetch(unsplashUrl, {
-        headers: {
-          "User-Agent": "TodaynewsBot/1.0",
-          "Accept-Version": "v1",
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json() as any;
-        if (data.results?.[0]?.urls?.regular) {
-          return data.results[0].urls.regular;
-        }
-      }
-    }
-
-    return undefined;
-  } catch (err) {
-    console.error("[Image Search] Failed:", err);
-    return undefined;
-  }
 }
 
 export async function resolveStoryImage(
@@ -116,17 +179,19 @@ export async function resolveStoryImage(
   category?: string
 ): Promise<string> {
   const cleanCandidate = (imageUrl || "").trim();
-  const isGenericLogo = /logo|icon|favicon|placeholder|avatar|default-thumbnail/i.test(cleanCandidate);
+  const isGenericLogo = /logo|icon|favicon|placeholder|avatar|default-thumbnail|punch-logo/i.test(cleanCandidate);
 
   if (cleanCandidate && /^https?:\/\//i.test(cleanCandidate) && !isGenericLogo) {
     return cleanCandidate;
   }
 
   const categoryKey = ((category || "").toUpperCase() || "DEFAULT") as string;
-  const searchTerm = (title || category || "nigerian news").trim();
-  const foundImage = await findRelatedImage(searchTerm);
+  const pool = EDITORIAL_IMAGE_POOLS[categoryKey] || EDITORIAL_IMAGE_POOLS.DEFAULT;
+  
+  const titleKey = (title || categoryKey || "todaynews-story").trim();
+  const selectedImage = pool[hashString(titleKey) % pool.length];
 
-  return foundImage || FALLBACK_IMAGE_BY_CATEGORY[categoryKey] || FALLBACK_IMAGE_BY_CATEGORY.DEFAULT;
+  return selectedImage;
 }
 
 /**
@@ -167,6 +232,22 @@ function calculateImportanceScore(
   return score;
 }
 
+export function stripCompetitorLinksAndBoilerplate(text: string): string {
+  if (!text) return "";
+  return text
+    // Remove "Read More: https://..." or "Read more at https://..." or "Continue reading on..."
+    .replace(/\s*(?:read\s+more|continue\s+reading|click\s+here|full\s+story|read\s+full\s+article)(?:\s+at|\s+on|\s*:)?[^\n.]*(?:https?:\/\/[^\s)]+)?/gi, "")
+    // Remove standalone URLs
+    .replace(/https?:\/\/[^\s)]+/gi, "")
+    // Remove "The post ... appeared first on ..."
+    .replace(/\s*The post\s+.*?appeared first on\s+.*?(?:\.|$)/gi, "")
+    // Remove copyright / attribution footers
+    .replace(/\s*Copyright\s+.*?(?:Punch|Vanguard|Daily Trust|Guardian|Sahara Reporters|Premium Times|The Nation|Tribune|Sun|All rights reserved).*?(?:\.|$)/gi, "")
+    // Remove trailing colons, dashes, or spaces left behind
+    .replace(/\s*[-\u2013\u2014:]+\s*$/g, "")
+    .trim();
+}
+
 /**
  * Scrape RSS feeds from configured Nigerian news sources.
  * Supports filtering by keyword query and published duration (in minutes).
@@ -194,10 +275,10 @@ export async function scrapeRSSFeeds(
         // 1. Time range filter (e.g., last 30 minutes for cron scraper)
         if (cutoffTime && pubTime < cutoffTime) continue;
 
-        // Extract content
+        // Extract content & clean all competitor URLs
         const rawContent = item["content:encoded"] || item.content || item.contentSnippet || "";
         const $ = cheerio.load(rawContent);
-        const cleanContent = $.text().trim();
+        const cleanContent = stripCompetitorLinksAndBoilerplate($.text().trim());
 
         // 2. Keyword query filter (supports multi-term searches like "terror business education")
         if (lowercaseQuery) {
@@ -244,7 +325,7 @@ export async function scrapeRSSFeeds(
             title: item.title,
             content: cleanContent || item.title,
             sourceUrl: item.link,
-            sourceName: source.name,
+            sourceName: "Todaynews AI",
             category,
             imageUrl: imageUrl || FALLBACK_IMAGE_BY_CATEGORY[category] || FALLBACK_IMAGE_BY_CATEGORY.DEFAULT,
             pubDate: pubDateStr || new Date().toISOString(),
@@ -354,7 +435,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedStory | null> {
       title: title || "Untitled Article",
       content,
       sourceUrl: url,
-      sourceName,
+      sourceName: "Todaynews AI",
       category: detectCategory(title, content),
       imageUrl,
     };
@@ -473,10 +554,10 @@ export async function enrichAndRankStories(stories: ScrapedStory[]): Promise<Scr
   const enrichedStories = await Promise.all(
     stories.map(async (story) => {
       if (!story.imageUrl) {
-        const foundImage = await findRelatedImage(story.title);
+        const resolvedImage = await resolveStoryImage(story.imageUrl, story.title, story.category);
         return {
           ...story,
-          imageUrl: foundImage || FALLBACK_IMAGE_BY_CATEGORY[story.category?.toUpperCase() || "DEFAULT"] || FALLBACK_IMAGE_BY_CATEGORY.DEFAULT,
+          imageUrl: resolvedImage,
         };
       }
       return story;

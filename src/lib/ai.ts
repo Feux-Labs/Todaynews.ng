@@ -2,6 +2,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { geminiBreaker } from "./circuitBreaker";
 import { sanitizeArticleHtml } from "./content";
 
+import { stripCompetitorLinksAndBoilerplate } from "./scraper";
+
 export type AllowedCategory =
   | "POLITICS"
   | "NAIRA"
@@ -31,7 +33,7 @@ const VALID_CATEGORIES: Set<AllowedCategory> = new Set([
   "MAKE_MONEY_ONLINE",
 ]);
 
-interface ParaphrasedResult {
+export interface ParaphrasedResult {
   title: string;
   summary: string;
   category: AllowedCategory;
@@ -46,14 +48,10 @@ interface ParaphrasedResult {
  * Procedural offline rewriter when Gemini API key is not configured or fails.
  * Ensures strict compliance with Nigerian editorial rules, hedging terms, and category validation.
  */
-/**
- * Strips all duplicate [BREAKING] from a title.
- * Returns clean headline matching Punchng.com News style.
- */
-function cleanAndFormatTitle(rawTitle: string): string {
+export function cleanAndFormatTitle(rawTitle: string): string {
   if (!rawTitle) return "New Trending Nigerian News Alert";
-  // Remove ALL occurrences of [BREAKING] and trailing suffixes
-  let clean = rawTitle
+  // Remove ALL occurrences of [BREAKING], trailing suffixes, and competitor urls
+  let clean = stripCompetitorLinksAndBoilerplate(rawTitle)
     .replace(/\[BREAKING\]\s*/gi, "")
     .replace(/\s*[-\u2013\u2014]\s*What We Know So Far\s*/gi, "")
     .replace(/\s*[-\u2013\u2014]\s*What We Know\s*/gi, "")
@@ -61,7 +59,7 @@ function cleanAndFormatTitle(rawTitle: string): string {
   return clean || "New Trending Nigerian News Alert";
 }
 
-function localProceduralRewriter(
+export function localProceduralRewriter(
   rawText: string,
   rawTitle: string,
   category: string
@@ -69,9 +67,10 @@ function localProceduralRewriter(
   const upperCat = (category || "POLITICS").toUpperCase() as AllowedCategory;
   const cleanCategory: AllowedCategory = VALID_CATEGORIES.has(upperCat) ? upperCat : "POLITICS";
   const headline = cleanAndFormatTitle(rawTitle);
+  const cleanedText = stripCompetitorLinksAndBoilerplate(rawText || rawTitle);
 
-  // Split raw text into sentences for richer fallback paragraphs
-  const sentences = rawText
+  // Split cleaned text into sentences for richer paragraphs
+  const sentences = cleanedText
     .replace(/\n+/g, " ")
     .split(/(?<=[.!?])\s+/)
     .map((s) => s.trim())
@@ -91,19 +90,21 @@ function localProceduralRewriter(
   const toHtml = (lines: string[]) =>
     lines.map((l) => `<p class="mb-4">${l}</p>`).join("\n");
 
+  const coreSentence = sentences[0] || `${headline}. Official channels and key stakeholders are currently assessing the situation as developments unfold.`;
+
   const pages: { pageNumber: number; title: string; content: string }[] = [];
   pages.push({
     pageNumber: 1,
     title: "Core Facts & Breaking Report",
     content:
+      `<p class="mb-4"><strong>${headline}</strong> — ${coreSentence}</p>` +
       toHtml(
         part1.length >= 3
-          ? part1
+          ? part1.slice(1)
           : [
-            part1[0] || "Breaking reports indicate significant developments today as official channels and key stakeholders review preliminary findings.",
-            "Credible sources confirm that the situation is being closely monitored by relevant authorities. Early accounts suggest a sequence of events that demands immediate attention from both citizens and policymakers.",
-            "Todaynews.ng is tracking this story in real time. Multiple government agencies have been briefed and are expected to issue an official statement before end of day.",
-            "Subject to official confirmation, preliminary accounts indicate that this development may have wide-reaching implications across key sectors. The full scope of the situation is still being assessed.",
+            "Credible sources confirm that the situation is being closely monitored by relevant authorities and emergency response agencies. Early accounts suggest a sequence of events that demands immediate attention from both citizens and policymakers.",
+            "Todaynews.ng is tracking this story in real time. Multiple government agencies have been briefed and are expected to issue an official follow-up statement before end of day.",
+            "Subject to official confirmation, preliminary accounts indicate that this development may have wide-reaching implications across key sectors. The full scope of the situation is still being assessed on the ground.",
           ]
       ) +
       `<p class="mb-4"><em>Note: Details surrounding this report remain subject to official verification by relevant authorities and emergency response agencies. Todaynews.ng is committed to accurate, verified reporting.</em></p>`,
@@ -113,15 +114,15 @@ function localProceduralRewriter(
     pageNumber: 2,
     title: "Why This Matters & Background Context",
     content:
-      `<div class="p-4 bg-paper border-l-4 border-flag my-4 rounded"><h4 class="font-bold text-ink mb-1">🇳🇬 Why This Matters to Nigerians</h4><p class="text-sm text-muted">This development carries direct implications for trade, governance, security, and purchasing power across Nigeria's 36 states. Citizens in Lagos, Abuja, Port Harcourt, and other key urban centres should take note of the following verified context.</p></div>` +
+      `<div class="p-4 bg-paper border-l-4 border-flag my-4 rounded"><h4 class="font-bold text-ink mb-1">🇳🇬 Why This Matters to Nigerians</h4><p class="text-sm text-muted">This development carries direct implications for governance, security, and the affected communities across Nigeria.</p></div>` +
       toHtml(
         part2.length >= 3
           ? part2
           : [
-            "Historical precedent shows that events of this nature have led to significant policy adjustments within weeks. The Nigerian government has previously responded to similar triggers with emergency regulations and inter-ministerial taskforce deployments.",
-            "Economic analysts noted in a recent briefing that the downstream effects on the naira, fuel prices, and federal budget allocation are difficult to predict without further official data. However, precautionary advisories have already been issued to relevant agencies.",
-            "Civil society organisations and opposition voices have begun weighing in on the matter, calling for transparency and timely disclosure from the appropriate government ministries and parastatals.",
-            "Institutional memory from previous cycles suggests that early, calibrated government communication plays a critical role in preventing unnecessary public panic and misinformation — a lesson Todaynews.ng continues to champion.",
+            "Historical precedent shows that developments of this nature have led to significant policy adjustments and operational reviews. The Nigerian authorities have previously responded to similar triggers with specialized taskforce deployments and judicial reviews.",
+            "Legal and security analysts noted in a recent briefing that proactive institutional responses play a critical role in preventing unnecessary public distress and ensuring justice is served.",
+            "Civil society organisations and community advocates have begun weighing in on the matter, calling for transparency, due process, and timely disclosure from the appropriate authorities.",
+            "Institutional lessons from previous cycles highlight the necessity of clear, verified reporting — a principle Todaynews.ng consistently upholds.",
           ]
       ),
   });
@@ -134,10 +135,10 @@ function localProceduralRewriter(
         part3.length >= 3
           ? part3
           : [
-            "Stakeholders, civil society groups, and diplomatic observers are awaiting official press briefings from government representatives to determine the next course of action.",
-            "Policy analysts expect that the relevant federal agencies will convene a session in the coming 48 to 72 hours to assess the situation formally and communicate an official government position.",
-            "Security and intelligence agencies remain on heightened alert. Sources familiar with the matter, who spoke on condition of anonymity, confirmed that inter-agency coordination is already underway to manage any fallout.",
-            "The international community, including Nigeria's diplomatic partners, is reportedly monitoring developments closely. A formal response from external observers is anticipated once the government's statement is released.",
+            "Stakeholders, civil society groups, and community representatives are awaiting official updates from administrative representatives to determine subsequent measures.",
+            "Legal and policy experts expect that the relevant authorities will convene an assessment review in the coming 48 to 72 hours to formally communicate their findings.",
+            "Relevant agencies remain on alert to ensure due process and public order are maintained as the situation progresses.",
+            "Diplomatic and human rights observers are reportedly monitoring developments closely, with a formal statement expected as more verified facts emerge.",
           ]
       ) +
       `<p class="mb-4"><strong>📌 Todaynews.ng will continue to provide real-time, verified updates on this developing story. Bookmark this page and follow our Breaking News ticker for the latest.</strong></p>`,
@@ -145,7 +146,7 @@ function localProceduralRewriter(
 
   const summaryText = sentences[0]
     ? sentences[0].substring(0, 200) + (sentences[0].length > 200 ? "..." : "")
-    : "Verified Nigerian breaking news report. Todaynews.ng provides real-time, accurate, and contextualised coverage of major events across Nigeria.";
+    : `Verified Nigerian breaking news report on ${headline}. Todaynews.ng provides real-time, accurate, and contextualised coverage.`;
 
   return {
     title: headline,
@@ -165,12 +166,14 @@ function normalizeParaphrasedResult(result: ParaphrasedResult, fallback: Paraphr
 
   return {
     title: cleanTitle,
-    summary: (result.summary || fallback.summary).trim(),
+    summary: stripCompetitorLinksAndBoilerplate(result.summary || fallback.summary).trim(),
     category: cleanCategory,
     pages: pages.map((page, index) => ({
       pageNumber: index + 1,
       title: page.title || `Section ${index + 1}`,
-      content: sanitizeArticleHtml(page.content || fallback.pages[index]?.content || fallback.summary),
+      content: sanitizeArticleHtml(
+        stripCompetitorLinksAndBoilerplate(page.content || fallback.pages[index]?.content || fallback.summary)
+      ),
     })),
   };
 }
@@ -203,10 +206,8 @@ export async function paraphraseNews(
   return geminiBreaker.execute(
     async () => {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const cleanInputTitle = rawTitle
-        .replace(/\[BREAKING\]\s*/gi, "")
-        .replace(/\s*[-\u2014\u2013]\s*What We Know So Far\s*/gi, "")
-        .trim();
+      const cleanInputTitle = cleanAndFormatTitle(rawTitle);
+      const cleanInputText = stripCompetitorLinksAndBoilerplate(rawText);
 
       const prompt = `
       You are Chief Editor and Mass Communication Specialist for "Todaynews.ng", writing in the authoritative long-form style of Punch Newspaper, BBC Africa, Premium Times, and Guardian Nigeria.
@@ -229,6 +230,7 @@ export async function paraphraseNews(
          - For JAPA articles: Highlight visa requirements, timeline, cost, and verification of legitimacy
          - For MAKE_MONEY_ONLINE articles: Emphasize legitimate methods, real experiences, and WARNING against scams
       7. HTML FORMATTING: Use rich HTML inside page content: <p class="mb-4">, <ul><li>, <strong>, <em>, <blockquote>, <h4>.
+      8. STRICT PROHIBITION ON COMPETITOR LINKS: NEVER include external links, competitor website names (Punch, Vanguard, Daily Trust, Sahara Reporters, etc.), or phrases like "Read More: https://..." in the content or summary. Todaynews.ng is the sole publisher.
 
       Return ONLY a valid JSON object matching this exact schema:
       {
@@ -257,7 +259,7 @@ export async function paraphraseNews(
       Input Article Title: "${cleanInputTitle}"
       Input Target Category: "${category}"
       Input Article Text:
-      ${rawText}
+      ${cleanInputText}
       `;
 
       let lastError: any = null;

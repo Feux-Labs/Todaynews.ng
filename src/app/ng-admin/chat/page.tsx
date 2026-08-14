@@ -419,7 +419,6 @@ export default function AIChatPage() {
                                 <span className="text-[9px] px-1.5 py-0.5 bg-[#00e676]/10 text-[#00e676] rounded font-mono">
                                   {card.category}
                                 </span>
-                                <span className="text-[10px] text-slate-500 font-mono">via {card.sourceName}</span>
                               </div>
                             </div>
                           </div>
