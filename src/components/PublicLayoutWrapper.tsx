@@ -10,9 +10,9 @@ import AdSlot from "@/components/AdSlot";
 
 export default function PublicLayoutWrapper({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   const pathname = usePathname();
   const isAdminRoute = pathname?.startsWith("/ng-admin") || pathname?.startsWith("/admin");
 

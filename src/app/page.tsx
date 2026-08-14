@@ -10,7 +10,7 @@ import NewsletterBox from "@/components/NewsletterBox";
 import WhatsAppBanner from "@/components/WhatsAppBanner";
 import AdSlot from "@/components/AdSlot";
 import { ArticleData } from "@/lib/sample-data";
-import { ShieldCheck, Clock, ArrowRight, Zap, TrendingUp, Flame } from "lucide-react";
+import { ShieldCheck, ArrowRight, Zap } from "lucide-react";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -79,7 +79,7 @@ export default async function HomePage() {
   const heroArticle = articles[0];
   const sideArticles = articles.slice(1, 3);
   const securityArticles = articles.filter((a) => a.category === "SECURITY" || a.category === "METRO").slice(0, 4);
-  const politicsArticles = articles.filter((a) => a.category === "POLITICS").slice(0, 4);
+
   const remainingArticles = articles.slice(3);
 
   const newsOrgJsonLd = {

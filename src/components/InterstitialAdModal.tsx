@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Script from "next/script";
+
 import { X } from "lucide-react";
 
 export default function InterstitialAdModal() {
@@ -97,12 +97,11 @@ export default function InterstitialAdModal() {
   return (
     <>
       {/* Full-screen overlay backdrop */}
-      <div
+      <button
+        type="button"
         className="fixed inset-0 bg-black/80 z-[999] transition-opacity duration-300"
         onClick={handleClose}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === "Escape" && handleClose()}
+        aria-label="Close ad"
       />
 
       {/* Centered Modal Container */}
@@ -133,6 +132,7 @@ export default function InterstitialAdModal() {
           {/* Skip Ad Text (appears after 5 seconds) */}
           <div className="absolute bottom-4 right-4 text-xs text-gray-400">
             <button
+              type="button"
               onClick={handleClose}
               className="text-blue-600 hover:underline font-semibold transition-colors"
             >

@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { geminiBreaker } from "./circuitBreaker";
-import { sanitizeArticleHtml, textToParagraphHtml } from "./content";
+import { sanitizeArticleHtml } from "./content";
 
 export type AllowedCategory =
   | "POLITICS"
@@ -55,8 +55,8 @@ function cleanAndFormatTitle(rawTitle: string): string {
   // Remove ALL occurrences of [BREAKING] and trailing suffixes
   let clean = rawTitle
     .replace(/\[BREAKING\]\s*/gi, "")
-    .replace(/\s*[—\-–]\s*What We Know So Far\s*/gi, "")
-    .replace(/\s*[—\-–]\s*What We Know\s*/gi, "")
+    .replace(/\s*[-\u2013\u2014]\s*What We Know So Far\s*/gi, "")
+    .replace(/\s*[-\u2013\u2014]\s*What We Know\s*/gi, "")
     .trim();
   return clean || "New Trending Nigerian News Alert";
 }
@@ -92,8 +92,6 @@ function localProceduralRewriter(
     lines.map((l) => `<p class="mb-4">${l}</p>`).join("\n");
 
   const pages: { pageNumber: number; title: string; content: string }[] = [];
-
-  // PAGE 1 — Core Breaking Report (4-5 paragraphs)
   pages.push({
     pageNumber: 1,
     title: "Core Facts & Breaking Report",
@@ -111,7 +109,6 @@ function localProceduralRewriter(
       `<p class="mb-4"><em>Note: Details surrounding this report remain subject to official verification by relevant authorities and emergency response agencies. Todaynews.ng is committed to accurate, verified reporting.</em></p>`,
   });
 
-  // PAGE 2 — Why It Matters + Background (4-5 paragraphs)
   pages.push({
     pageNumber: 2,
     title: "Why This Matters & Background Context",
@@ -129,7 +126,6 @@ function localProceduralRewriter(
       ),
   });
 
-  // PAGE 3 — What Happens Next (4-5 paragraphs)
   pages.push({
     pageNumber: 3,
     title: "What Happens Next & Expert Outlook",
@@ -208,10 +204,9 @@ export async function paraphraseNews(
         },
       });
 
-      // Strip any existing [BREAKING] from rawTitle before sending to Gemini
       const cleanInputTitle = rawTitle
         .replace(/\[BREAKING\]\s*/gi, "")
-        .replace(/\s*[—\-–]\s*What We Know So Far\s*/gi, "")
+        .replace(/\s*[-\u2014\u2013]\s*What We Know So Far\s*/gi, "")
         .trim();
 
       const prompt = `
@@ -267,8 +262,7 @@ export async function paraphraseNews(
       `;
 
       const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const text = result.response.text();
 
       if (!text) {
         throw new Error("Empty response from Gemini API");

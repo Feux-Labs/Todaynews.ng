@@ -13,6 +13,22 @@ export interface ScrapedStory {
 
 const rssParser = new RSSParser();
 
+const FALLBACK_IMAGE_BY_CATEGORY: Record<string, string> = {
+  DEFAULT: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80",
+  POLITICS: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?auto=format&fit=crop&w=1200&q=80",
+  NAIRA: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80",
+  ENTERTAINMENT: "https://images.unsplash.com/photo-1516280440614-abea0f8c6b69?auto=format&fit=crop&w=1200&q=80",
+  SPORTS: "https://images.unsplash.com/photo-1547347298-4074fc3086f0?auto=format&fit=crop&w=1200&q=80",
+  SECURITY: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80",
+  METRO: "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1200&q=80",
+  EDUCATION: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+  TECHNOLOGY: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+  HEALTH: "https://images.unsplash.com/photo-1538108149393-fbbd81895977?auto=format&fit=crop&w=1200&q=80",
+  SCHOLARSHIP: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
+  JAPA: "https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=1200&q=80",
+  MAKE_MONEY_ONLINE: "https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=1200&q=80",
+};
+
 // RSS Feed sources — Nigerian news sites with active RSS feeds
 const RSS_SOURCES: { name: string; url: string; category: string }[] = [
   { name: "Punch NG", url: "https://punchng.com/feed/", category: "POLITICS" },
@@ -54,31 +70,56 @@ function detectCategory(title: string, content: string): string {
  */
 async function findRelatedImage(topic: string): Promise<string | undefined> {
   try {
-    // Try Unsplash API (free tier, no key required for basic searches)
-    const searchTerm = topic.split(" ").slice(0, 3).join("+");
-    const unsplashUrl = `https://api.unsplash.com/search/photos?query=${searchTerm}&per_page=1&order_by=relevance`;
-    
-    const response = await fetch(unsplashUrl, {
-      headers: {
-        "User-Agent": "TodaynewsBot/1.0",
-        "Accept-Version": "v1",
-      },
-    });
+    const searchTerm = (topic || "nigerian news")
+      .replace(/[^a-zA-Z0-9\s-]/g, " ")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 3)
+      .join("+");
 
-    if (response.ok) {
-      const data = await response.json() as any;
-      if (data.results?.[0]?.urls?.regular) {
-        return data.results[0].urls.regular;
+    const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+    const unsplashUrl = accessKey
+      ? `https://api.unsplash.com/search/photos?query=${searchTerm}&per_page=1&order_by=relevance&client_id=${accessKey}`
+      : undefined;
+
+    if (unsplashUrl) {
+      const response = await fetch(unsplashUrl, {
+        headers: {
+          "User-Agent": "TodaynewsBot/1.0",
+          "Accept-Version": "v1",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json() as any;
+        if (data.results?.[0]?.urls?.regular) {
+          return data.results[0].urls.regular;
+        }
       }
     }
 
-    // Fallback: Try Pixabay if available
-    // For now, return undefined and let the article use a default placeholder
     return undefined;
   } catch (err) {
     console.error("[Image Search] Failed:", err);
     return undefined;
   }
+}
+
+export async function resolveStoryImage(
+  imageUrl?: string,
+  title?: string,
+  category?: string
+): Promise<string> {
+  const cleanCandidate = (imageUrl || "").trim();
+  if (cleanCandidate && /^https?:\/\//i.test(cleanCandidate)) {
+    return cleanCandidate;
+  }
+
+  const categoryKey = ((category || "").toUpperCase() || "DEFAULT") as string;
+  const searchTerm = (title || category || "nigerian news").trim();
+  const foundImage = await findRelatedImage(searchTerm);
+
+  return foundImage || FALLBACK_IMAGE_BY_CATEGORY[categoryKey] || FALLBACK_IMAGE_BY_CATEGORY.DEFAULT;
 }
 
 /**
@@ -183,7 +224,7 @@ export async function scrapeRSSFeeds(
         }
       }
     } catch (err) {
-      // Suppress normal network timeout logs
+      console.error(`[RSS Scraper] Feed ${source.name} failed:`, err instanceof Error ? err.message : String(err));
     }
   });
 
@@ -391,11 +432,10 @@ export async function enrichAndRankStories(stories: ScrapedStory[]): Promise<Scr
   const enrichedStories = await Promise.all(
     stories.map(async (story) => {
       if (!story.imageUrl) {
-        // Try to find a related image
         const foundImage = await findRelatedImage(story.title);
         return {
           ...story,
-          imageUrl: foundImage || `/images/default-news-placeholder.jpg`, // Fallback to default
+          imageUrl: foundImage || FALLBACK_IMAGE_BY_CATEGORY[story.category?.toUpperCase() || "DEFAULT"] || FALLBACK_IMAGE_BY_CATEGORY.DEFAULT,
         };
       }
       return story;

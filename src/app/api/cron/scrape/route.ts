@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scrapeRSSFeeds, scrapeScholarships, scrapeJapa, scrapeMakeMoneyOnline, enrichAndRankStories } from "@/lib/scraper";
+import { scrapeRSSFeeds, scrapeScholarships, scrapeJapa, scrapeMakeMoneyOnline, enrichAndRankStories, resolveStoryImage } from "@/lib/scraper";
 import { paraphraseNews } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { sendNewStoryAlert } from "@/lib/mailer";
@@ -92,6 +92,7 @@ export async function GET(req: Request) {
 
       // Paraphrase with Gemini AI
       const paraphrased = await paraphraseNews(story.content, story.title, story.category);
+      const finalImageUrl = await resolveStoryImage(story.imageUrl, paraphrased.title, paraphrased.category);
 
       const slug = paraphrased.title
         .toLowerCase()
@@ -99,7 +100,7 @@ export async function GET(req: Request) {
         .replace(/(^-|-$)/g, "")
         .substring(0, 60);
 
-      const uniqueSlug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
+      const uniqueSlug = `${slug}-${Date.now().toString(36)}`;
 
       let savedArticleId = "";
 
@@ -113,7 +114,7 @@ export async function GET(req: Request) {
             status: "AI_PENDING" as any,
             sourceName: story.sourceName,
             sourceUrl: story.sourceUrl,
-            imageUrl: story.imageUrl,
+            imageUrl: finalImageUrl,
             author: settings.defaultAuthorName,
             pages: {
               create: paraphrased.pages.map((p) => ({
@@ -134,7 +135,7 @@ export async function GET(req: Request) {
           status: "AI_PENDING" as any,
           sourceName: story.sourceName,
           sourceUrl: story.sourceUrl,
-          imageUrl: story.imageUrl,
+          imageUrl: finalImageUrl,
           author: settings.defaultAuthorName,
           readTimeMinutes: 3,
           pages: paraphrased.pages,

@@ -1,5 +1,5 @@
 import React from "react";
-import Metadata from "next";
+
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { ShieldCheck, Users, Globe, BookOpen, Award, CheckCircle } from "lucide-react";

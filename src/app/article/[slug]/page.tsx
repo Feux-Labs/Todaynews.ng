@@ -1,7 +1,7 @@
 import React from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Eye, Calendar, User, MessageSquare } from "lucide-react";
+import { Eye, Calendar, User, MessageSquare } from "lucide-react";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { generateSeoMetadata, getNewsArticleJsonLd, getBreadcrumbsJsonLd } from "@/lib/seo";
 import SocialShareBar from "@/components/SocialShareBar";
@@ -83,7 +83,7 @@ export async function generateMetadata({ params, searchParams }: ArticlePageProp
   const article = await getArticle(params.slug);
   if (!article) return {};
 
-  const pageNum = parseInt(searchParams.page || "1", 10);
+  const pageNum = Number.parseInt(searchParams.page || "1", 10);
   const totalPages = article.pages?.length || 1;
   
   // Dynamic page title to optimize for target keyword variants
@@ -93,20 +93,20 @@ export async function generateMetadata({ params, searchParams }: ArticlePageProp
   return generateSeoMetadata({
     title,
     description: article.summary,
-    path: `/article/${article.slug}${pageNum > 1 ? `?page=${pageNum}` : ""}`,
+    path: `/article/${article.slug}${pageNum > 1 ? `?page=${pageNum}` : ""}`.replace(/\?page=1$/, ""),
     imageUrl: article.imageUrl || undefined,
     category: article.category,
     keywords: [article.title, article.category, "Nigeria news", "Latest Naija Gist"],
   });
 }
 
-export default async function ArticlePage({ params, searchParams }: ArticlePageProps) {
+export default async function ArticlePage({ params, searchParams }: Readonly<ArticlePageProps>) {
   const article = await getArticle(params.slug);
   if (!article) {
     notFound();
   }
 
-  const currentPage = parseInt(searchParams.page || "1", 10);
+  const currentPage = Number.parseInt(searchParams.page || "1", 10);
   const totalPages = article.pages?.length || 1;
 
   // Sanity check current page limits

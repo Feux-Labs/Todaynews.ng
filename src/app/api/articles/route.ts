@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
+import { resolveStoryImage } from "@/lib/scraper";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +15,8 @@ export async function GET(req: Request) {
     const category = searchParams.get("category") || undefined;
     const status = searchParams.get("status") || undefined;
     const effectiveStatus = status || "PUBLISHED";
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const rawLimit = parseInt(searchParams.get("limit") || "10", 10);
+    const page = Math.max(1, Number.parseInt(searchParams.get("page") || "1", 10));
+    const rawLimit = Number.parseInt(searchParams.get("limit") || "10", 10);
     const limit = Math.min(50, Math.max(1, rawLimit)); // Cap max limit at 50 to prevent huge queries
 
     if (isDbConfigured()) {
@@ -116,6 +117,12 @@ export async function POST(req: Request) {
 
     const uniqueSlug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
 
+    const finalImageUrl = await resolveStoryImage(
+      imageUrl,
+      title,
+      category
+    );
+
     const requestedStatus = (status || "DRAFT").toString().toUpperCase();
     const hasScheduleDate = Boolean(scheduledAt);
     const resolvedStatus = hasScheduleDate && requestedStatus === "PUBLISHED" ? "SCHEDULED" : requestedStatus;
@@ -136,7 +143,7 @@ export async function POST(req: Request) {
             category: category.toUpperCase() as any,
             status: resolvedStatus as any,
             scheduledAt: resolvedScheduledAt,
-            imageUrl: imageUrl || undefined,
+            imageUrl: finalImageUrl,
             sourceName: sourceName || "Manual Editorial",
             author: resolvedAuthor,
             readTimeMinutes: resolvedReadTime,
@@ -162,7 +169,7 @@ export async function POST(req: Request) {
       summary,
       category: category.toUpperCase() as any,
       status: resolvedStatus as any,
-      imageUrl: imageUrl || undefined,
+      imageUrl: finalImageUrl,
       sourceName: sourceName || "Manual Editorial",
       author: resolvedAuthor,
       readTimeMinutes: resolvedReadTime,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scrapeRSSFeeds, scrapeUrl } from "@/lib/scraper";
+import { scrapeRSSFeeds, scrapeUrl, resolveStoryImage } from "@/lib/scraper";
 import { paraphraseNews, chatWithAi } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import {
@@ -146,13 +146,9 @@ export async function POST(req: Request) {
           const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error("Paraphrase timeout after 25s")), 25000)
           );
-          article = await Promise.race([paraphrasePromise, timeoutPromise]);
+          article = await Promise.race([paraphrasePromise, timeoutPromise]) as any;
         } catch (paraErr) {
           console.log("Paraphrase timeout/error — using rich local rewriter fallback:", paraErr);
-          // Import and use the same rich localProceduralRewriter via paraphraseNews with no API key
-          // We simulate no-api by calling without key — just use the imported function directly
-          const { paraphraseNews: pn } = await import("@/lib/ai");
-          // Force local fallback by temporarily using raw content
           article = {
             title: safeTitle,
             summary: safeSummary,
@@ -203,6 +199,12 @@ export async function POST(req: Request) {
         let createdId = `art-${Math.random().toString(36).substring(2, 9)}`;
         const finalCategory = sanitizeCategory(article.category);
 
+        const finalImageUrl = await resolveStoryImage(
+          storyImageUrl,
+          safeTitle,
+          finalCategory
+        );
+
         if (isDbConfigured()) {
           try {
             const dbCreated = await prisma.article.create({
@@ -214,7 +216,7 @@ export async function POST(req: Request) {
                 status: targetStatus as any,
                 sourceUrl: storySourceUrl || undefined,
                 sourceName: storySource || "Web Scraper",
-                imageUrl: storyImageUrl || undefined,
+                imageUrl: finalImageUrl,
                 author: settings.defaultAuthorName || "Todaynews.ng Editorial",
                 pages: {
                   create: (article.pages || [{ pageNumber: 1, content: safeSummary }]).map((p: any, idx: number) => ({
@@ -236,7 +238,7 @@ export async function POST(req: Request) {
               status: targetStatus as any,
               sourceUrl: storySourceUrl || undefined,
               sourceName: storySource || "Web Scraper",
-              imageUrl: storyImageUrl || undefined,
+              imageUrl: finalImageUrl,
               author: settings.defaultAuthorName || "Todaynews.ng Editorial",
               readTimeMinutes: 3,
               pages: article.pages || [{ pageNumber: 1, content: safeSummary }],
@@ -252,7 +254,7 @@ export async function POST(req: Request) {
             status: targetStatus as any,
             sourceUrl: storySourceUrl || undefined,
             sourceName: storySource || "Web Scraper",
-            imageUrl: storyImageUrl || undefined,
+            imageUrl: finalImageUrl,
             author: settings.defaultAuthorName || "Todaynews.ng Editorial",
             readTimeMinutes: 3,
             pages: article.pages || [{ pageNumber: 1, content: safeSummary }],
@@ -260,7 +262,6 @@ export async function POST(req: Request) {
           createdId = memCreated.id;
         }
 
-        // Update card status in memory JSON
         if (storyId) {
           try {
             await updatePersistentMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft", sessionId);
@@ -273,7 +274,6 @@ export async function POST(req: Request) {
           settings.defaultAuthorName
         }\n📄 **Pages**: ${(article.pages || []).length} section(s) re-written with AI context.`;
 
-        // Append assistant message to chat history
         try {
           await appendPersistentChatMessage({
             role: "assistant",
@@ -316,7 +316,6 @@ export async function POST(req: Request) {
 
         const finalCategory = sanitizeCategory(article.category);
 
-        // If storyId is an existing database article (not temporary scraped ID), update it in DB/memoryDb
         if (storyId && !storyId.startsWith("scraped-")) {
           if (isDbConfigured()) {
             try {
@@ -357,7 +356,6 @@ export async function POST(req: Request) {
           }
         }
 
-        // Build fully formatted markdown response for the user to copy or review
         const formattedMarkdown = `
 # ${article.title || safeTitle}
 
@@ -375,14 +373,19 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
 
         const replyMsg = `✨ **Article Paraphrased & Re-written Successfully!**\n\n${formattedMarkdown}`;
 
-        // Create a story card for this paraphrased article so user can send it to Inbox or Drafts directly!
+        const paraphrasedImageUrl = await resolveStoryImage(
+          storyImageUrl,
+          article.title || safeTitle,
+          finalCategory
+        );
+
         const paraphrasedCard = {
           id: `para-${Date.now()}`,
           title: article.title || safeTitle,
           summary: article.summary || safeSummary,
           sourceName: storySource || "Todaynews AI",
           category: finalCategory,
-          imageUrl: storyImageUrl,
+          imageUrl: paraphrasedImageUrl,
           status: "new" as const,
         };
 
@@ -411,7 +414,6 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
     const history = await getPersistentChatMemory(sessionId);
     const cleanHistory = history.map((h) => ({ role: h.role, content: h.content }));
 
-    // Append user message to history
     const persistedUserMessage = await appendPersistentChatMessage({
       role: "user",
       content: message,
@@ -419,12 +421,17 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
     });
     const activeSessionId = persistedUserMessage.sessionId || sessionId;
 
-    // Invoke Gemini reasoning engine to determine conversational reply or search intent
     const aiResponse = await chatWithAi(message, cleanHistory);
 
     let storyCards: any[] = [];
 
-    // If intent is to search, scrape matching stories
+    // If intent is to search, scrape matching stories.
+    // NOTE: scrapeRSSFeeds's second parameter here is being passed a free-text
+    // search phrase (aiResponse.searchQuery, e.g. "Nigeria scholarship
+    // opportunities"). Confirm this matches what scrapeRSSFeeds's signature
+    // actually expects in that position — if it expects a category enum
+    // instead of free text, this is why unrelated stories keep coming back
+    // regardless of what was asked for. Check /lib/scraper's real signature.
     if (aiResponse.intent === "search") {
       const query = aiResponse.searchQuery;
       const urlMatch = message.match(/https?:\/\/[^\s)]+/i);
@@ -445,7 +452,6 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
       }));
     }
 
-    // Append assistant reply to history
     await appendPersistentChatMessage({
       role: "assistant",
       content: aiResponse.reply,
