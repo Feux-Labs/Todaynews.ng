@@ -17,6 +17,9 @@ const CATEGORIES = [
   { label: "Technology", slug: "technology" },
   { label: "Education", slug: "education" },
   { label: "Health", slug: "health" },
+  { label: "Scholarships", slug: "scholarship" },
+  { label: "Japa", slug: "japa" },
+  { label: "Make Money Online", slug: "make-money-online" },
 ];
 
 export default function Header() {

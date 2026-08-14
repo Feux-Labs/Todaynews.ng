@@ -9,7 +9,19 @@ export interface ArticleData {
   title: string;
   slug: string;
   summary: string;
-  category: "POLITICS" | "NAIRA" | "ENTERTAINMENT" | "SPORTS" | "SECURITY" | "METRO" | "EDUCATION" | "TECHNOLOGY" | "HEALTH";
+  category:
+    | "POLITICS"
+    | "NAIRA"
+    | "ENTERTAINMENT"
+    | "SPORTS"
+    | "SECURITY"
+    | "METRO"
+    | "EDUCATION"
+    | "TECHNOLOGY"
+    | "HEALTH"
+    | "SCHOLARSHIP"
+    | "JAPA"
+    | "MAKE_MONEY_ONLINE";
   status: "PENDING" | "PUBLISHED" | "REJECTED";
   sourceUrl?: string;
   sourceName?: string;

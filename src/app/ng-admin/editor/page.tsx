@@ -37,6 +37,9 @@ const CATEGORIES = [
   "EDUCATION",
   "TECHNOLOGY",
   "HEALTH",
+  "SCHOLARSHIP",
+  "JAPA",
+  "MAKE_MONEY_ONLINE",
 ];
 
 interface ArticlePageData {

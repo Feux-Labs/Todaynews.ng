@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scrapeRSSFeeds } from "@/lib/scraper";
+import { scrapeRSSFeeds, scrapeScholarships, scrapeJapa, scrapeMakeMoneyOnline, enrichAndRankStories } from "@/lib/scraper";
 import { paraphraseNews } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { sendNewStoryAlert } from "@/lib/mailer";
@@ -62,7 +62,18 @@ export async function GET(req: Request) {
     }
 
     // Fetch top 3 fresh stories from RSS feeds published in the last 30 minutes
-    const stories = await scrapeRSSFeeds(3, undefined, 30);
+    const newsStories = await scrapeRSSFeeds(3, undefined, 30);
+    
+    // Also fetch from new specialized categories (mix in with news)
+    const scholarshipStories = await scrapeScholarships(1);
+    const japaStories = await scrapeJapa(1);
+    const moneyStories = await scrapeMakeMoneyOnline(1);
+    
+    // Combine all sources
+    let stories = [...newsStories, ...scholarshipStories, ...japaStories, ...moneyStories];
+
+    // Enrich with images and rank by importance
+    stories = await enrichAndRankStories(stories);
 
     if (stories.length === 0) {
       return NextResponse.json({

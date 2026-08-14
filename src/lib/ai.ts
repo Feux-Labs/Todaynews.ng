@@ -11,7 +11,10 @@ export type AllowedCategory =
   | "METRO"
   | "EDUCATION"
   | "TECHNOLOGY"
-  | "HEALTH";
+  | "HEALTH"
+  | "SCHOLARSHIP"
+  | "JAPA"
+  | "MAKE_MONEY_ONLINE";
 
 const VALID_CATEGORIES: Set<AllowedCategory> = new Set([
   "POLITICS",
@@ -23,6 +26,9 @@ const VALID_CATEGORIES: Set<AllowedCategory> = new Set([
   "EDUCATION",
   "TECHNOLOGY",
   "HEALTH",
+  "SCHOLARSHIP",
+  "JAPA",
+  "MAKE_MONEY_ONLINE",
 ]);
 
 interface ParaphrasedResult {
@@ -223,7 +229,11 @@ export async function paraphraseNews(
       3. LEGAL HEDGING: Use "allegedly", "according to reports", "unconfirmed accounts indicate", "subject to official confirmation" appropriately throughout.
       4. PUNCH NEWS HEADLINE STYLE: Create a compelling, direct headline in the style of Punch Newspaper — sharp, impactful, and search-optimised. NO prefixes like [BREAKING], NO suffixes like "What We Know So Far". Example: "Naira hits new low as CBN holds emergency meeting" or "Court orders EFCC to release former governor within 48 hours". The headline should BE the story.
       5. META SUMMARY: Write a compelling 2-3 sentence meta description for Google Search indexing. Make it specific and informative.
-      6. CATEGORY: Pick exactly ONE from: POLITICS, NAIRA, ENTERTAINMENT, SPORTS, SECURITY, METRO, EDUCATION, TECHNOLOGY, HEALTH.
+      6. CATEGORY HANDLING: 
+         - Pick exactly ONE from: POLITICS, NAIRA, ENTERTAINMENT, SPORTS, SECURITY, METRO, EDUCATION, TECHNOLOGY, HEALTH, SCHOLARSHIP, JAPA, MAKE_MONEY_ONLINE
+         - For SCHOLARSHIP articles: Focus on eligibility, application deadlines, funding details, and how to apply
+         - For JAPA articles: Highlight visa requirements, timeline, cost, and verification of legitimacy
+         - For MAKE_MONEY_ONLINE articles: Emphasize legitimate methods, real experiences, and WARNING against scams
       7. HTML FORMATTING: Use rich HTML inside page content: <p class="mb-4">, <ul><li>, <strong>, <em>, <blockquote>, <h4>.
 
       Return ONLY a valid JSON object matching this exact schema:

@@ -40,6 +40,7 @@ interface DraftArticle {
 const CATEGORIES = [
   "POLITICS", "NAIRA", "ENTERTAINMENT", "SPORTS",
   "SECURITY", "METRO", "EDUCATION", "TECHNOLOGY", "HEALTH",
+  "SCHOLARSHIP", "JAPA", "MAKE_MONEY_ONLINE",
 ];
 
 export default function DraftsPage() {

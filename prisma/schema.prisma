@@ -17,6 +17,9 @@ enum Category {
   EDUCATION
   TECHNOLOGY
   HEALTH
+  SCHOLARSHIP
+  JAPA
+  MAKE_MONEY_ONLINE
 }
 
 enum Status {

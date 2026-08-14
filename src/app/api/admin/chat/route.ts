@@ -48,6 +48,9 @@ const VALID_CATEGORIES = new Set([
   "EDUCATION",
   "TECHNOLOGY",
   "HEALTH",
+  "SCHOLARSHIP",
+  "JAPA",
+  "MAKE_MONEY_ONLINE",
 ]);
 
 function sanitizeCategory(cat?: string): string {
@@ -59,6 +62,9 @@ function sanitizeCategory(cat?: string): string {
   if (upper.includes("CRIME") || upper.includes("DEFENSE") || upper.includes("MILITARY") || upper.includes("TERROR")) return "SECURITY";
   if (upper.includes("SCHOOL") || upper.includes("UNI") || upper.includes("ASUU")) return "EDUCATION";
   if (upper.includes("MOVIE") || upper.includes("MUSIC") || upper.includes("SHOW")) return "ENTERTAINMENT";
+  if (upper.includes("SCHOLARSHIP") || upper.includes("GRANT") || upper.includes("TUITION")) return "SCHOLARSHIP";
+  if (upper.includes("JAPA") || upper.includes("VISA") || upper.includes("RELOCATION") || upper.includes("EMIGRATE")) return "JAPA";
+  if (upper.includes("EARN") || upper.includes("PASSIVE") || upper.includes("FREELANCE") || upper.includes("SIDE HUSTLE")) return "MAKE_MONEY_ONLINE";
   return "POLITICS";
 }
 

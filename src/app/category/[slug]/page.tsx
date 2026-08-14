@@ -23,6 +23,9 @@ const CATEGORY_MAP: Record<string, string> = {
   education: "EDUCATION",
   technology: "TECHNOLOGY",
   health: "HEALTH",
+  scholarship: "SCHOLARSHIP",
+  japa: "JAPA",
+  "make-money-online": "MAKE_MONEY_ONLINE",
 };
 
 interface CategoryPageProps {
@@ -35,7 +38,16 @@ export async function generateMetadata({ params }: CategoryPageProps) {
   const categoryKey = CATEGORY_MAP[params.slug.toLowerCase()];
   if (!categoryKey) return {};
 
-  const readableName = params.slug.toUpperCase() === "NAIRA" ? "Naira Watch" : params.slug.charAt(0).toUpperCase() + params.slug.slice(1);
+  const readableName =
+    params.slug.toLowerCase() === "naira"
+      ? "Naira Watch"
+      : params.slug.toLowerCase() === "scholarship"
+        ? "Scholarships"
+        : params.slug.toLowerCase() === "japa"
+          ? "Japa & Relocation"
+          : params.slug.toLowerCase() === "make-money-online"
+            ? "Make Money Online"
+            : params.slug.charAt(0).toUpperCase() + params.slug.slice(1);
 
   return generateSeoMetadata({
     title: `${readableName} News — Current Updates`,
@@ -105,7 +117,16 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   }
 
   const articles = await getCategoryArticles(categoryKey);
-  const readableName = params.slug.toUpperCase() === "NAIRA" ? "Naira Watch" : params.slug.charAt(0).toUpperCase() + params.slug.slice(1);
+  const readableName =
+    params.slug.toLowerCase() === "naira"
+      ? "Naira Watch"
+      : params.slug.toLowerCase() === "scholarship"
+        ? "Scholarships"
+        : params.slug.toLowerCase() === "japa"
+          ? "Japa & Relocation"
+          : params.slug.toLowerCase() === "make-money-online"
+            ? "Make Money Online"
+            : params.slug.charAt(0).toUpperCase() + params.slug.slice(1);
 
   // Yoast/RankMath style Breadcrumbs
   const breadcrumbSchema = getBreadcrumbsJsonLd([
