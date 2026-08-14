@@ -176,9 +176,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           <WhatsAppBanner />
         </div>
       </div>
-
-      {/* Bottom Ad / recommendations */}
-      <NativeSponsoredFeed />
     </div>
   );
 }

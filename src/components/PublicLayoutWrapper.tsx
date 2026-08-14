@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PushPromptModal from "@/components/PushPromptModal";
-import InterstitialAdModal from "@/components/InterstitialAdModal";
 import AdSlot from "@/components/AdSlot";
 
 export default function PublicLayoutWrapper({
@@ -37,9 +36,6 @@ export default function PublicLayoutWrapper({
 
       {/* Breaking news web push notification prompt */}
       <PushPromptModal />
-
-      {/* Full-screen Interstitial Ad Modal (High CTR) */}
-      <InterstitialAdModal />
 
       {/* Global Script hooks for Adsterra Social Bar */}
       <AdSlot id="adsterra-social-bar" type="social-bar" />

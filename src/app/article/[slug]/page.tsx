@@ -8,7 +8,6 @@ import SocialShareBar from "@/components/SocialShareBar";
 import ClickToQuote from "@/components/ClickToQuote";
 import EmojiReactions from "@/components/EmojiReactions";
 import AdSlot from "@/components/AdSlot";
-import NativeSponsoredFeed from "@/components/NativeSponsoredFeed";
 import MidArticleRelatedNews from "@/components/MidArticleRelatedNews";
 import TrendingSidebar from "@/components/TrendingSidebar";
 import WhatsAppBanner from "@/components/WhatsAppBanner";
@@ -300,9 +299,6 @@ export default async function ArticlePage({ params, searchParams }: Readonly<Art
           <AdSlot id="sidebar-display-article" type="sidebar-native" />
         </div>
       </div>
-
-      {/* Taboola / Outbrain style native recommendations feed */}
-      <NativeSponsoredFeed />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { SessionProvider } from "@/components/admin/SessionProvider";
 import AdminLayoutGuard from "@/components/admin/AdminLayoutGuard";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata = {
   title: "Admin Portal | Todaynews.ng",
@@ -12,8 +13,10 @@ export default function NgAdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SessionProvider>
-      <AdminLayoutGuard>{children}</AdminLayoutGuard>
-    </SessionProvider>
+    <ThemeProvider>
+      <SessionProvider>
+        <AdminLayoutGuard>{children}</AdminLayoutGuard>
+      </SessionProvider>
+    </ThemeProvider>
   );
 }

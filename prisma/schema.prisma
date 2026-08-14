@@ -148,3 +148,19 @@ model PageView {
   @@index([visitedAt, articleSlug])
   @@index([category])
 }
+
+model SponsoredAd {
+  id        String   @id @default(cuid())
+  title     String
+  sponsor   String
+  imageUrl  String
+  targetUrl String
+  category  String?
+  badgeText String   @default("Sponsored")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+  @@index([createdAt(sort: Desc)])
+}

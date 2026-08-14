@@ -5,7 +5,6 @@ import { generateSeoMetadata } from "@/lib/seo";
 import ArticleCard from "@/components/ArticleCard";
 import TrendingSidebar from "@/components/TrendingSidebar";
 import NairaRateWidget from "@/components/NairaRateWidget";
-import NativeSponsoredFeed from "@/components/NativeSponsoredFeed";
 import NewsletterBox from "@/components/NewsletterBox";
 import WhatsAppBanner from "@/components/WhatsAppBanner";
 import AdSlot from "@/components/AdSlot";
@@ -282,11 +281,6 @@ export default async function HomePage() {
             </p>
           </div>
         </div>
-      </section>
-
-      {/* ================= NATIVE SPONSORED RECOMMENDATIONS FEED ================= */}
-      <section>
-        <NativeSponsoredFeed />
       </section>
 
       {/* ================= EMAIL NEWSLETTER SUBSCRIPTION BOX ================= */}
