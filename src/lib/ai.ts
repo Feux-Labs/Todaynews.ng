@@ -189,10 +189,8 @@ export async function paraphraseNews(
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || apiKey === "AIzaSyYourGeminiKeyHere") {
-    console.log("Todaynews.ng AI: GEMINI_API_KEY is not configured. Using local fallback.");
-    return localProceduralRewriter(rawText, rawTitle, category);
+    throw new Error("Live Gemini AI is required for article paraphrasing and is not configured.");
   }
-  const fallback = localProceduralRewriter(rawText, rawTitle, category);
 
   return geminiBreaker.execute(
     async () => {
@@ -268,11 +266,10 @@ export async function paraphraseNews(
         throw new Error("Empty response from Gemini API");
       }
 
-      return normalizeParaphrasedResult(JSON.parse(text) as ParaphrasedResult, fallback);
+      return normalizeParaphrasedResult(JSON.parse(text) as ParaphrasedResult, localProceduralRewriter(rawText, rawTitle, category));
     },
-    () => {
-      console.log("Todaynews.ng AI: Circuit is open or request failed. Using local fallback rewriter.");
-      return fallback;
+    async () => {
+      throw new Error("Live Gemini AI is unavailable and fallback behavior is disabled.");
     }
 
   );
@@ -314,7 +311,7 @@ export async function chatWithAi(
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || apiKey === "AIzaSyYourGeminiKeyHere") {
-    return smartLocalChat(userMessage);
+    throw new Error("Live Gemini AI is required and is not configured.");
   }
 
   try {
@@ -385,8 +382,9 @@ Latest message: "${userMessage}"
       const result = await model.generateContent(simplePrompt);
       const text = result.response.text();
       return { intent: "chat", reply: text || smartLocalChat(userMessage).reply };
-    } catch {
-      return smartLocalChat(userMessage);
+    } catch (innerErr) {
+      console.error("Gemini Chat AI Error (grounded, final attempt failed):", innerErr);
+      throw new Error("Live Gemini AI is unavailable. Fallback chat is disabled.");
     }
   }
 }

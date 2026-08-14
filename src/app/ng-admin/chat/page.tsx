@@ -174,7 +174,6 @@ export default function AIChatPage() {
 
       const data = await res.json();
       if (data.sessionId) setSelectedSessionId(data.sessionId);
-      if (data.sessionId) fetchHistory(data.sessionId).catch(() => {});
 
       const aiMsg: Message = {
         id: `msg-${Date.now()}-ai`,
