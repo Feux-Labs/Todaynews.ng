@@ -11,7 +11,12 @@ export interface ScrapedStory {
   pubDate?: string;
 }
 
-const rssParser = new RSSParser();
+const rssParser = new RSSParser({
+  timeout: 5000,
+  headers: {
+    "User-Agent": "Mozilla/5.0 (compatible; TodaynewsBot/1.0; +https://todaynews.ng)",
+  },
+});
 
 const FALLBACK_IMAGE_BY_CATEGORY: Record<string, string> = {
   DEFAULT: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=80",
@@ -111,7 +116,9 @@ export async function resolveStoryImage(
   category?: string
 ): Promise<string> {
   const cleanCandidate = (imageUrl || "").trim();
-  if (cleanCandidate && /^https?:\/\//i.test(cleanCandidate)) {
+  const isGenericLogo = /logo|icon|favicon|placeholder|avatar|default-thumbnail/i.test(cleanCandidate);
+
+  if (cleanCandidate && /^https?:\/\//i.test(cleanCandidate) && !isGenericLogo) {
     return cleanCandidate;
   }
 
@@ -208,8 +215,29 @@ export async function scrapeRSSFeeds(
           }
         }
 
-        const imgMatch = rawContent.match(/<img[^>]+src=["']([^"']+)["']/);
-        const imageUrl = imgMatch ? imgMatch[1] : undefined;
+        // Extract image from RSS item tags or HTML
+        let imageUrl: string | undefined = undefined;
+        if ((item as any).enclosure?.url) {
+          imageUrl = (item as any).enclosure.url;
+        } else if ((item as any)["media:content"]?.url) {
+          imageUrl = (item as any)["media:content"].url;
+        } else if ((item as any)["media:content"]?.$?.url) {
+          imageUrl = (item as any)["media:content"].$.url;
+        } else if ((item as any)["media:thumbnail"]?.url) {
+          imageUrl = (item as any)["media:thumbnail"].url;
+        } else if ((item as any)["media:thumbnail"]?.$?.url) {
+          imageUrl = (item as any)["media:thumbnail"].$.url;
+        }
+
+        if (!imageUrl) {
+          const imgMatch =
+            rawContent.match(/<img[^>]+src=["']([^"']+)["']/i) ||
+            (item.content || "").match(/<img[^>]+src=["']([^"']+)["']/i) ||
+            (item.summary || "").match(/<img[^>]+src=["']([^"']+)["']/i);
+          imageUrl = imgMatch ? imgMatch[1] : undefined;
+        }
+
+        const category = detectCategory(item.title, cleanContent);
 
         if (cleanContent.length > 50 || item.title) {
           stories.push({
@@ -217,8 +245,8 @@ export async function scrapeRSSFeeds(
             content: cleanContent || item.title,
             sourceUrl: item.link,
             sourceName: source.name,
-            category: detectCategory(item.title, cleanContent),
-            imageUrl,
+            category,
+            imageUrl: imageUrl || FALLBACK_IMAGE_BY_CATEGORY[category] || FALLBACK_IMAGE_BY_CATEGORY.DEFAULT,
             pubDate: pubDateStr || new Date().toISOString(),
           });
         }
@@ -246,7 +274,20 @@ export async function scrapeRSSFeeds(
     return timeB - timeA;
   });
 
-  return unique.slice(0, limit);
+  const selected = unique.slice(0, limit);
+
+  // Guarantee every story has a valid high-res image
+  const resolvedStories = await Promise.all(
+    selected.map(async (story) => {
+      const resolvedImg = await resolveStoryImage(story.imageUrl, story.title, story.category);
+      return {
+        ...story,
+        imageUrl: resolvedImg,
+      };
+    })
+  );
+
+  return resolvedStories;
 }
 
 /**

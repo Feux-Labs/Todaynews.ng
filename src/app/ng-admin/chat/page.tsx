@@ -400,13 +400,16 @@ export default function AIChatPage() {
                           className="bg-white/5 border border-white/10 rounded-lg p-3 hover:border-[#00e676]/20 transition"
                         >
                           <div className="flex items-start gap-3">
-                            {card.imageUrl && (
+                            <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border border-white/10 bg-white/5 relative">
                               <img
-                                src={card.imageUrl}
-                                alt=""
-                                className="w-16 h-16 rounded-md object-cover flex-shrink-0 border border-white/5"
+                                src={card.imageUrl || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80"}
+                                alt={card.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80";
+                                }}
                               />
-                            )}
+                            </div>
                             <div className="flex-1 min-w-0">
                               <h4 className="text-sm font-semibold text-white leading-tight truncate">
                                 {card.title}
