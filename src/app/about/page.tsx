@@ -102,18 +102,18 @@ export default function AboutPage() {
 
         <div className="border-2 border-ink p-6 rounded-lg bg-paper flex flex-col md:flex-row items-center gap-6">
           <div className="w-24 h-24 rounded-full bg-flag/10 border-2 border-flag flex items-center justify-center font-display font-black text-2xl text-flag flex-shrink-0">
-            GI
+            TN
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-display font-black text-xl text-ink">Gideon Ibitoye</h3>
-              <span className="bg-ink text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded">Chief Editor & Publisher</span>
+              <h3 className="font-display font-black text-xl text-ink">TodaynewsAi</h3>
+              <span className="bg-ink text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded">AI Editorial System</span>
             </div>
             <p className="text-xs text-muted mt-1 leading-relaxed">
-              Leading the digital newsdesk at Todaynews.ng, Gideon oversees editorial strategy, fact-verification protocols, and policy reporting across Nigeria's 36 states.
+              Running the digital newsdesk at Todaynews.ng, TodaynewsAi drafts every story from verified sources, applies fact-verification protocols, and covers policy reporting across Nigeria's 36 states — with human editors reviewing before publish.
             </p>
             <div className="mt-3 flex gap-4 text-xs font-bold">
-              <Link href="/author/gideon-ibitoye" className="text-flag hover:underline">
+              <Link href="/author/todaynewsai" className="text-flag hover:underline">
                 View Published & Reviewed Articles →
               </Link>
             </div>

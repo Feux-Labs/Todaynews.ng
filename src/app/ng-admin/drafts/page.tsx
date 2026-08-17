@@ -86,7 +86,7 @@ export default function DraftsPage() {
   const fetchDrafts = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/articles?status=DRAFT,SCHEDULED");
+      const res = await fetch("/api/articles?status=DRAFT,SCHEDULED&limit=100");
       if (res.ok) {
         const data = await res.json();
         setArticles(data.articles || data);
@@ -246,11 +246,11 @@ export default function DraftsPage() {
     <div className="p-6 lg:p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <FileEdit className="w-6 h-6 text-[#aa00ff]" />
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <FileEdit className="w-6 h-6 text-[#475569]" />
             Drafts & Scheduled Articles
             {articles.length > 0 && (
-              <span className="ml-2 px-2.5 py-0.5 bg-[#aa00ff]/10 text-[#aa00ff] text-sm font-bold rounded-full">
+              <span className="ml-2 px-2.5 py-0.5 bg-[#475569]/10 text-[#475569] text-sm font-bold rounded-full">
                 {articles.length}
               </span>
             )}
@@ -263,7 +263,7 @@ export default function DraftsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-[#aa00ff]" />
+          <Loader2 className="w-6 h-6 animate-spin text-[#475569]" />
         </div>
       ) : articles.length === 0 ? (
         <div className="text-center py-20">
@@ -275,13 +275,13 @@ export default function DraftsPage() {
           {articles.map((article) => (
             <div
               key={article.id}
-              className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-5 hover:border-white/10 transition-all"
+              className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 hover:border-slate-200 transition-all"
             >
               <div className="flex gap-4">
                 {/* Thumbnail with Click to Change Image */}
                 <div
                   onClick={() => openQuickImageModal(article)}
-                  className="group relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer border border-white/10 bg-white/5"
+                  className="group relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer border border-slate-200 bg-slate-50"
                   title="Click to Change Featured Image"
                 >
                   {article.imageUrl ? (
@@ -295,20 +295,20 @@ export default function DraftsPage() {
                       <ImageIcon className="w-8 h-8 text-slate-600" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition gap-1 text-[10px] text-white font-bold">
-                    <Camera className="w-4 h-4 text-[#00e676]" />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition gap-1 text-[10px] text-slate-900 font-bold">
+                    <Camera className="w-4 h-4 text-[#2563eb]" />
                     <span>Change</span>
                   </div>
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold text-white leading-tight">
+                  <h3 className="text-base font-semibold text-slate-900 leading-tight">
                     {article.title}
                   </h3>
                   <p className="text-sm text-slate-400 mt-1 line-clamp-2">{article.summary}</p>
 
                   <div className="flex flex-wrap items-center gap-3 mt-2">
-                    <span className="text-[10px] px-2 py-0.5 bg-[#aa00ff]/10 text-purple-300 rounded-full font-medium">
+                    <span className="text-[10px] px-2 py-0.5 bg-[#475569]/10 text-slate-700 rounded-full font-medium">
                       <Tag className="w-3 h-3 inline mr-1" />
                       {article.category}
                     </span>
@@ -333,22 +333,22 @@ export default function DraftsPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/5 items-center">
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200 items-center">
                 <button
                   onClick={() => openEditor(article)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-300 text-xs font-medium rounded-md hover:bg-white/10 transition"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-700 text-xs font-medium rounded-md hover:bg-slate-100 transition"
                 >
                   <Maximize2 className="w-3.5 h-3.5" /> Edit Content
                 </button>
                 <button
                   onClick={() => openQuickImageModal(article)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00e676]/10 text-[#00e676] text-xs font-bold rounded-md hover:bg-[#00e676]/20 transition border border-[#00e676]/20"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb]/10 text-[#2563eb] text-xs font-bold rounded-md hover:bg-[#2563eb]/20 transition border border-[#2563eb]/20"
                 >
                   <Camera className="w-3.5 h-3.5" /> Change Image
                 </button>
                 <button
                   onClick={() => publishArticle(article.id)}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#00e676]/10 text-[#00e676] text-xs font-bold rounded-md hover:bg-[#00e676]/20 transition"
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#2563eb]/10 text-[#2563eb] text-xs font-bold rounded-md hover:bg-[#2563eb]/20 transition"
                 >
                   <Rocket className="w-3.5 h-3.5" /> Publish Now
                 </button>
@@ -368,16 +368,16 @@ export default function DraftsPage() {
       {editingArticle && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col">
           {/* Modal Header */}
-          <div className="h-14 flex items-center justify-between px-6 border-b border-white/10 bg-[#0a0f1c] shrink-0">
+          <div className="h-14 flex items-center justify-between px-6 border-b border-slate-200 bg-white shrink-0">
             <div className="flex items-center gap-3">
-              <FileEdit className="w-5 h-5 text-[#aa00ff]" />
-              <span className="text-white font-semibold text-sm truncate max-w-md">{editTitle || "Untitled Draft"}</span>
+              <FileEdit className="w-5 h-5 text-[#475569]" />
+              <span className="text-slate-900 font-semibold text-sm truncate max-w-md">{editTitle || "Untitled Draft"}</span>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => saveFullEdit("DRAFT")}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#00e676] hover:bg-[#00c853] text-[#060b18] text-xs font-bold rounded-lg transition disabled:opacity-60"
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 transition disabled:opacity-60"
               >
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 {saving ? "Saving..." : "Save Changes"}
@@ -385,14 +385,14 @@ export default function DraftsPage() {
               <button
                 onClick={() => saveFullEdit("PUBLISHED")}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-bold rounded-lg border border-emerald-500/30 transition disabled:opacity-60"
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-lg border border-[#2563eb] transition disabled:opacity-60"
               >
                 <Rocket className="w-3.5 h-3.5" />
                 Publish
               </button>
               <button
                 onClick={closeEditor}
-                className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition"
+                className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-900 transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -401,7 +401,7 @@ export default function DraftsPage() {
 
           <div className="flex-1 flex overflow-hidden">
             {/* Left Panel — Metadata & Featured Image */}
-            <div className="w-80 shrink-0 border-r border-white/5 bg-[#0a0f1c] overflow-y-auto p-4 space-y-4">
+            <div className="w-80 shrink-0 border-r border-slate-200 bg-white overflow-y-auto p-4 space-y-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Article Metadata</h3>
 
               <div className="space-y-3">
@@ -410,7 +410,7 @@ export default function DraftsPage() {
                   <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">
                     Featured Image
                   </label>
-                  <div className="w-full h-28 rounded-lg overflow-hidden bg-black/50 border border-white/10 relative mb-2">
+                  <div className="w-full h-28 rounded-lg overflow-hidden bg-black/50 border border-slate-200 relative mb-2">
                     {editImageUrl ? (
                       <img src={editImageUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -423,7 +423,7 @@ export default function DraftsPage() {
                     value={editImageUrl}
                     onChange={(e) => setEditImageUrl(e.target.value)}
                     placeholder="Image URL (https://...)"
-                    className="w-full px-2.5 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30 font-mono mb-2"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#475569]/30 font-mono mb-2"
                   />
                   {/* Preset Buttons */}
                   <div className="flex flex-wrap gap-1">
@@ -432,7 +432,7 @@ export default function DraftsPage() {
                         key={p.url}
                         type="button"
                         onClick={() => setEditImageUrl(p.url)}
-                        className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 transition"
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-slate-50 hover:bg-slate-100 text-slate-700 transition"
                       >
                         {p.label.split("/")[0]}
                       </button>
@@ -446,7 +446,7 @@ export default function DraftsPage() {
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     rows={2}
-                    className="w-full px-2.5 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30 resize-none"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#475569]/30 resize-none"
                   />
                 </div>
 
@@ -456,7 +456,7 @@ export default function DraftsPage() {
                     value={editSummary}
                     onChange={(e) => setEditSummary(e.target.value)}
                     rows={3}
-                    className="w-full px-2.5 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30 resize-none"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#475569]/30 resize-none"
                   />
                 </div>
 
@@ -465,7 +465,7 @@ export default function DraftsPage() {
                   <select
                     value={editCategory}
                     onChange={(e) => setEditCategory(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-[#1a2336] border border-white/10 rounded-lg text-white text-xs focus:outline-none"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -479,17 +479,17 @@ export default function DraftsPage() {
                     value={editAuthor}
                     onChange={(e) => setEditAuthor(e.target.value)}
                     placeholder="Author name"
-                    className="w-full px-2.5 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#475569]/30"
                   />
                 </div>
 
-                <div className="pt-3 border-t border-white/5 space-y-2">
+                <div className="pt-3 border-t border-slate-200 space-y-2">
                   <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Schedule Publish</label>
                   <input
                     type="datetime-local"
                     value={editScheduledAt}
                     onChange={(e) => setEditScheduledAt(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#475569]/30"
                   />
                   <button
                     onClick={() => saveFullEdit("PUBLISHED", editScheduledAt)}
@@ -508,7 +508,7 @@ export default function DraftsPage() {
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pages ({editPages.length})</h3>
                   <button
                     onClick={addPage}
-                    className="flex items-center gap-1 text-[10px] text-[#aa00ff] hover:text-purple-300 transition"
+                    className="flex items-center gap-1 text-[10px] text-[#475569] hover:text-slate-700 transition"
                   >
                     <Plus className="w-3 h-3" /> Add Page
                   </button>
@@ -521,8 +521,8 @@ export default function DraftsPage() {
                       onClick={() => setActivePageIdx(idx)}
                       className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition flex items-center justify-between group ${
                         activePageIdx === idx
-                          ? "bg-[#aa00ff]/15 text-purple-300 border border-[#aa00ff]/30"
-                          : "text-slate-400 hover:bg-white/5 hover:text-white"
+                          ? "bg-[#475569]/15 text-slate-700 border border-[#475569]/30"
+                          : "text-slate-400 hover:bg-slate-50 hover:text-slate-900"
                       }`}
                     >
                       <span className="truncate">
@@ -548,21 +548,21 @@ export default function DraftsPage() {
               {editPages[activePageIdx] && (
                 <div className="space-y-4 max-w-3xl mx-auto">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-purple-400">
+                    <span className="text-xs font-mono text-slate-600">
                       Editing Page {activePageIdx + 1} of {editPages.length}
                     </span>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setActivePageIdx(Math.max(0, activePageIdx - 1))}
                         disabled={activePageIdx === 0}
-                        className="p-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 text-slate-400 hover:text-white transition"
+                        className="p-1 rounded bg-slate-50 hover:bg-slate-100 disabled:opacity-30 text-slate-400 hover:text-slate-900 transition"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setActivePageIdx(Math.min(editPages.length - 1, activePageIdx + 1))}
                         disabled={activePageIdx === editPages.length - 1}
-                        className="p-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 text-slate-400 hover:text-white transition"
+                        className="p-1 rounded bg-slate-50 hover:bg-slate-100 disabled:opacity-30 text-slate-400 hover:text-slate-900 transition"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
@@ -577,7 +577,7 @@ export default function DraftsPage() {
                       value={editPages[activePageIdx].title || ""}
                       onChange={(e) => updatePageContent(activePageIdx, "title", e.target.value)}
                       placeholder="e.g. Background and Key Statements"
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#475569]/30"
                     />
                   </div>
 
@@ -590,7 +590,7 @@ export default function DraftsPage() {
                       onChange={(e) => updatePageContent(activePageIdx, "content", e.target.value)}
                       rows={14}
                       placeholder="Write or edit article content for this page..."
-                      className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#aa00ff]/30 font-mono text-xs leading-relaxed resize-none"
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#475569]/30 font-mono text-xs leading-relaxed resize-none"
                     />
                   </div>
                 </div>
@@ -603,27 +603,27 @@ export default function DraftsPage() {
       {/* Quick Image Picker Modal */}
       {imageModalArticle && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0b1329] border border-white/10 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#aa00ff]/10 text-purple-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-[#475569]/10 text-slate-600 flex items-center justify-center">
                   <Camera className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Change Featured Image</h3>
+                  <h3 className="text-base font-bold text-slate-900">Change Featured Image</h3>
                   <p className="text-xs text-slate-400 line-clamp-1">{imageModalArticle.title}</p>
                 </div>
               </div>
               <button
                 onClick={() => setImageModalArticle(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Live Preview */}
-            <div className="w-full h-44 rounded-xl overflow-hidden bg-black/50 border border-white/10 relative">
+            <div className="w-full h-44 rounded-xl overflow-hidden bg-black/50 border border-slate-200 relative">
               {modalImageUrl ? (
                 <img
                   src={modalImageUrl}
@@ -643,8 +643,8 @@ export default function DraftsPage() {
 
             {/* URL Input */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <LinkIcon className="w-3.5 h-3.5 text-purple-400" />
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <LinkIcon className="w-3.5 h-3.5 text-slate-600" />
                 Image URL (Direct link)
               </label>
               <input
@@ -652,14 +652,14 @@ export default function DraftsPage() {
                 value={modalImageUrl}
                 onChange={(e) => setModalImageUrl(e.target.value)}
                 placeholder="https://images.unsplash.com/... or direct web link"
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:border-purple-400/50 font-mono"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs placeholder-slate-500 focus:outline-none focus:border-slate-400/50 font-mono"
               />
             </div>
 
             {/* Preset Library */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-slate-600" />
                 Curated High-Res Nigerian Editorial Presets
               </label>
               <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
@@ -670,8 +670,8 @@ export default function DraftsPage() {
                     onClick={() => setModalImageUrl(preset.url)}
                     className={`flex items-center gap-2 p-1.5 rounded-lg border text-left text-[11px] transition ${
                       modalImageUrl === preset.url
-                        ? "bg-[#aa00ff]/15 border-[#aa00ff] text-white font-semibold"
-                        : "bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+                        ? "bg-[#475569]/15 border-[#475569] text-slate-900 font-semibold"
+                        : "bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-900 hover:bg-slate-100"
                     }`}
                   >
                     <img src={preset.url} alt="" className="w-7 h-7 rounded object-cover flex-shrink-0" />
@@ -687,7 +687,7 @@ export default function DraftsPage() {
                 type="button"
                 onClick={saveQuickModalImage}
                 disabled={savingModalImage || !modalImageUrl.trim()}
-                className="flex-1 py-2.5 bg-[#aa00ff] text-white font-bold text-xs rounded-xl hover:bg-[#aa00ff]/90 transition flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-lg shadow-purple-900/30"
+                className="flex-1 py-2.5 bg-[#475569] text-slate-900 font-bold text-xs rounded-xl hover:bg-[#475569]/90 transition flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-lg shadow-slate-400/30"
               >
                 {savingModalImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                 Apply & Save Image
@@ -695,7 +695,7 @@ export default function DraftsPage() {
               <button
                 type="button"
                 onClick={() => setImageModalArticle(null)}
-                className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 text-xs rounded-xl transition"
+                className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs rounded-xl transition"
               >
                 Cancel
               </button>

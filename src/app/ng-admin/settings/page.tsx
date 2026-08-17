@@ -22,10 +22,10 @@ interface SiteSettings {
 }
 
 const DEFAULT_SETTINGS: SiteSettings = {
-  defaultAuthorName: "Gideon Ibitoye",
+  defaultAuthorName: "TodaynewsAi",
   defaultAuthorEmail: "editor@todaynews.ng",
   defaultAuthorBio:
-    "Chief Editor and Reviewing Authority at Todaynews.ng, specializing in Nigerian political affairs, parallel currency trends, and national policy analysis.",
+    "AI Editorial System at Todaynews.ng, drafting and reviewing stories on Nigerian political affairs, parallel currency trends, and national policy analysis.",
   siteName: "Todaynews.ng",
   siteTagline: "Breaking Nigerian News, Politics, Naira Rates & Gist",
   contactEmail: "editor@todaynews.ng",
@@ -106,7 +106,7 @@ export default function AdminSettingsPage() {
   if (fetchLoading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="w-6 h-6 animate-spin text-[#00e676]" />
+        <Loader2 className="w-6 h-6 animate-spin text-[#2563eb]" />
       </div>
     );
   }
@@ -116,8 +116,8 @@ export default function AdminSettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Settings className="w-6 h-6 text-[#00e676]" />
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Settings className="w-6 h-6 text-[#2563eb]" />
             Site Settings
           </h1>
           <p className="text-slate-400 text-sm mt-1">
@@ -127,7 +127,7 @@ export default function AdminSettingsPage() {
         <div className="flex gap-2">
           <button
             onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-400 hover:text-white border border-white/10 rounded-lg hover:border-white/20 transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-400 hover:text-slate-900 border border-slate-200 rounded-lg hover:border-slate-300 transition-all"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Reset to Defaults
@@ -135,7 +135,7 @@ export default function AdminSettingsPage() {
           <button
             onClick={handleSave}
             disabled={loading || saved}
-            className="flex items-center gap-2 px-4 py-2 bg-[#00e676] hover:bg-[#00c853] text-[#060b18] text-xs font-bold rounded-lg transition-all shadow-lg shadow-[#00e676]/20 disabled:opacity-60"
+            className="flex items-center gap-2 px-4 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-[#2563eb]/20 disabled:opacity-60"
           >
             {loading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -150,7 +150,7 @@ export default function AdminSettingsPage() {
       </div>
 
       {saved && (
-        <div className="p-3 bg-[#00e676]/10 border border-[#00e676]/30 rounded-lg text-[#00e676] text-sm font-medium flex items-center gap-2">
+        <div className="p-3 bg-[#2563eb]/10 border border-[#2563eb]/30 rounded-lg text-[#2563eb] text-sm font-medium flex items-center gap-2">
           <CheckCircle className="w-4 h-4" />
           Settings saved to server! All new AI-scraped articles will use these defaults.
         </div>
@@ -164,10 +164,10 @@ export default function AdminSettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Default Author Section */}
-        <div className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-2 border-b border-white/5 pb-4">
-            <User className="w-5 h-5 text-[#00e676]" />
-            <h2 className="text-base font-bold text-white">Default Author / Byline</h2>
+        <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2 border-b border-slate-200 pb-4">
+            <User className="w-5 h-5 text-[#2563eb]" />
+            <h2 className="text-base font-bold text-slate-900">Default Author / Byline</h2>
           </div>
           <p className="text-xs text-slate-400">
             This name will be automatically applied to every article scraped, paraphrased, or published through the AI system. You can edit it per-article in the inbox/drafts.
@@ -175,15 +175,15 @@ export default function AdminSettingsPage() {
 
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                Default Author Name <span className="text-[#00e676]">*</span>
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+                Default Author Name <span className="text-[#2563eb]">*</span>
               </label>
               <input
                 type="text"
                 value={settings.defaultAuthorName}
                 onChange={update("defaultAuthorName")}
-                placeholder="e.g. Gideon Ibitoye"
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/40 focus:border-[#00e676]/40 transition text-sm"
+                placeholder="e.g. TodaynewsAi"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40 focus:border-[#2563eb]/40 transition text-sm"
               />
               <p className="text-[10px] text-slate-500 mt-1">
                 Displayed on all article bylines and in structured data for Google News.
@@ -191,7 +191,7 @@ export default function AdminSettingsPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">
                 Default Author Email
               </label>
               <input
@@ -199,12 +199,12 @@ export default function AdminSettingsPage() {
                 value={settings.defaultAuthorEmail}
                 onChange={update("defaultAuthorEmail")}
                 placeholder="editor@todaynews.ng"
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/40 focus:border-[#00e676]/40 transition text-sm"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40 focus:border-[#2563eb]/40 transition text-sm"
               />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">
                 Default Author Bio
               </label>
               <textarea
@@ -212,22 +212,22 @@ export default function AdminSettingsPage() {
                 value={settings.defaultAuthorBio}
                 onChange={update("defaultAuthorBio")}
                 placeholder="Brief editorial profile shown below articles..."
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/40 focus:border-[#00e676]/40 transition text-sm resize-none"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40 focus:border-[#2563eb]/40 transition text-sm resize-none"
               />
             </div>
           </div>
 
           {/* Live Preview */}
-          <div className="border border-white/5 rounded-lg p-4 bg-white/5 space-y-2">
+          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-2">
             <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Live Preview (Article Byline)</p>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#00e676]/10 border-2 border-[#00e676] flex items-center justify-center text-sm font-black text-[#00e676]">
+              <div className="w-10 h-10 rounded-full bg-[#2563eb]/10 border-2 border-[#2563eb] flex items-center justify-center text-sm font-black text-[#2563eb]">
                 {settings.defaultAuthorName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "??"}
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-bold text-white">{settings.defaultAuthorName || "Author Name"}</p>
-                  <span className="bg-[#00e676] text-[#060b18] text-[9px] font-bold px-1.5 py-0.5 rounded">Verified Editor</span>
+                  <p className="text-sm font-bold text-slate-900">{settings.defaultAuthorName || "Author Name"}</p>
+                  <span className="bg-[#2563eb] text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Verified Editor</span>
                 </div>
                 <p className="text-[10px] text-slate-400">{settings.defaultAuthorEmail}</p>
               </div>
@@ -237,37 +237,37 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Site Identity Section */}
-        <div className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-2 border-b border-white/5 pb-4">
-            <Shield className="w-5 h-5 text-[#00e676]" />
-            <h2 className="text-base font-bold text-white">Site Identity</h2>
+        <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2 border-b border-slate-200 pb-4">
+            <Shield className="w-5 h-5 text-[#2563eb]" />
+            <h2 className="text-base font-bold text-slate-900">Site Identity</h2>
           </div>
 
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">Site Name</label>
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">Site Name</label>
               <input
                 type="text"
                 value={settings.siteName}
                 onChange={update("siteName")}
                 placeholder="Todaynews.ng"
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/40 focus:border-[#00e676]/40 transition text-sm"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40 focus:border-[#2563eb]/40 transition text-sm"
               />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">Site Tagline</label>
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">Site Tagline</label>
               <input
                 type="text"
                 value={settings.siteTagline}
                 onChange={update("siteTagline")}
                 placeholder="Breaking Nigerian News..."
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/40 focus:border-[#00e676]/40 transition text-sm"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40 focus:border-[#2563eb]/40 transition text-sm"
               />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">
                 <Mail className="w-3.5 h-3.5 inline mr-1" />
                 Public Contact Email
               </label>
@@ -276,19 +276,19 @@ export default function AdminSettingsPage() {
                 value={settings.contactEmail}
                 onChange={update("contactEmail")}
                 placeholder="editor@todaynews.ng"
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/40 focus:border-[#00e676]/40 transition text-sm"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40 focus:border-[#2563eb]/40 transition text-sm"
               />
             </div>
           </div>
 
           {/* Tips */}
-          <div className="border border-[#00e676]/20 rounded-lg p-4 bg-[#00e676]/5 space-y-2">
-            <p className="text-[10px] font-bold text-[#00e676] uppercase tracking-wider">💡 How Author Name Works</p>
+          <div className="border border-[#2563eb]/20 rounded-lg p-4 bg-[#2563eb]/5 space-y-2">
+            <p className="text-[10px] font-bold text-[#2563eb] uppercase tracking-wider">💡 How Author Name Works</p>
             <ul className="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
-              <li>New AI-scraped articles will use <strong className="text-white">"{settings.defaultAuthorName}"</strong> as default byline.</li>
-              <li>You can override the name per-article inside the <strong className="text-white">Inbox</strong> or <strong className="text-white">Drafts</strong> before publishing.</li>
-              <li>The author name also appears in <strong className="text-white">Google News JSON-LD schema</strong> for SEO credit.</li>
-              <li>Settings are saved <strong className="text-white">server-side</strong> and persist across all devices and deployments.</li>
+              <li>New AI-scraped articles will use <strong className="text-slate-900">"{settings.defaultAuthorName}"</strong> as default byline.</li>
+              <li>You can override the name per-article inside the <strong className="text-slate-900">Inbox</strong> or <strong className="text-slate-900">Drafts</strong> before publishing.</li>
+              <li>The author name also appears in <strong className="text-slate-900">Google News JSON-LD schema</strong> for SEO credit.</li>
+              <li>Settings are saved <strong className="text-slate-900">server-side</strong> and persist across all devices and deployments.</li>
             </ul>
           </div>
         </div>

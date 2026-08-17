@@ -65,7 +65,7 @@ export default function CmsEditorPage() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("POLITICS");
   const [summary, setSummary] = useState("");
-  const [author, setAuthor] = useState("Gideon Ibitoye");
+  const [author, setAuthor] = useState("TodaynewsAi");
   const [imageUrl, setImageUrl] = useState("");
   const [imageUploading, setImageUploading] = useState(false);
   const [readTimeMinutes, setReadTimeMinutes] = useState(3);
@@ -124,7 +124,7 @@ export default function CmsEditorPage() {
         setTitle(data.title || "");
         setCategory(data.category || "POLITICS");
         setSummary(data.summary || "");
-        setAuthor(data.author || "Gideon Ibitoye");
+        setAuthor(data.author || "TodaynewsAi");
         setImageUrl(data.imageUrl || "");
         setReadTimeMinutes(data.readTimeMinutes || 3);
         if (data.scheduledAt) {
@@ -180,7 +180,7 @@ export default function CmsEditorPage() {
     if (!linkUrl.trim()) return;
     const href = linkUrl.startsWith("http") ? linkUrl : `https://${linkUrl.trim()}`;
     const textToDisplay = linkText.trim() || href;
-    const linkHtml = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-[#00e676] underline font-medium hover:text-[#00c853]">${textToDisplay}</a>`;
+    const linkHtml = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-[#2563eb] underline font-medium hover:text-[#1d4ed8]">${textToDisplay}</a>`;
     insertHtmlAtCursor(` ${linkHtml} `);
     
     setShowLinkModal(false);
@@ -245,10 +245,10 @@ export default function CmsEditorPage() {
 
   const insertRelatedStory = (item: RelatedArticleItem) => {
     const widgetHtml = `
-<div class="p-4 my-5 bg-[#0f172a] border-l-4 border-[#00e676] rounded-r-lg shadow-md">
-  <span class="text-[11px] text-[#00e676] font-extrabold uppercase tracking-wider block mb-1">📌 READ ALSO:</span>
-  <h5 class="text-base font-bold text-white leading-snug">
-    <a href="/news/${item.slug}" target="_blank" class="hover:underline hover:text-[#00e676] transition">${item.title}</a>
+<div class="p-4 my-5 bg-slate-50 border-l-4 border-[#2563eb] rounded-r-lg shadow-md">
+  <span class="text-[11px] text-[#2563eb] font-extrabold uppercase tracking-wider block mb-1">📌 READ ALSO:</span>
+  <h5 class="text-base font-bold text-slate-900 leading-snug">
+    <a href="/news/${item.slug}" target="_blank" class="hover:underline hover:text-[#2563eb] transition">${item.title}</a>
   </h5>
 </div>
 `.trim();
@@ -359,7 +359,7 @@ export default function CmsEditorPage() {
         <div
           className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-lg shadow-xl text-sm font-semibold flex items-center gap-2 border transition-all ${
             toast.type === "success"
-              ? "bg-emerald-950 border-emerald-500/50 text-emerald-300"
+              ? "bg-blue-50 border-blue-200/50 text-blue-100"
               : "bg-rose-950 border-rose-500/50 text-rose-300"
           }`}
         >
@@ -373,13 +373,13 @@ export default function CmsEditorPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="p-2 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition"
+            className="p-2 text-slate-400 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-lg transition"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <PenTool className="w-6 h-6 text-[#00e676]" />
+            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <PenTool className="w-6 h-6 text-[#2563eb]" />
               {articleId ? "Edit News Article" : "Create Manual News (Blogger Studio)"}
             </h1>
             <p className="text-slate-400 text-xs mt-0.5">
@@ -393,7 +393,7 @@ export default function CmsEditorPage() {
           <button
             onClick={() => handleSave("DRAFT")}
             disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 text-sm font-semibold rounded-lg border border-white/10 transition disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg border border-slate-200 transition disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-slate-400" />}
             Save Draft
@@ -402,14 +402,14 @@ export default function CmsEditorPage() {
           <button
             onClick={() => handleSave("PUBLISHED")}
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2 bg-[#00e676] hover:bg-[#00c853] text-black text-sm font-bold rounded-lg shadow-lg shadow-[#00e676]/20 transition disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-bold rounded-lg shadow-lg shadow-[#2563eb]/20 transition disabled:opacity-50"
           >
             {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin text-black" />
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
             ) : publishMode === "scheduled" ? (
-              <Calendar className="w-4 h-4 text-black" />
+              <Calendar className="w-4 h-4 text-white" />
             ) : (
-              <Send className="w-4 h-4 text-black" />
+              <Send className="w-4 h-4 text-white" />
             )}
             {publishMode === "scheduled" ? "Schedule Post" : "Publish Now"}
           </button>
@@ -418,7 +418,7 @@ export default function CmsEditorPage() {
 
       {loading ? (
         <div className="py-24 text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#00e676] mx-auto mb-3" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#2563eb] mx-auto mb-3" />
           <p className="text-slate-400 text-sm">Loading article details...</p>
         </div>
       ) : (
@@ -426,21 +426,21 @@ export default function CmsEditorPage() {
           {/* Main Column — Editor Forms */}
           <div className="lg:col-span-2 space-y-6">
             {/* Title / Headline */}
-            <div className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-5 space-y-3">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                Article Headline / Title <span className="text-[#00e676]">*</span>
+            <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 space-y-3">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Article Headline / Title <span className="text-[#2563eb]">*</span>
               </label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter compelling headline for Google News..."
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white font-bold text-lg placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-bold text-lg placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
               />
               {title.trim() && (
                 <p className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
-                  <ExternalLink className="w-3 h-3 text-[#00e676]" />
+                  <ExternalLink className="w-3 h-3 text-[#2563eb]" />
                   Preview Slug: todaynews.ng/news/
-                  <span className="text-slate-300">
+                  <span className="text-slate-700">
                     {title
                       .toLowerCase()
                       .replace(/[^a-z0-9]+/g, "-")
@@ -452,25 +452,25 @@ export default function CmsEditorPage() {
             </div>
 
             {/* Summary / Meta Description */}
-            <div className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-5 space-y-2">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                Summary / Meta Description <span className="text-[#00e676]">*</span>
+            <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Summary / Meta Description <span className="text-[#2563eb]">*</span>
               </label>
               <textarea
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
                 rows={3}
                 placeholder="Write a 2-3 sentence meta description for Google Search & Discover..."
-                className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 resize-none"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 resize-none"
               />
             </div>
 
             {/* Multi-Page Content Section Manager (Blogger Studio) */}
-            <div className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-[#00e676]" />
-                  <h3 className="text-sm font-bold text-white">Article Pages & Sections</h3>
+                  <FileText className="w-5 h-5 text-[#2563eb]" />
+                  <h3 className="text-sm font-bold text-slate-900">Article Pages & Sections</h3>
                 </div>
 
                 {/* Page Tabs */}
@@ -481,8 +481,8 @@ export default function CmsEditorPage() {
                       onClick={() => setActivePageIndex(index)}
                       className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
                         activePageIndex === index
-                          ? "bg-[#00e676] text-black"
-                          : "bg-white/5 text-slate-400 hover:text-white"
+                          ? "bg-[#2563eb] text-white"
+                          : "bg-slate-50 text-slate-400 hover:text-slate-900"
                       }`}
                     >
                       Page {p.pageNumber}
@@ -490,7 +490,7 @@ export default function CmsEditorPage() {
                   ))}
                   <button
                     onClick={addPage}
-                    className="p-1.5 bg-[#00e676]/10 text-[#00e676] hover:bg-[#00e676]/20 rounded-lg transition"
+                    className="p-1.5 bg-[#2563eb]/10 text-[#2563eb] hover:bg-[#2563eb]/20 rounded-lg transition"
                     title="Add Page Section"
                   >
                     <Plus className="w-4 h-4" />
@@ -508,7 +508,7 @@ export default function CmsEditorPage() {
                     )
                   }
                   placeholder={`Page ${activePageIndex + 1} Section Header`}
-                  className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                  className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                 />
                 {pages.length > 1 && (
                   <button
@@ -521,11 +521,11 @@ export default function CmsEditorPage() {
               </div>
 
               {/* Formatting Toolbar */}
-              <div className="flex flex-wrap items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/10">
+              <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
                 <button
                   type="button"
                 onClick={() => execEditorCommand("bold")}
-                  className="px-2.5 py-1 text-xs font-bold text-slate-200 bg-white/5 hover:bg-white/10 rounded"
+                  className="px-2.5 py-1 text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 rounded"
                   title="Bold"
                 >
                   B
@@ -533,7 +533,7 @@ export default function CmsEditorPage() {
                 <button
                   type="button"
                 onClick={() => execEditorCommand("italic")}
-                  className="px-2.5 py-1 text-xs italic font-bold text-slate-200 bg-white/5 hover:bg-white/10 rounded"
+                  className="px-2.5 py-1 text-xs italic font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 rounded"
                   title="Italic"
                 >
                   I
@@ -541,7 +541,7 @@ export default function CmsEditorPage() {
                 <button
                   type="button"
                 onClick={() => execEditorCommand("formatBlock", "h3")}
-                  className="px-2.5 py-1 text-xs font-bold text-slate-200 bg-white/5 hover:bg-white/10 rounded"
+                  className="px-2.5 py-1 text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 rounded"
                   title="Subheading"
                 >
                   H3
@@ -549,19 +549,19 @@ export default function CmsEditorPage() {
                 <button
                   type="button"
                 onClick={() => execEditorCommand("formatBlock", "p")}
-                  className="px-2.5 py-1 text-xs text-slate-200 bg-white/5 hover:bg-white/10 rounded"
+                  className="px-2.5 py-1 text-xs text-slate-800 bg-slate-50 hover:bg-slate-100 rounded"
                   title="Paragraph"
                 >
                   Paragraph
                 </button>
 
-                <div className="h-4 w-px bg-white/10 mx-1" />
+                <div className="h-4 w-px bg-slate-100 mx-1" />
 
                 {/* Hyperlink Button */}
                 <button
                   type="button"
                   onClick={() => setShowLinkModal(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-[#00e676] bg-[#00e676]/10 hover:bg-[#00e676]/20 border border-[#00e676]/30 rounded transition"
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-[#2563eb] bg-[#2563eb]/10 hover:bg-[#2563eb]/20 border border-[#2563eb]/30 rounded transition"
                 >
                   <LinkIcon className="w-3.5 h-3.5" />
                   Add Link
@@ -587,7 +587,7 @@ export default function CmsEditorPage() {
                 onBlur={syncEditorContent}
                 data-placeholder={`Write article content for Page ${activePageIndex + 1}...`}
                 dangerouslySetInnerHTML={{ __html: pages[activePageIndex]?.content || "" }}
-                className="min-h-72 w-full p-4 bg-[#0a0f1d] border border-white/10 rounded-lg text-slate-200 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 prose prose-invert max-w-none prose-a:text-[#00e676] prose-a:underline prose-p:mb-4 empty:before:content-[attr(data-placeholder)] empty:before:text-slate-600"
+                className="min-h-72 w-full p-4 bg-white border border-slate-200 rounded-lg text-slate-800 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 prose prose-invert max-w-none prose-a:text-[#2563eb] prose-a:underline prose-p:mb-4 empty:before:content-[attr(data-placeholder)] empty:before:text-slate-600"
               />
 
               <p className="text-[11px] text-slate-500">
@@ -599,22 +599,22 @@ export default function CmsEditorPage() {
           {/* Sidebar Settings Column */}
           <div className="space-y-6">
             {/* Publishing Settings Card */}
-            <div className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-5 space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-white/5 pb-3">
-                <Calendar className="w-4 h-4 text-[#00e676]" />
+            <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
+                <Calendar className="w-4 h-4 text-[#2563eb]" />
                 Publishing Schedule
               </h3>
 
               <div className="space-y-3">
-                <label className="text-xs font-semibold text-slate-300 block">Publication Mode</label>
+                <label className="text-xs font-semibold text-slate-700 block">Publication Mode</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setPublishMode("immediate")}
                     className={`py-2 text-xs font-bold rounded-lg border transition ${
                       publishMode === "immediate"
-                        ? "bg-[#00e676]/20 text-[#00e676] border-[#00e676]/40"
-                        : "bg-white/5 text-slate-400 border-white/10"
+                        ? "bg-[#2563eb]/20 text-[#2563eb] border-[#2563eb]/40"
+                        : "bg-slate-50 text-slate-400 border-slate-200"
                     }`}
                   >
                     Publish Now
@@ -625,7 +625,7 @@ export default function CmsEditorPage() {
                     className={`py-2 text-xs font-bold rounded-lg border transition ${
                       publishMode === "scheduled"
                         ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                        : "bg-white/5 text-slate-400 border-white/10"
+                        : "bg-slate-50 text-slate-400 border-slate-200"
                     }`}
                   >
                     Schedule Post
@@ -639,7 +639,7 @@ export default function CmsEditorPage() {
                       type="datetime-local"
                       value={scheduledAt}
                       onChange={(e) => setScheduledAt(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                     />
                   </div>
                 )}
@@ -647,19 +647,19 @@ export default function CmsEditorPage() {
             </div>
 
             {/* Metadata Settings Card */}
-            <div className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-5 space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-white/5 pb-3">
-                <Tag className="w-4 h-4 text-[#00e676]" />
+            <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
+                <Tag className="w-4 h-4 text-[#2563eb]" />
                 Article Metadata
               </h3>
 
               {/* Category Picker */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-300 block">News Category</label>
+                <label className="text-xs font-semibold text-slate-700 block">News Category</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-[#0a0f1d] border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 font-semibold"
+                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 font-semibold"
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
@@ -671,21 +671,21 @@ export default function CmsEditorPage() {
 
               {/* Author Byline */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-300 block">Author / Byline</label>
+                <label className="text-xs font-semibold text-slate-700 block">Author / Byline</label>
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-slate-500 flex-shrink-0" />
                   <input
                     value={author}
                     onChange={(e) => setAuthor(e.target.value)}
                     placeholder="Author name"
-                    className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                   />
                 </div>
               </div>
 
               {/* Reading Time */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-300 block">Estimated Read Time (Mins)</label>
+                <label className="text-xs font-semibold text-slate-700 block">Estimated Read Time (Mins)</label>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-slate-500 flex-shrink-0" />
                   <input
@@ -694,24 +694,24 @@ export default function CmsEditorPage() {
                     max={30}
                     value={readTimeMinutes}
                     onChange={(e) => setReadTimeMinutes(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                   />
                 </div>
               </div>
 
               {/* Featured Image */}
-              <div className="space-y-2 pt-2 border-t border-white/5">
-                <label className="text-xs font-semibold text-slate-300 block">Featured Image</label>
+              <div className="space-y-2 pt-2 border-t border-slate-200">
+                <label className="text-xs font-semibold text-slate-700 block">Featured Image</label>
                 <div className="flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-slate-500 flex-shrink-0" />
                   <input
                     value={imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="https://..."
-                    className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                   />
                 </div>
-                <label className="flex items-center justify-center gap-2 px-3 py-2 bg-[#00e676]/10 hover:bg-[#00e676]/20 text-[#00e676] border border-[#00e676]/30 rounded-lg text-xs font-bold cursor-pointer transition">
+                <label className="flex items-center justify-center gap-2 px-3 py-2 bg-[#2563eb]/10 hover:bg-[#2563eb]/20 text-[#2563eb] border border-[#2563eb]/30 rounded-lg text-xs font-bold cursor-pointer transition">
                   {imageUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                   {imageUploading ? "Uploading..." : "Upload Image"}
                   <input
@@ -741,7 +741,7 @@ export default function CmsEditorPage() {
                         key={p.label}
                         type="button"
                         onClick={() => setImageUrl(p.url)}
-                        className="text-[9px] px-2 py-0.5 rounded bg-white/5 hover:bg-[#00e676]/20 text-slate-300 hover:text-[#00e676] transition border border-white/5 hover:border-[#00e676]/30"
+                        className="text-[9px] px-2 py-0.5 rounded bg-slate-50 hover:bg-[#2563eb]/20 text-slate-700 hover:text-[#2563eb] transition border border-slate-200 hover:border-[#2563eb]/30"
                       >
                         {p.label}
                       </button>
@@ -750,7 +750,7 @@ export default function CmsEditorPage() {
                 </div>
 
                 {imageUrl.trim() && (
-                  <div className="mt-2 rounded-lg overflow-hidden border border-white/10 h-32 bg-black/40">
+                  <div className="mt-2 rounded-lg overflow-hidden border border-slate-200 h-32 bg-black/40">
                     <img src={imageUrl} alt="Featured Preview" className="w-full h-full object-cover" />
                   </div>
                 )}
@@ -763,35 +763,35 @@ export default function CmsEditorPage() {
       {/* Hyperlink Insertion Modal */}
       {showLinkModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-[#0f1729] border border-white/10 rounded-xl p-6 w-full max-w-md space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <LinkIcon className="w-5 h-5 text-[#00e676]" />
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <LinkIcon className="w-5 h-5 text-[#2563eb]" />
                 Insert Hyperlink
               </h3>
-              <button onClick={() => setShowLinkModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowLinkModal(false)} className="text-slate-400 hover:text-slate-900">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Link Display Text</label>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Link Display Text</label>
                 <input
                   value={linkText}
                   onChange={(e) => setLinkText(e.target.value)}
                   placeholder="e.g. Read full Vanguard report"
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Target URL</label>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Target URL</label>
                 <input
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                 />
               </div>
             </div>
@@ -799,13 +799,13 @@ export default function CmsEditorPage() {
             <div className="flex gap-2 pt-2">
               <button
                 onClick={handleAddLink}
-                className="flex-1 py-2 bg-[#00e676] text-black font-bold text-xs rounded-lg hover:bg-[#00c853]"
+                className="flex-1 py-2 bg-[#2563eb] text-white font-bold text-xs rounded-lg hover:bg-[#1d4ed8]"
               >
                 Insert Link
               </button>
               <button
                 onClick={() => setShowLinkModal(false)}
-                className="px-4 py-2 bg-white/5 text-slate-300 font-semibold text-xs rounded-lg hover:bg-white/10"
+                className="px-4 py-2 bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-100"
               >
                 Cancel
               </button>
@@ -817,10 +817,10 @@ export default function CmsEditorPage() {
       {/* Auto-Suggest Related Stories Modal */}
       {showRelatedModal && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-[#0f1729] border border-white/10 rounded-xl p-6 w-full max-w-2xl space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3 flex-shrink-0">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 w-full max-w-2xl space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3 flex-shrink-0">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-amber-400" />
                   Auto-Suggest Related Stories
                 </h3>
@@ -828,7 +828,7 @@ export default function CmsEditorPage() {
                   Select published articles from Todaynews.ng to insert as styled related story links
                 </p>
               </div>
-              <button onClick={() => setShowRelatedModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowRelatedModal(false)} className="text-slate-400 hover:text-slate-900">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -840,7 +840,7 @@ export default function CmsEditorPage() {
                 value={relatedSearch}
                 onChange={(e) => setRelatedSearch(e.target.value)}
                 placeholder="Search published site stories..."
-                className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
               />
             </div>
 
@@ -848,7 +848,7 @@ export default function CmsEditorPage() {
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               {loadingRelated ? (
                 <div className="py-12 text-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#00e676] mx-auto mb-2" />
+                  <Loader2 className="w-6 h-6 animate-spin text-[#2563eb] mx-auto mb-2" />
                   <p className="text-xs text-slate-400">Fetching published stories...</p>
                 </div>
               ) : filteredRelated.length === 0 ? (
@@ -859,7 +859,7 @@ export default function CmsEditorPage() {
                 filteredRelated.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3 bg-white/5 border border-white/10 rounded-lg flex items-center justify-between gap-4 hover:border-[#00e676]/30 transition"
+                    className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-4 hover:border-[#2563eb]/30 transition"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {item.imageUrl && (
@@ -870,16 +870,16 @@ export default function CmsEditorPage() {
                         />
                       )}
                       <div className="min-w-0">
-                        <span className="text-[9px] px-1.5 py-0.5 bg-[#00e676]/10 text-[#00e676] rounded font-bold">
+                        <span className="text-[9px] px-1.5 py-0.5 bg-[#2563eb]/10 text-[#2563eb] rounded font-bold">
                           {item.category}
                         </span>
-                        <h5 className="text-sm font-semibold text-white truncate mt-0.5">{item.title}</h5>
+                        <h5 className="text-sm font-semibold text-slate-900 truncate mt-0.5">{item.title}</h5>
                       </div>
                     </div>
 
                     <button
                       onClick={() => insertRelatedStory(item)}
-                      className="px-3 py-1.5 bg-[#00e676]/10 hover:bg-[#00e676]/20 text-[#00e676] text-xs font-bold rounded-lg border border-[#00e676]/30 whitespace-nowrap"
+                      className="px-3 py-1.5 bg-[#2563eb]/10 hover:bg-[#2563eb]/20 text-[#2563eb] text-xs font-bold rounded-lg border border-[#2563eb]/30 whitespace-nowrap"
                     >
                       + Insert Link
                     </button>

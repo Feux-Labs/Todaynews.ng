@@ -93,7 +93,7 @@ export function getNewsArticleJsonLd({
   imageUrl,
   datePublished,
   dateModified,
-  authorName = "Gideon Ibitoye",
+  authorName = "TodaynewsAi",
   slug,
   category,
 }: {
@@ -122,10 +122,10 @@ export function getNewsArticleJsonLd({
     "inLanguage": "en-NG",
     "articleSection": category,
     "author": {
-      "@type": "Person",
-      "name": authorName || "Gideon Ibitoye",
-      "jobTitle": "Chief Editor & Reviewing Authority",
-      "url": `${SITE_URL}/author/gideon-ibitoye`,
+      "@type": "Organization",
+      "name": authorName || "TodaynewsAi",
+      "jobTitle": "AI Editorial System",
+      "url": `${SITE_URL}/author/todaynewsai`,
     },
     "publisher": {
       "@type": "NewsMediaOrganization",

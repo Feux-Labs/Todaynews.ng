@@ -4,10 +4,10 @@ import { isDbConfigured, prisma } from "./db";
 const SETTINGS_FILE = path.join(process.cwd(), "data", "settings.json");
 
 export const DEFAULT_SETTINGS = {
-  defaultAuthorName: "Gideon Ibitoye",
+  defaultAuthorName: "TodaynewsAi",
   defaultAuthorEmail: "editor@todaynews.ng",
   defaultAuthorBio:
-    "Chief Editor and Reviewing Authority at Todaynews.ng, specializing in Nigerian political affairs, parallel currency trends, and national policy analysis.",
+    "AI Editorial System at Todaynews.ng, drafting and reviewing stories on Nigerian political affairs, parallel currency trends, and national policy analysis.",
   siteName: "Todaynews.ng",
   siteTagline: "Breaking Nigerian News, Politics, Naira Rates & Gist",
   contactEmail: "editor@todaynews.ng",

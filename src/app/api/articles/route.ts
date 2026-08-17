@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     const effectiveStatus = status || "PUBLISHED";
     const page = Math.max(1, Number.parseInt(searchParams.get("page") || "1", 10));
     const rawLimit = Number.parseInt(searchParams.get("limit") || "10", 10);
-    const limit = Math.min(50, Math.max(1, rawLimit)); // Cap max limit at 50 to prevent huge queries
+    const limit = Math.min(500, Math.max(1, rawLimit)); // Cap max limit at 500 to allow full admin listings
 
     if (isDbConfigured()) {
       const where: any = {};

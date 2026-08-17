@@ -47,6 +47,12 @@ async function getArticle(slug: string): Promise<ArticleData | null> {
             where: { id: publishedArticle.id },
             data: { views: { increment: 1 } },
           });
+          await (prisma as any).pageView.create({
+            data: {
+              articleSlug: publishedArticle.slug,
+              category: publishedArticle.category || "GENERAL",
+            },
+          });
         } catch {}
 
         return {
@@ -57,6 +63,7 @@ async function getArticle(slug: string): Promise<ArticleData | null> {
           category: publishedArticle.category,
           status: "PUBLISHED",
           imageUrl: publishedArticle.imageUrl || undefined,
+          imageAlt: publishedArticle.imageAlt || undefined,
           author: publishedArticle.author,
           readTimeMinutes: publishedArticle.readTimeMinutes,
           views: publishedArticle.views + 1,
@@ -193,7 +200,7 @@ export default async function ArticlePage({ params, searchParams }: Readonly<Art
             <div className="relative aspect-video w-full overflow-hidden rounded border border-ink/5 my-6">
               <img
                 src={article.imageUrl}
-                alt={article.title}
+                alt={(article as any).imageAlt || article.title}
                 className="object-cover w-full h-full"
               />
             </div>
@@ -245,26 +252,26 @@ export default async function ArticlePage({ params, searchParams }: Readonly<Art
 
           {/* Author Biography Section (Punch-style bio card) */}
           <div className="bg-paper border-2 border-ink p-5 rounded flex gap-4 items-start my-8">
-            <Link href="/author/gideon-ibitoye">
+            <Link href="/author/todaynewsai">
               <div className="w-12 h-12 bg-flag/10 border-2 border-flag text-flag rounded-full flex items-center justify-center font-display font-black text-xl shrink-0 hover:bg-flag hover:text-paper transition-colors cursor-pointer">
-                GI
+                TN
               </div>
             </Link>
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <h5 className="font-display font-black text-sm uppercase text-ink">
-                  {article.author || "Gideon Ibitoye"}
+                  {article.author || "TodaynewsAi"}
                 </h5>
                 <span className="bg-flag text-white text-[9px] font-bold px-1.5 py-0.5 rounded">Verified Editor</span>
               </div>
               <p className="text-xs text-muted leading-relaxed">
-                {article.author || "Gideon Ibitoye"} is the Chief Editor and Reviewing Authority at Todaynews.ng, specializing in Nigerian political affairs, parallel currency trends, and national policy analysis.
+                {article.author || "TodaynewsAi"} is the AI Editorial System at Todaynews.ng, specializing in Nigerian political affairs, parallel currency trends, and national policy analysis.
               </p>
               <div className="mt-2 flex items-center gap-4 text-[10px] font-bold">
                 <a href="mailto:editor@todaynews.ng" className="text-flag underline hover:text-ink">
                   editor@todaynews.ng
                 </a>
-                <Link href="/author/gideon-ibitoye" className="text-muted hover:text-flag">
+                <Link href="/author/todaynewsai" className="text-muted hover:text-flag">
                   View All Articles →
                 </Link>
               </div>

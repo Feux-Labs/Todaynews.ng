@@ -37,6 +37,8 @@ export interface ParaphrasedResult {
   title: string;
   summary: string;
   category: AllowedCategory;
+  imageAlt?: string;
+  keywords?: string[];
   pages: {
     pageNumber: number;
     title?: string;
@@ -174,10 +176,22 @@ export function localProceduralRewriter(
     ? sentences[0].substring(0, 200) + (sentences[0].length > 200 ? "..." : "")
     : `Verified Nigerian breaking news report on ${headline}. Todaynews.ng provides real-time, accurate, and contextualised coverage.`;
 
+  const keywordStub = Array.from(
+    new Set(
+      `${headline} ${cleanCategory}`
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter((w) => w.length > 3)
+    )
+  ).slice(0, 5);
+
   return {
     title: headline,
     summary: summaryText,
     category: cleanCategory,
+    imageAlt: headline,
+    keywords: keywordStub,
     pages,
   };
 }
@@ -194,6 +208,8 @@ function normalizeParaphrasedResult(result: ParaphrasedResult, fallback: Paraphr
     title: cleanTitle,
     summary: stripCompetitorLinksAndBoilerplate(result.summary || fallback.summary).trim(),
     category: cleanCategory,
+    imageAlt: (result.imageAlt || fallback.imageAlt || cleanTitle).toString().trim().substring(0, 125),
+    keywords: Array.isArray(result.keywords) && result.keywords.length > 0 ? result.keywords.slice(0, 8) : fallback.keywords,
     pages: pages.map((page, index) => ({
       pageNumber: index + 1,
       title: page.title || `Section ${index + 1}`,
@@ -263,19 +279,25 @@ export async function paraphraseNews(
 
       3. LEGAL HEDGING: Use "allegedly", "according to reports", "unconfirmed accounts indicate", "subject to official confirmation" appropriately where facts are still evolving.
 
-      4. PUNCH-STYLE HEADLINES: Create a compelling, sharp, search-optimized headline in the classic style of Punch Newspaper and Premium Times. NO prefixes like [BREAKING], NO suffixes like "What We Know So Far".
+      4. PUNCH-STYLE, SEO-OPTIMIZED HEADLINES: Create a compelling, sharp headline in the classic style of Punch Newspaper and Premium Times, 50-60 characters where possible, with the primary keyword (the main person/place/topic) placed near the front. NO prefixes like [BREAKING], NO suffixes like "What We Know So Far".
 
-      5. META SUMMARY: Write a compelling 2-3 sentence meta summary for Google Search indexing and social previews.
+      5. SEO META SUMMARY: Write a compelling 2-3 sentence meta summary, 140-160 characters, for Google Search indexing and social previews — front-load the primary keyword and key fact.
 
-      6. STRICT PROHIBITION ON COMPETITOR LINKS: NEVER include external competitor links, competitor website names (Punch, Vanguard, Daily Trust, Sahara Reporters, etc.), or "Read More: https://...". Todaynews.ng is the primary publisher.
+      6. SEO KEYWORDS & IMAGE ALT TEXT: Return 5-8 realistic SEO keywords/phrases a Nigerian reader would actually search for this story (people, places, policies named in it — not generic filler), and a concise, descriptive image alt text (under 125 characters) describing what the story's photo would show.
 
-      7. HTML FORMATTING: Use clean HTML inside page content: <p class="mb-4">, <ul><li>, <strong>, <em>, <blockquote>.
+      7. NATURAL KEYWORD USE: Work the primary keyword naturally into the first paragraph of page 1 — don't force it, but don't bury it either.
+
+      8. STRICT PROHIBITION ON COMPETITOR LINKS: NEVER include external competitor links, competitor website names (Punch, Vanguard, Daily Trust, Sahara Reporters, etc.), or "Read More: https://...". Todaynews.ng is the primary publisher.
+
+      9. HTML FORMATTING: Use clean HTML inside page content: <p class="mb-4">, <ul><li>, <strong>, <em>, <blockquote>.
 
       Return ONLY a valid JSON object matching this schema:
       {
-        "title": "Sharp compelling Nigerian headline without [BREAKING] prefix",
-        "summary": "Compelling 2-3 sentence meta summary with key facts.",
+        "title": "Sharp, SEO-optimized Nigerian headline (50-60 chars, keyword near front, no [BREAKING] prefix)",
+        "summary": "Compelling 140-160 character meta summary with key facts and primary keyword.",
         "category": "POLITICS",
+        "imageAlt": "Concise descriptive alt text for the story's photo, under 125 characters",
+        "keywords": ["primary keyword phrase", "secondary keyword", "..."],
         "pages": [
           {
             "pageNumber": 1,
@@ -308,6 +330,7 @@ export async function paraphraseNews(
           const result = await model.generateContent(prompt);
           const text = result.response.text();
           if (text) {
+            console.log(`[Gemini Paraphrase] SUCCESS via model "${modelName}" — real AI content generated.`);
             return normalizeParaphrasedResult(JSON.parse(text) as ParaphrasedResult, localProceduralRewriter(rawText, rawTitle, category));
           }
         } catch (err) {
@@ -316,9 +339,11 @@ export async function paraphraseNews(
         }
       }
 
+      console.error(`[Gemini Paraphrase] ALL ${CANDIDATE_MODELS.length} candidate models failed — falling back to canned local rewriter. Last error:`, lastError?.message || lastError);
       throw lastError || new Error("All Gemini models failed during paraphrasing.");
     },
     async () => {
+      console.error("[Gemini Paraphrase] Circuit breaker OPEN or fallback triggered — using canned local rewriter instead of real AI.");
       throw new Error("Live Gemini AI is unavailable and fallback behavior is disabled.");
     }
 

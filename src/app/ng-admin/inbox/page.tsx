@@ -38,7 +38,7 @@ export default function InboxPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editSummary, setEditSummary] = useState("");
   const [editAuthor, setEditAuthor] = useState("");
-  const [defaultAuthor, setDefaultAuthor] = useState("Gideon Ibitoye");
+  const [defaultAuthor, setDefaultAuthor] = useState("TodaynewsAi");
   const [paraphrasingId, setParaphrasingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -57,7 +57,7 @@ export default function InboxPage() {
   const fetchInbox = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/articles?status=AI_PENDING");
+      const res = await fetch("/api/articles?status=AI_PENDING&limit=100");
       if (res.ok) {
         const data = await res.json();
         setArticles(data.articles || data);
@@ -148,11 +148,11 @@ export default function InboxPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <InboxIcon className="w-6 h-6 text-[#ff6d00]" />
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <InboxIcon className="w-6 h-6 text-[#475569]" />
             Inbox
             {articles.length > 0 && (
-              <span className="ml-2 px-2.5 py-0.5 bg-[#ff6d00]/10 text-[#ff6d00] text-sm font-bold rounded-full">
+              <span className="ml-2 px-2.5 py-0.5 bg-[#475569]/10 text-[#475569] text-sm font-bold rounded-full">
                 {articles.length}
               </span>
             )}
@@ -166,7 +166,7 @@ export default function InboxPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search stories..."
-            className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 w-64"
+            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 w-64"
           />
         </div>
       </div>
@@ -174,7 +174,7 @@ export default function InboxPage() {
       {/* Stories */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-[#00e676]" />
+          <Loader2 className="w-6 h-6 animate-spin text-[#2563eb]" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
@@ -189,7 +189,7 @@ export default function InboxPage() {
           {filtered.map((article) => (
             <div
               key={article.id}
-              className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-5 hover:border-white/10 transition-all"
+              className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 hover:border-slate-200 transition-all"
             >
               <div className="flex gap-4">
                 {/* Thumbnail */}
@@ -200,7 +200,7 @@ export default function InboxPage() {
                     className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-24 h-24 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                  <div className="w-24 h-24 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
                     <ImageIcon className="w-8 h-8 text-slate-600" />
                   </div>
                 )}
@@ -213,25 +213,25 @@ export default function InboxPage() {
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
                         placeholder="Article Headline"
-                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                       />
                       <textarea
                         value={editSummary}
                         onChange={(e) => setEditSummary(e.target.value)}
                         rows={2}
                         placeholder="Article summary / meta description"
-                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 resize-none"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 resize-none"
                       />
                       <div className="flex items-center gap-2">
                         <input
                           value={editAuthor}
                           onChange={(e) => setEditAuthor(e.target.value)}
                           placeholder="Author / Byline name"
-                          className="flex-1 px-3 py-2 bg-white/5 border border-[#00e676]/30 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                          className="flex-1 px-3 py-2 bg-slate-50 border border-[#2563eb]/30 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                         />
                         <button
                           onClick={() => setEditAuthor(defaultAuthor)}
-                          className="px-2 py-2 text-[10px] text-slate-400 hover:text-[#00e676] border border-white/10 rounded-lg transition whitespace-nowrap"
+                          className="px-2 py-2 text-[10px] text-slate-400 hover:text-[#2563eb] border border-slate-200 rounded-lg transition whitespace-nowrap"
                         >
                           Reset to Default
                         </button>
@@ -239,13 +239,13 @@ export default function InboxPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => saveEdit(article.id)}
-                          className="px-3 py-1.5 bg-[#00e676]/20 text-[#00e676] text-xs font-medium rounded-md hover:bg-[#00e676]/30"
+                          className="px-3 py-1.5 bg-[#2563eb]/20 text-[#2563eb] text-xs font-medium rounded-md hover:bg-[#2563eb]/30"
                         >
                           Save Changes
                         </button>
                         <button
                           onClick={() => setEditingId(null)}
-                          className="px-3 py-1.5 bg-white/5 text-slate-400 text-xs font-medium rounded-md"
+                          className="px-3 py-1.5 bg-slate-50 text-slate-400 text-xs font-medium rounded-md"
                         >
                           Cancel
                         </button>
@@ -253,7 +253,7 @@ export default function InboxPage() {
                     </div>
                   ) : (
                     <>
-                      <h3 className="text-base font-semibold text-white leading-tight">
+                      <h3 className="text-base font-semibold text-slate-900 leading-tight">
                         {article.title}
                       </h3>
                       <p className="text-sm text-slate-400 mt-1 line-clamp-2">{article.summary}</p>
@@ -261,12 +261,12 @@ export default function InboxPage() {
                   )}
 
                   <div className="flex items-center gap-3 mt-2">
-                    <span className="text-[10px] px-2 py-0.5 bg-[#00e676]/10 text-[#00e676] rounded-full font-medium">
+                    <span className="text-[10px] px-2 py-0.5 bg-[#2563eb]/10 text-[#2563eb] rounded-full font-medium">
                       <Tag className="w-3 h-3 inline mr-1" />
                       {article.category}
                     </span>
-                    <span className="text-[10px] text-emerald-400/80 flex items-center gap-1 font-mono">
-                      <Globe className="w-3 h-3 text-[#00e676]" /> Todaynews AI
+                    <span className="text-[10px] text-blue-700/80 flex items-center gap-1 font-mono">
+                      <Globe className="w-3 h-3 text-[#2563eb]" /> Todaynews AI
                     </span>
                     <span className="text-[10px] text-slate-500 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
@@ -286,16 +286,16 @@ export default function InboxPage() {
 
               {/* Action Buttons */}
               {editingId !== article.id && (
-                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/5">
+                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200">
                   <Link
                     href={`/ng-admin/editor?id=${article.id}`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00e676]/10 text-[#00e676] text-xs font-bold rounded-md hover:bg-[#00e676]/20 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb]/10 text-[#2563eb] text-xs font-bold rounded-md hover:bg-[#2563eb]/20 transition"
                   >
                     <Pencil className="w-3.5 h-3.5" /> Edit in CMS
                   </Link>
                   <button
                     onClick={() => startEdit(article)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-300 text-xs font-medium rounded-md hover:bg-white/10 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-700 text-xs font-medium rounded-md hover:bg-slate-100 transition"
                   >
                     <FileEdit className="w-3.5 h-3.5" /> Quick Edit
                   </button>
@@ -313,7 +313,7 @@ export default function InboxPage() {
                   </button>
                   <button
                     onClick={() => handleAction(article.id, "publish")}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00e676]/15 text-[#00e676] text-xs font-bold rounded-md hover:bg-[#00e676]/25 border border-[#00e676]/30 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb]/15 text-[#2563eb] text-xs font-bold rounded-md hover:bg-[#2563eb]/25 border border-[#2563eb]/30 transition"
                   >
                     <Check className="w-3.5 h-3.5" /> 🚀 Instant Publish
                   </button>

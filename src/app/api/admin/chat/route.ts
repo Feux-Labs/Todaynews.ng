@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scrapeRSSFeeds, scrapeUrl, resolveStoryImage, stripCompetitorLinksAndBoilerplate } from "@/lib/scraper";
+import { scrapeRSSFeeds, scrapeUrl, resolveStoryImage, stripCompetitorLinksAndBoilerplate, getRecentArticleTitles, titleSimilarity, searchGoogleNews } from "@/lib/scraper";
 import { paraphraseNews, chatWithAi, cleanAndFormatTitle, localProceduralRewriter } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import {
@@ -75,7 +75,7 @@ async function findExistingArticle(sourceUrl?: string, title?: string) {
 
   if (isDbConfigured()) {
     try {
-      return await prisma.article.findFirst({
+      const exact = await prisma.article.findFirst({
         where: {
           OR: [
             ...(cleanUrl ? [{ sourceUrl: cleanUrl }] : []),
@@ -84,6 +84,20 @@ async function findExistingArticle(sourceUrl?: string, title?: string) {
         },
         select: { id: true, status: true, title: true },
       });
+      if (exact) return exact;
+
+      // Fuzzy check — catches a reworded version of a story already saved.
+      if (cleanTitle) {
+        const recentTitles = await getRecentArticleTitles();
+        const fuzzyMatch = recentTitles.find((t) => titleSimilarity(cleanTitle, t) >= 0.6);
+        if (fuzzyMatch) {
+          return prisma.article.findFirst({
+            where: { title: fuzzyMatch },
+            select: { id: true, status: true, title: true },
+          });
+        }
+      }
+      return null;
     } catch (err) {
       console.error("[AI Chat] Duplicate DB lookup failed; checking memory fallback.", err);
     }
@@ -121,20 +135,21 @@ export async function POST(req: Request) {
       const cleanCategory = sanitizeCategory(storyCategory);
       const settings = await getPersistentServerSettings();
 
-      if (action === "send_to_inbox" || action === "add_to_draft") {
-        const targetStatus = action === "send_to_inbox" ? "AI_PENDING" : "DRAFT";
+      if (action === "send_to_inbox" || action === "add_to_draft" || action === "publish") {
+        const targetStatus = action === "send_to_inbox" ? "AI_PENDING" : action === "add_to_draft" ? "DRAFT" : "PUBLISHED";
+        const cardStatusLabel = action === "send_to_inbox" ? "sent_to_inbox" : action === "add_to_draft" ? "in_draft" : "published";
         const existing = await findExistingArticle(storySourceUrl, safeTitle);
         if (existing) {
           const replyMsg = `This story already exists as "${existing.title}" with status ${existing.status}. I did not create a duplicate.`;
           if (storyId) {
-            await updatePersistentMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft", sessionId);
+            await updatePersistentMemoryCardStatus(storyId, cardStatusLabel, sessionId);
           }
           await appendPersistentChatMessage({ role: "assistant", content: replyMsg, sessionId });
           return NextResponse.json({
             success: true,
             articleId: existing.id,
             duplicate: true,
-            newStatus: action === "send_to_inbox" ? "sent_to_inbox" : "in_draft",
+            newStatus: cardStatusLabel,
             reply: replyMsg,
           });
         }
@@ -183,6 +198,7 @@ export async function POST(req: Request) {
                 sourceUrl: storySourceUrl || undefined,
                 sourceName: "Todaynews AI",
                 imageUrl: finalImageUrl,
+                imageAlt: article.imageAlt || article.title || safeTitle,
                 author: settings.defaultAuthorName || "Todaynews.ng Editorial",
                 pages: {
                   create: (article.pages || [{ pageNumber: 1, content: safeSummary }]).map((p: any, idx: number) => ({
@@ -205,6 +221,7 @@ export async function POST(req: Request) {
               sourceUrl: storySourceUrl || undefined,
               sourceName: "Todaynews AI",
               imageUrl: finalImageUrl,
+              imageAlt: article.imageAlt || article.title || safeTitle,
               author: settings.defaultAuthorName || "Todaynews.ng Editorial",
               readTimeMinutes: 3,
               pages: article.pages || [{ pageNumber: 1, content: safeSummary }],
@@ -221,6 +238,7 @@ export async function POST(req: Request) {
             sourceUrl: storySourceUrl || undefined,
             sourceName: "Todaynews AI",
             imageUrl: finalImageUrl,
+            imageAlt: article.imageAlt || article.title || safeTitle,
             author: settings.defaultAuthorName || "Todaynews.ng Editorial",
             readTimeMinutes: 3,
             pages: article.pages || [{ pageNumber: 1, content: safeSummary }],
@@ -230,15 +248,27 @@ export async function POST(req: Request) {
 
         if (storyId) {
           try {
-            await updatePersistentMemoryCardStatus(storyId, action === "send_to_inbox" ? "sent_to_inbox" : "in_draft", sessionId);
+            await updatePersistentMemoryCardStatus(storyId, cardStatusLabel, sessionId);
           } catch {}
         }
 
-        const replyMsg = `✅ **Article Saved to ${
-          action === "send_to_inbox" ? "Inbox (Pending Review)" : "Drafts"
-        }!**\n\n📌 **Title**: ${article.title || safeTitle}\n📁 **Category**: ${finalCategory}\n👤 **Author**: ${
+        if (targetStatus === "PUBLISHED") {
+          try {
+            const { notifyNewPublish } = await import("@/lib/push");
+            await notifyNewPublish({ id: createdId, title: article.title || safeTitle, slug: uniqueSlug, summary: article.summary || safeSummary });
+          } catch (err) {
+            console.error("[AI Chat] Push notify on publish failed (non-fatal):", err);
+          }
+        }
+
+        const destinationLabel =
+          action === "send_to_inbox" ? "Inbox (Pending Review)" : action === "add_to_draft" ? "Drafts" : "Live — Published on Todaynews.ng";
+
+        const replyMsg = `✅ **Article Saved to ${destinationLabel}!**\n\n📌 **Title**: ${article.title || safeTitle}\n📁 **Category**: ${finalCategory}\n👤 **Author**: ${
           settings.defaultAuthorName
-        }\n📄 **Pages**: ${(article.pages || []).length} section(s) re-written with AI context.`;
+        }\n📄 **Pages**: ${(article.pages || []).length} section(s) re-written with AI context.${
+          targetStatus === "PUBLISHED" ? `\n🔗 **Live at**: /article/${uniqueSlug}` : ""
+        }`;
 
         try {
           await appendPersistentChatMessage({
@@ -383,19 +413,32 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
 
     let storyCards: any[] = [];
 
-    // If intent is to search, scrape matching stories.
-    // NOTE: scrapeRSSFeeds's second parameter here is being passed a free-text
-    // search phrase (aiResponse.searchQuery, e.g. "Nigeria scholarship
-    // opportunities"). Confirm this matches what scrapeRSSFeeds's signature
-    // actually expects in that position — if it expects a category enum
-    // instead of free text, this is why unrelated stories keep coming back
-    // regardless of what was asked for. Check /lib/scraper's real signature.
+    // If intent is to search, scrape matching stories from both the fixed
+    // RSS source list and a free-text whole-web search (see below).
     if (aiResponse.intent === "search") {
       const query = aiResponse.searchQuery;
       const urlMatch = message.match(/https?:\/\/[^\s)]+/i);
-      const scraped = urlMatch
-        ? [await scrapeUrl(urlMatch[0])].filter(Boolean) as any[]
-        : await scrapeRSSFeeds(6, query);
+
+      let scraped: any[];
+      if (urlMatch) {
+        scraped = [await scrapeUrl(urlMatch[0])].filter(Boolean) as any[];
+      } else if (query) {
+        // Blend the fixed source list with a free, keyless whole-web search
+        // (Google News RSS) so results aren't limited to RSS_SOURCES.
+        const [fromFeeds, fromWeb] = await Promise.all([
+          scrapeRSSFeeds(6, query),
+          searchGoogleNews(query),
+        ]);
+        const combined = [...fromFeeds];
+        for (const story of fromWeb) {
+          if (!combined.some((s) => titleSimilarity(s.title, story.title) >= 0.6)) {
+            combined.push(story);
+          }
+        }
+        scraped = combined.slice(0, 8);
+      } else {
+        scraped = await scrapeRSSFeeds(6);
+      }
 
       storyCards = scraped.map((s, idx) => ({
         id: `scraped-${Date.now()}-${idx}`,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scrapeRSSFeeds, scrapeScholarships, scrapeJapa, scrapeMakeMoneyOnline, enrichAndRankStories, resolveStoryImage, stripCompetitorLinksAndBoilerplate } from "@/lib/scraper";
+import { scrapeRSSFeeds, scrapeScholarships, scrapeJapa, scrapeMakeMoneyOnline, enrichAndRankStories, resolveStoryImage, stripCompetitorLinksAndBoilerplate, isDuplicateStory, getRecentArticleTitles } from "@/lib/scraper";
 import { paraphraseNews, localProceduralRewriter, cleanAndFormatTitle } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { sendNewStoryAlert } from "@/lib/mailer";
@@ -16,29 +16,24 @@ function isAuthorized(req: Request): boolean {
   return authHeader === `Bearer ${cronSecret}` || cronKey === cronSecret;
 }
 
-async function storyAlreadyExists(sourceUrl: string, title: string) {
+async function storyAlreadyExists(sourceUrl: string, title: string, recentTitles: string[]) {
   if (isDbConfigured()) {
     try {
       const existing = await prisma.article.findFirst({
-        where: {
-          OR: [
-            { sourceUrl },
-            { title: { equals: title, mode: "insensitive" as const } },
-          ],
-        },
+        where: { sourceUrl },
         select: { id: true },
       });
       if (existing) return true;
     } catch (err) {
       console.error("[Cron Scraper] Duplicate DB check failed; using memory fallback.", err);
     }
+  } else {
+    const memoryArticles = await memoryDb.getArticles(undefined, undefined, 1, 100);
+    if ((memoryArticles.articles || []).some((article: any) => article.sourceUrl === sourceUrl)) return true;
   }
 
-  const memoryArticles = await memoryDb.getArticles(undefined, undefined, 1, 100);
-  return (memoryArticles.articles || []).some((article: any) =>
-    article.sourceUrl === sourceUrl ||
-    article.title.toLowerCase() === title.toLowerCase()
-  );
+  // Fuzzy check — catches reworded rewrites of a story we already ran, not just exact matches.
+  return isDuplicateStory(title, { existingTitles: recentTitles });
 }
 
 /**
@@ -117,12 +112,15 @@ export async function GET(req: Request) {
     }
 
     const savedStories = [];
+    const recentTitles = await getRecentArticleTitles();
 
     for (const story of stories) {
-      if (await storyAlreadyExists(story.sourceUrl, story.title)) {
+      if (await storyAlreadyExists(story.sourceUrl, story.title, recentTitles)) {
         console.log(`[Cron Scraper] Skipping duplicate story: ${story.title}`);
         continue;
       }
+      // Prevent duplicates within this same batch too.
+      recentTitles.push(story.title);
 
       // Clean competitor links before paraphrasing
       const cleanTitle = cleanAndFormatTitle(story.title);
@@ -159,6 +157,7 @@ export async function GET(req: Request) {
             sourceName: "Todaynews AI",
             sourceUrl: story.sourceUrl,
             imageUrl: finalImageUrl,
+            imageAlt: paraphrased.imageAlt || paraphrased.title,
             author: settings.defaultAuthorName,
             pages: {
               create: paraphrased.pages.map((p: { pageNumber: number; title?: string | null; content: string }) => ({
@@ -180,6 +179,7 @@ export async function GET(req: Request) {
           sourceName: "Todaynews AI",
           sourceUrl: story.sourceUrl,
           imageUrl: finalImageUrl,
+          imageAlt: paraphrased.imageAlt || paraphrased.title,
           author: settings.defaultAuthorName,
           readTimeMinutes: 3,
           pages: paraphrased.pages,

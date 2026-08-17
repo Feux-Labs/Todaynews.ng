@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { memoryDb } from "@/lib/db";
 import ArticleCard from "@/components/ArticleCard";
 import { Mail, CheckCircle } from "lucide-react";
@@ -17,18 +17,24 @@ const AUTHORS: Record<string, {
   avatar: string;
   verificationBadge: string;
 }> = {
-  "gideon-ibitoye": {
-    name: "Gideon Ibitoye",
-    role: "Chief Editor & Reviewing Authority",
-    bio: "Gideon leads the editorial team at Todaynews.ng. Specializing in Nigerian political affairs, parallel currency trends, and national policy analysis, Gideon reviews all incoming stories for journalistic integrity and accuracy.",
+  todaynewsai: {
+    name: "TodaynewsAi",
+    role: "AI Editorial System",
+    bio: "TodaynewsAi is the automated editorial system at Todaynews.ng. It continuously scans verified sources worldwide, drafts and paraphrases every story, and every article it produces passes through human editorial review before publishing for journalistic integrity and accuracy.",
     email: "editor@todaynews.ng",
-    avatar: "GI",
-    verificationBadge: "Verified Senior Editor",
+    avatar: "TN",
+    verificationBadge: "Verified AI Editorial Desk",
   },
 };
 
+// Legacy slug redirect — old bylines pointed at /author/gideon-ibitoye
+const LEGACY_SLUGS: Record<string, string> = {
+  "gideon-ibitoye": "todaynewsai",
+};
+
 export async function generateMetadata({ params }: AuthorPageProps) {
-  const author = AUTHORS[params.slug] || AUTHORS["gideon-ibitoye"];
+  const slug = LEGACY_SLUGS[params.slug] || params.slug;
+  const author = AUTHORS[slug] || AUTHORS.todaynewsai;
   return {
     title: `${author.name} (${author.role}) | Todaynews.ng Editorial`,
     description: author.bio,
@@ -36,8 +42,11 @@ export async function generateMetadata({ params }: AuthorPageProps) {
 }
 
 export default async function AuthorPage({ params }: AuthorPageProps) {
-  const author = AUTHORS[params.slug] || AUTHORS["gideon-ibitoye"];
-  
+  if (LEGACY_SLUGS[params.slug]) {
+    redirect(`/author/${LEGACY_SLUGS[params.slug]}`);
+  }
+  const author = AUTHORS[params.slug] || AUTHORS.todaynewsai;
+
   // Fetch published articles for this author/editor
   const { articles: allArticles } = await memoryDb.getArticles(undefined, "PUBLISHED", 1, 12);
   const authorArticles = allArticles;

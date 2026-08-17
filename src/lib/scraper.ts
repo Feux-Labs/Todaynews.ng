@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import RSSParser from "rss-parser";
+import { isDbConfigured, prisma, memoryDb } from "./db";
 
 export interface ScrapedStory {
   title: string;
@@ -114,8 +115,10 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-// RSS Feed sources — Nigerian news sites with active RSS feeds
+// RSS Feed sources — Nigerian/African outlets plus a real international spread,
+// so coverage is never dependent on a single publisher (e.g. Punch NG).
 const RSS_SOURCES: { name: string; url: string; category: string }[] = [
+  // ── Nigeria / Africa ──────────────────────────────────────────────────────
   { name: "Punch NG", url: "https://punchng.com/feed/", category: "POLITICS" },
   { name: "Vanguard", url: "https://www.vanguardngr.com/feed/", category: "POLITICS" },
   { name: "Channels TV", url: "https://www.channelstv.com/feed/", category: "POLITICS" },
@@ -127,8 +130,63 @@ const RSS_SOURCES: { name: string; url: string; category: string }[] = [
   { name: "The Nation", url: "https://thenationonlineng.net/feed/", category: "POLITICS" },
   { name: "Tribune", url: "https://tribuneonlineng.com/feed/", category: "POLITICS" },
   { name: "Daily Sun", url: "https://www.sunnewsonline.com/feed/", category: "METRO" },
-  { name: "CNN Africa", url: "https://rss.cnn.com/rss/edition_africa.rss", category: "POLITICS" },
+  { name: "Africanews", url: "https://www.africanews.com/feed/rss", category: "POLITICS" },
+  // ── World / International ─────────────────────────────────────────────────
+  { name: "BBC World", url: "https://feeds.bbci.co.uk/news/world/rss.xml", category: "POLITICS" },
+  { name: "Al Jazeera", url: "https://www.aljazeera.com/xml/rss/all.xml", category: "POLITICS" },
+  { name: "France24", url: "https://www.france24.com/en/rss", category: "POLITICS" },
+  { name: "DW News", url: "https://rss.dw.com/rdf/rss-en-all", category: "POLITICS" },
+  { name: "The Guardian World", url: "https://www.theguardian.com/world/rss", category: "POLITICS" },
+  { name: "NYT World", url: "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", category: "POLITICS" },
+  { name: "Sky News World", url: "https://feeds.skynews.com/feeds/rss/world.xml", category: "POLITICS" },
+  { name: "CNBC World", url: "https://www.cnbc.com/id/100727362/device/rss/rss.html", category: "NAIRA" },
 ];
+
+/**
+ * Free, keyless "search the whole web" mechanism via Google News' public RSS
+ * search endpoint — indexes essentially any publisher Google crawls, not just
+ * the fixed RSS_SOURCES list above. Used for on-demand topic sweeps (AI chat
+ * search intent, cron topic rotation) that need broader reach than the fixed
+ * source list.
+ */
+export async function searchGoogleNews(query: string, region: string = "NG"): Promise<ScrapedStory[]> {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) return [];
+
+  const encodedQuery = encodeURIComponent(trimmedQuery);
+  const url = `https://news.google.com/rss/search?q=${encodedQuery}&hl=en-${region}&gl=${region}&ceid=${region}:en`;
+
+  try {
+    const feed = await rssParser.parseURL(url);
+    const items = feed.items.slice(0, 15);
+
+    const stories: ScrapedStory[] = items
+      .filter((item) => item.title && item.link)
+      .map((item) => {
+        const pubDateStr = item.isoDate || item.pubDate || new Date().toISOString();
+        const rawContent = item.contentSnippet || item.content || item.title || "";
+        const cleanContent = stripCompetitorLinksAndBoilerplate(rawContent);
+        // Google News titles are formatted "Headline - Source Name"; extract the real source.
+        const sourceMatch = item.title!.match(/\s-\s([^-]+)$/);
+        const sourceName = sourceMatch ? sourceMatch[1].trim() : "Todaynews AI";
+        const cleanTitle = sourceMatch ? item.title!.replace(/\s-\s([^-]+)$/, "").trim() : item.title!;
+
+        return {
+          title: cleanTitle,
+          content: cleanContent || cleanTitle,
+          sourceUrl: item.link!,
+          sourceName: "Todaynews AI",
+          category: detectCategory(cleanTitle, cleanContent),
+          pubDate: pubDateStr,
+        };
+      });
+
+    return stories;
+  } catch (err) {
+    console.error(`[Google News Search] Query "${trimmedQuery}" failed:`, err instanceof Error ? err.message : String(err));
+    return [];
+  }
+}
 
 // Keyword-based category detection with precise word boundaries
 export function detectCategory(title: string, content: string): string {
@@ -173,21 +231,177 @@ export function detectCategory(title: string, content: string): string {
   return "POLITICS";
 }
 
+// ============================================================
+// DEDUPLICATION — "never repeat a news" enforcement
+// ============================================================
+
+const STOPWORDS = new Set([
+  "the", "a", "an", "of", "in", "on", "at", "to", "for", "and", "or", "with",
+  "as", "by", "is", "are", "was", "were", "after", "before", "over", "amid",
+  "amidst", "new", "says", "say", "said", "how", "why", "what", "who", "this",
+  "that", "his", "her", "their", "its", "from", "into", "than", "then", "but",
+]);
+
+function normalizedTitleWords(title: string): Set<string> {
+  return new Set(
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !STOPWORDS.has(w))
+  );
+}
+
+/**
+ * Jaccard similarity between two headlines' significant words (0..1).
+ * Catches reworded rewrites of the same real-world event, not just exact
+ * title matches — e.g. "Tinubu Signs New Tax Bill" vs "President Tinubu
+ * Approves Tax Reform Bill" both describe the same story.
+ */
+export function titleSimilarity(a: string, b: string): number {
+  const setA = normalizedTitleWords(a);
+  const setB = normalizedTitleWords(b);
+  if (setA.size === 0 || setB.size === 0) return 0;
+
+  let intersection = 0;
+  for (const word of setA) if (setB.has(word)) intersection++;
+  const union = setA.size + setB.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+const DUPLICATE_SIMILARITY_THRESHOLD = 0.6;
+
+/** Fetch titles of recently created articles (DB or in-memory) for dedup comparison. */
+export async function getRecentArticleTitles(days: number = 7): Promise<string[]> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  if (isDbConfigured()) {
+    try {
+      const rows = await prisma.article.findMany({
+        where: { createdAt: { gte: since } },
+        select: { title: true },
+        take: 500,
+        orderBy: { createdAt: "desc" },
+      });
+      return rows.map((r) => r.title);
+    } catch (err) {
+      console.error("[Dedup] Failed to fetch recent titles from DB, falling back to memory:", err);
+    }
+  }
+
+  const mem = await memoryDb.getArticles(undefined, undefined, 1, 500);
+  return (mem.articles || []).map((a: any) => a.title as string);
+}
+
+/**
+ * True if `title` is a near-duplicate of an existing recent article (fuzzy),
+ * or of any title in `batchTitles` (other stories already picked in this run).
+ */
+export async function isDuplicateStory(
+  title: string,
+  options: { batchTitles?: string[]; existingTitles?: string[] } = {}
+): Promise<boolean> {
+  const existingTitles = options.existingTitles || (await getRecentArticleTitles());
+  const batchTitles = options.batchTitles || [];
+
+  for (const other of [...existingTitles, ...batchTitles]) {
+    if (titleSimilarity(title, other) >= DUPLICATE_SIMILARITY_THRESHOLD) return true;
+  }
+  return false;
+}
+
+// ============================================================
+// IMAGE RESOLUTION — real photos for named subjects, not mismatched stock
+// ============================================================
+
+const TITLE_STOPWORD_START = new Set([
+  "The", "A", "An", "How", "Why", "What", "Who", "This", "That", "In", "On",
+  "At", "For", "After", "Before", "With", "As", "Amid", "Breaking", "See",
+  "Watch", "New", "Report", "Reports", "Exclusive",
+]);
+
+/**
+ * Heuristically pull the likely main subject (a named person, or a specific
+ * named entity) out of a headline — sequences of 2-3 capitalized words that
+ * aren't a stopword-led phrase. Best-effort; used only to try fetching a real
+ * photo, never blocks the pipeline if nothing is found.
+ */
+export function extractMainSubject(title: string): string | null {
+  const matches = title.match(/\b([A-Z][a-zA-Z'’.-]+(?:\s+[A-Z][a-zA-Z'’.-]+){1,2})\b/g);
+  if (!matches || matches.length === 0) return null;
+
+  const candidates = matches.filter((m) => {
+    const firstWord = m.split(/\s+/)[0];
+    if (TITLE_STOPWORD_START.has(firstWord)) return false;
+    if (m === m.toUpperCase()) return false; // skip ALL-CAPS acronyms like "NNPC", "EFCC"
+    return true;
+  });
+
+  if (candidates.length === 0) return null;
+  // Prefer the longest (most specific) candidate.
+  return candidates.sort((a, b) => b.length - a.length)[0];
+}
+
+const wikipediaPhotoCache = new Map<string, string | null>();
+
+/** Free, keyless lookup of a real photo for a named person/entity via Wikipedia's REST summary API. */
+export async function fetchPersonPhoto(name: string): Promise<string | null> {
+  if (!name || name.length < 4) return null;
+  if (wikipediaPhotoCache.has(name)) return wikipediaPhotoCache.get(name) || null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name.replace(/\s+/g, "_"))}`,
+      { headers: { "User-Agent": "TodaynewsBot/1.0 (+https://todaynews.ng)" }, signal: controller.signal }
+    );
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      wikipediaPhotoCache.set(name, null);
+      return null;
+    }
+
+    const data: any = await res.json();
+    if (data.type === "disambiguation") {
+      wikipediaPhotoCache.set(name, null);
+      return null;
+    }
+
+    const photo: string | null = data.originalimage?.source || data.thumbnail?.source || null;
+    wikipediaPhotoCache.set(name, photo);
+    return photo;
+  } catch (err) {
+    wikipediaPhotoCache.set(name, null);
+    return null;
+  }
+}
+
 export async function resolveStoryImage(
   imageUrl?: string,
   title?: string,
   category?: string
 ): Promise<string> {
   const cleanCandidate = (imageUrl || "").trim();
-  const isGenericLogo = /logo|icon|favicon|placeholder|avatar|default-thumbnail|punch-logo/i.test(cleanCandidate);
+  const isGenericLogo = /logo|icon|favicon|placeholder|avatar|default-thumbnail|punch-logo|sprite|1x1|pixel/i.test(cleanCandidate);
 
   if (cleanCandidate && /^https?:\/\//i.test(cleanCandidate) && !isGenericLogo) {
     return cleanCandidate;
   }
 
+  // Try to find a real photo of the story's main subject before falling back to stock.
+  if (title) {
+    const subject = extractMainSubject(title);
+    if (subject) {
+      const personPhoto = await fetchPersonPhoto(subject);
+      if (personPhoto) return personPhoto;
+    }
+  }
+
   const categoryKey = ((category || "").toUpperCase() || "DEFAULT") as string;
   const pool = EDITORIAL_IMAGE_POOLS[categoryKey] || EDITORIAL_IMAGE_POOLS.DEFAULT;
-  
+
   const titleKey = (title || categoryKey || "todaynews-story").trim();
   const selectedImage = pool[hashString(titleKey) % pool.length];
 
@@ -339,12 +553,13 @@ export async function scrapeRSSFeeds(
 
   await Promise.allSettled(feedPromises);
 
-  // Deduplicate by title similarity
-  const seen = new Set<string>();
+  // Deduplicate by fuzzy title similarity (catches reworded rewrites of the
+  // same story across different outlets, not just exact/prefix matches).
+  const keptTitles: string[] = [];
   const unique = stories.filter((s) => {
-    const key = s.title.toLowerCase().substring(0, 40);
-    if (seen.has(key)) return false;
-    seen.add(key);
+    const isDup = keptTitles.some((t) => titleSimilarity(s.title, t) >= DUPLICATE_SIMILARITY_THRESHOLD);
+    if (isDup) return false;
+    keptTitles.push(s.title);
     return true;
   });
 

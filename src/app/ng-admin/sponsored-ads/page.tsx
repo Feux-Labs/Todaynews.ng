@@ -297,7 +297,7 @@ export default function SponsoredAdsPage() {
                       ad.active
                         ? "bg-green-500 hover:bg-green-600"
                         : "bg-gray-500 hover:bg-gray-600"
-                    } text-white transition-colors`}
+                    } text-slate-900 transition-colors`}
                   >
                     {ad.active ? (
                       <CheckCircle className="w-5 h-5" />

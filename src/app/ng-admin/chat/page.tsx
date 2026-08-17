@@ -35,7 +35,7 @@ interface StoryCard {
   sourceUrl?: string;
   category: string;
   imageUrl?: string;
-  status: "new" | "sent_to_inbox" | "in_draft";
+  status: "new" | "sent_to_inbox" | "in_draft" | "published";
 }
 
 interface ChatSession {
@@ -205,7 +205,7 @@ export default function AIChatPage() {
 
   const handleStoryAction = async (
     card: StoryCard,
-    action: "send_to_inbox" | "paraphrase" | "add_to_draft"
+    action: "send_to_inbox" | "paraphrase" | "add_to_draft" | "publish"
   ) => {
     setActionLoading({ cardId: card.id, action });
     try {
@@ -232,9 +232,10 @@ export default function AIChatPage() {
         throw new Error(data.error || "Action failed");
       }
 
-      // Update local message state: set card status to sent_to_inbox or in_draft
-      if (action === "send_to_inbox" || action === "add_to_draft") {
-        const newStatus = action === "send_to_inbox" ? "sent_to_inbox" : "in_draft";
+      // Update local message state: set card status to reflect the action taken
+      if (action === "send_to_inbox" || action === "add_to_draft" || action === "publish") {
+        const newStatus =
+          action === "send_to_inbox" ? "sent_to_inbox" : action === "add_to_draft" ? "in_draft" : "published";
         setMessages((prev) =>
           prev.map((msg) => {
             if (!msg.storyCards) return msg;
@@ -264,6 +265,8 @@ export default function AIChatPage() {
           ? "Saved to Inbox (Pending Review)!"
           : action === "add_to_draft"
           ? "Saved to Drafts!"
+          : action === "publish"
+          ? "Published live on Todaynews.ng!"
           : "Paraphrased with AI!";
       showToast(toastLabel);
     } catch (err: any) {
@@ -291,17 +294,17 @@ export default function AIChatPage() {
     <div className="flex flex-col h-[calc(100vh-40px)] relative">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="absolute top-20 right-6 z-50 bg-[#00e676] text-[#060b18] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xl flex items-center gap-2 animate-bounce">
+        <div className="absolute top-20 right-6 z-50 bg-[#2563eb] text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-xl flex items-center gap-2 animate-bounce">
           <CheckCircle className="w-4 h-4 shrink-0" />
           {toastMessage}
         </div>
       )}
 
       {/* Header */}
-      <div className="h-16 flex items-center px-6 border-b border-white/5 bg-[#0a0f1c]/50 backdrop-blur-sm shrink-0">
-        <Bot className="w-6 h-6 text-[#00e676] mr-3" />
+      <div className="h-16 flex items-center px-6 border-b border-slate-200 bg-white/50 backdrop-blur-sm shrink-0">
+        <Bot className="w-6 h-6 text-[#2563eb] mr-3" />
         <div>
-          <h1 className="text-base font-semibold text-white">Todaynews AI Editor</h1>
+          <h1 className="text-base font-semibold text-slate-900">Todaynews AI Editor</h1>
           <p className="text-[11px] text-slate-400">Scrape, paraphrase, and publish with AI</p>
         </div>
         <div className="ml-auto flex items-center gap-4">
@@ -311,7 +314,7 @@ export default function AIChatPage() {
               setMessages([DEFAULT_WELCOME_MSG]);
               setInput("");
             }}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold rounded-lg transition"
+            className="flex items-center gap-1 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg transition"
             title="Start New Session"
           >
             New Session
@@ -320,11 +323,11 @@ export default function AIChatPage() {
             <select
               value={selectedSessionId || ""}
               onChange={(e) => fetchHistory(e.target.value)}
-              className="max-w-56 bg-white/5 border border-white/10 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+              className="max-w-56 bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
               title="Past AI Sessions"
             >
               {sessions.map((session) => (
-                <option key={session.id} value={session.id} className="bg-[#0a0f1c]">
+                <option key={session.id} value={session.id} className="bg-white">
                   {session.title}
                 </option>
               ))}
@@ -332,14 +335,14 @@ export default function AIChatPage() {
           )}
           <button
             onClick={handleClearHistory}
-            className="flex items-center gap-1 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-lg transition"
+            className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-lg transition"
             title="Clear Chat Memory"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Clear Memory
           </button>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-[#00e676] rounded-full animate-pulse" />
+            <span className="w-2 h-2 bg-[#2563eb] rounded-full animate-pulse" />
             <span className="text-xs text-slate-400 font-mono">AI Active</span>
           </div>
         </div>
@@ -357,27 +360,27 @@ export default function AIChatPage() {
           return (
             <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
               {msg.role === "assistant" && (
-                <div className="w-8 h-8 rounded-lg bg-[#00e676]/10 flex items-center justify-center flex-shrink-0 mt-1 border border-[#00e676]/20">
-                  <Bot className="w-4 h-4 text-[#00e676]" />
+                <div className="w-8 h-8 rounded-lg bg-[#2563eb]/10 flex items-center justify-center flex-shrink-0 mt-1 border border-[#2563eb]/20">
+                  <Bot className="w-4 h-4 text-[#2563eb]" />
                 </div>
               )}
 
               <div
                 className={`max-w-[80%] relative group ${
                   msg.role === "user"
-                    ? "bg-[#00e676]/10 border border-[#00e676]/20 text-white"
-                    : "bg-[#0f1729] border border-white/5 text-slate-200"
+                    ? "bg-[#2563eb]/10 border border-[#2563eb]/20 text-slate-900"
+                    : "bg-slate-50 border border-slate-200 text-slate-800"
                 } rounded-xl px-4 py-3 shadow-md`}
               >
                 {/* Copy content button for Assistant custom texts */}
                 {msg.role === "assistant" && hasMarkdown && (
                   <button
                     onClick={() => handleCopyText(msg.content, msg.id)}
-                    className="absolute right-3 top-3 p-1.5 bg-white/5 border border-white/10 rounded hover:bg-white/10 text-slate-400 hover:text-white transition shrink-0"
+                    className="absolute right-3 top-3 p-1.5 bg-slate-50 border border-slate-200 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition shrink-0"
                     title="Copy full text"
                   >
                     {copiedId === msg.id ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-[#00e676]" />
+                      <CheckCircle className="w-3.5 h-3.5 text-[#2563eb]" />
                     ) : (
                       <Copy className="w-3.5 h-3.5" />
                     )}
@@ -397,10 +400,10 @@ export default function AIChatPage() {
                       return (
                         <div
                           key={card.id}
-                          className="bg-white/5 border border-white/10 rounded-lg p-3 hover:border-[#00e676]/20 transition"
+                          className="bg-slate-50 border border-slate-200 rounded-lg p-3 hover:border-[#2563eb]/20 transition"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border border-white/10 bg-white/5 relative">
+                            <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border border-slate-200 bg-slate-50 relative">
                               <img
                                 src={card.imageUrl || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80"}
                                 alt={card.title}
@@ -411,12 +414,12 @@ export default function AIChatPage() {
                               />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-semibold text-white leading-tight truncate">
+                              <h4 className="text-sm font-semibold text-slate-900 leading-tight truncate">
                                 {card.title}
                               </h4>
                               <p className="text-xs text-slate-400 mt-1 line-clamp-2">{card.summary}</p>
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[9px] px-1.5 py-0.5 bg-[#00e676]/10 text-[#00e676] rounded font-mono">
+                                <span className="text-[9px] px-1.5 py-0.5 bg-[#2563eb]/10 text-[#2563eb] rounded font-mono">
                                   {card.category}
                                 </span>
                               </div>
@@ -424,84 +427,85 @@ export default function AIChatPage() {
                           </div>
 
                           {/* Action Buttons */}
-                          <div className="flex gap-2 mt-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
                             {/* Send to Inbox Button */}
                             <button
                               onClick={() => handleStoryAction(card, "send_to_inbox")}
-                              disabled={isCardLoading || card.status === "sent_to_inbox" || card.status === "in_draft"}
-                              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition ${
+                              disabled={isCardLoading || card.status !== "new"}
+                              className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition ${
                                 card.status === "sent_to_inbox"
-                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-extrabold cursor-not-allowed"
-                                  : card.status === "in_draft"
-                                  ? "bg-slate-500/5 text-slate-500 cursor-not-allowed"
-                                  : "bg-[#00e676]/10 text-[#00e676] hover:bg-[#00e676]/20 border border-[#00e676]/20"
+                                  ? "bg-slate-200 text-slate-700 border border-slate-300 cursor-not-allowed"
+                                  : card.status !== "new"
+                                  ? "bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed"
+                                  : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
                               } disabled:opacity-60`}
                             >
                               {loadingAction === "send_to_inbox" ? (
-                                <>
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                  <span>Saving...</span>
-                                </>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               ) : card.status === "sent_to_inbox" ? (
-                                <>
-                                  <CheckCircle className="w-3.5 h-3.5" />
-                                  <span>Sent to Inbox</span>
-                                </>
+                                <CheckCircle className="w-3.5 h-3.5" />
                               ) : (
-                                <>
-                                  <Inbox className="w-3.5 h-3.5" />
-                                  <span>Send to Inbox</span>
-                                </>
+                                <Inbox className="w-3.5 h-3.5" />
                               )}
+                              <span>{card.status === "sent_to_inbox" ? "In Inbox" : "Inbox"}</span>
                             </button>
 
                             {/* Paraphrase Button */}
                             <button
                               onClick={() => handleStoryAction(card, "paraphrase")}
                               disabled={isCardLoading}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-blue-500/10 text-blue-400 text-xs font-bold rounded-md hover:bg-blue-500/20 border border-blue-500/20 transition disabled:opacity-60"
+                              className="flex items-center justify-center gap-1.5 py-1.5 bg-slate-50 text-slate-700 text-xs font-bold rounded-md hover:bg-slate-100 border border-slate-200 transition disabled:opacity-60"
                             >
                               {loadingAction === "paraphrase" ? (
-                                <>
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                  <span>Paraphrasing...</span>
-                                </>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               ) : (
-                                <>
-                                  <RefreshCw className="w-3.5 h-3.5" />
-                                  <span>Paraphrase</span>
-                                </>
+                                <RefreshCw className="w-3.5 h-3.5" />
                               )}
+                              <span>Paraphrase</span>
                             </button>
 
                             {/* Add to Draft Button */}
                             <button
                               onClick={() => handleStoryAction(card, "add_to_draft")}
-                              disabled={isCardLoading || card.status === "sent_to_inbox" || card.status === "in_draft"}
-                              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition ${
+                              disabled={isCardLoading || card.status !== "new"}
+                              className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition ${
                                 card.status === "in_draft"
-                                  ? "bg-purple-500/20 text-purple-400 border border-purple-500/30 font-extrabold cursor-not-allowed"
-                                  : card.status === "sent_to_inbox"
-                                  ? "bg-slate-500/5 text-slate-500 cursor-not-allowed"
-                                  : "bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20"
+                                  ? "bg-slate-200 text-slate-700 border border-slate-300 cursor-not-allowed"
+                                  : card.status !== "new"
+                                  ? "bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed"
+                                  : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
                               } disabled:opacity-60`}
                             >
                               {loadingAction === "add_to_draft" ? (
-                                <>
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
-                                  <span>Saving Draft...</span>
-                                </>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               ) : card.status === "in_draft" ? (
-                                <>
-                                  <CheckCircle className="w-3.5 h-3.5" />
-                                  <span>Added to Draft</span>
-                                </>
+                                <CheckCircle className="w-3.5 h-3.5" />
                               ) : (
-                                <>
-                                  <FileEdit className="w-3.5 h-3.5" />
-                                  <span>Add to Draft</span>
-                                </>
+                                <FileEdit className="w-3.5 h-3.5" />
                               )}
+                              <span>{card.status === "in_draft" ? "In Drafts" : "Draft"}</span>
+                            </button>
+
+                            {/* Publish Now Button — the primary action */}
+                            <button
+                              onClick={() => handleStoryAction(card, "publish")}
+                              disabled={isCardLoading || card.status !== "new"}
+                              className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition ${
+                                card.status === "published"
+                                  ? "bg-[#2563eb]/20 text-[#2563eb] border border-[#2563eb]/30 cursor-not-allowed"
+                                  : card.status !== "new"
+                                  ? "bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed"
+                                  : "bg-[#2563eb] text-white hover:bg-[#1d4ed8] border border-[#2563eb]"
+                              } disabled:opacity-60`}
+                            >
+                              {loadingAction === "publish" ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : card.status === "published" ? (
+                                <CheckCircle className="w-3.5 h-3.5" />
+                              ) : (
+                                <Send className="w-3.5 h-3.5" />
+                              )}
+                              <span>{card.status === "published" ? "Live" : "Publish"}</span>
                             </button>
                           </div>
                         </div>
@@ -512,8 +516,8 @@ export default function AIChatPage() {
               </div>
 
               {msg.role === "user" && (
-                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0 mt-1 border border-white/10">
-                  <User className="w-4 h-4 text-slate-300" />
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 mt-1 border border-slate-200">
+                  <User className="w-4 h-4 text-slate-700" />
                 </div>
               )}
             </div>
@@ -522,12 +526,12 @@ export default function AIChatPage() {
 
         {isLoading && (
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#00e676]/10 flex items-center justify-center flex-shrink-0 border border-[#00e676]/20">
-              <Bot className="w-4 h-4 text-[#00e676]" />
+            <div className="w-8 h-8 rounded-lg bg-[#2563eb]/10 flex items-center justify-center flex-shrink-0 border border-[#2563eb]/20">
+              <Bot className="w-4 h-4 text-[#2563eb]" />
             </div>
-            <div className="bg-[#0f1729] border border-white/5 rounded-xl px-4 py-3 shadow-md">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 shadow-md">
               <div className="flex items-center gap-2 text-sm text-slate-400">
-                <Loader2 className="w-4 h-4 animate-spin text-[#00e676]" />
+                <Loader2 className="w-4 h-4 animate-spin text-[#2563eb]" />
                 Todaynews AI is processing...
               </div>
             </div>
@@ -547,9 +551,9 @@ export default function AIChatPage() {
                 <button
                   key={s.label}
                   onClick={() => sendMessage(s.label)}
-                  className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-300 hover:text-white hover:bg-white/10 transition text-left"
+                  className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition text-left"
                 >
-                  <Icon className="w-4 h-4 text-[#00e676] flex-shrink-0" />
+                  <Icon className="w-4 h-4 text-[#2563eb] flex-shrink-0" />
                   {s.label}
                 </button>
               );
@@ -559,7 +563,7 @@ export default function AIChatPage() {
       )}
 
       {/* Input Area */}
-      <div className="p-4 border-t border-white/5 bg-[#0a0f1c]/50 backdrop-blur-sm shrink-0">
+      <div className="p-4 border-t border-slate-200 bg-white/50 backdrop-blur-sm shrink-0">
         <div className="flex gap-3 items-end max-w-4xl mx-auto">
           <div className="flex-1 relative">
             <textarea
@@ -569,13 +573,13 @@ export default function AIChatPage() {
               onKeyDown={handleKeyDown}
               placeholder='Type a command... e.g. "Scrape Punch for politics today"'
               rows={1}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/40 resize-none text-sm"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40 resize-none text-sm"
             />
           </div>
           <button
             onClick={() => sendMessage()}
             disabled={!input.trim() || isLoading}
-            className="w-11 h-11 bg-[#00e676] hover:bg-[#00c853] text-[#060b18] rounded-xl flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-[#00e676]/20"
+            className="w-11 h-11 bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-xl flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-[#2563eb]/20"
           >
             <Send className="w-5 h-5" />
           </button>

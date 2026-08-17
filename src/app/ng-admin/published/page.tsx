@@ -18,6 +18,8 @@ import {
   X,
   Sparkles,
   Link as LinkIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -50,6 +52,9 @@ export default function PublishedPage() {
   const [articles, setArticles] = useState<PublishedArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "views" | "title">("newest");
+  const [pageSize, setPageSize] = useState<number | "all">(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editSummary, setEditSummary] = useState("");
@@ -64,13 +69,18 @@ export default function PublishedPage() {
     fetchPublished();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy, pageSize]);
+
   const fetchPublished = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/articles?status=PUBLISHED");
+      const res = await fetch(`/api/articles?status=PUBLISHED&limit=500`);
       if (res.ok) {
         const data = await res.json();
-        setArticles(data.articles || data);
+        const rawList: PublishedArticle[] = data.articles || data;
+        setArticles(rawList);
       }
     } catch (err) {
       console.error("Failed to fetch published articles:", err);
@@ -162,29 +172,77 @@ export default function PublishedPage() {
     }
   };
 
-  const filtered = articles.filter(
-    (a) =>
-      a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filtered = articles
+    .filter(
+      (a) =>
+        a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        a.category.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy === "newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (sortBy === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (sortBy === "views") return b.views - a.views;
+      if (sortBy === "title") return a.title.localeCompare(b.title);
+      return 0;
+    });
+
+  // Pagination calculation
+  const numericPageSize = pageSize === "all" ? Math.max(1, filtered.length) : Number(pageSize);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / numericPageSize));
+  const validCurrentPage = Math.min(currentPage, totalPages);
+
+  const startIndex = filtered.length === 0 ? 0 : (validCurrentPage - 1) * numericPageSize;
+  const endIndex = Math.min(startIndex + numericPageSize, filtered.length);
+  const pagedArticles = filtered.slice(startIndex, endIndex);
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Globe className="w-6 h-6 text-[#00e676]" />
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Globe className="w-6 h-6 text-[#2563eb]" />
             Published Articles
             {articles.length > 0 && (
-              <span className="ml-2 px-2.5 py-0.5 bg-[#00e676]/10 text-[#00e676] text-sm font-bold rounded-full">
-                {articles.length}
+              <span className="ml-2 px-2.5 py-0.5 bg-[#2563eb]/10 text-[#2563eb] text-sm font-bold rounded-full">
+                {filtered.length} Total
               </span>
             )}
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Live articles currently visible to visitors on Todaynews.ng</p>
+          <p className="text-slate-400 text-sm mt-1">Live articles visible on Todaynews.ng (Sorted by Date Newest First)</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Sort Selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-medium">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={(e: any) => setSortBy(e.target.value)}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 cursor-pointer"
+            >
+              <option value="newest" className="bg-slate-50 text-slate-900">📅 Newest First (Date)</option>
+              <option value="oldest" className="bg-slate-50 text-slate-900">⏳ Oldest First (Date)</option>
+              <option value="views" className="bg-slate-50 text-slate-900">🔥 Most Views</option>
+              <option value="title" className="bg-slate-50 text-slate-900">🔤 Headline (A-Z)</option>
+            </select>
+          </div>
+
+          {/* Page Size Selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-medium">Per Page:</span>
+            <select
+              value={pageSize}
+              onChange={(e: any) => setPageSize(e.target.value === "all" ? "all" : Number(e.target.value))}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 cursor-pointer"
+            >
+              <option value={10} className="bg-slate-50 text-slate-900">10 per page</option>
+              <option value={25} className="bg-slate-50 text-slate-900">25 per page</option>
+              <option value={50} className="bg-slate-50 text-slate-900">50 per page</option>
+              <option value={100} className="bg-slate-50 text-slate-900">100 per page</option>
+              <option value="all" className="bg-slate-50 text-slate-900">See All ({articles.length})</option>
+            </select>
+          </div>
+
           {articles.length > 0 && (
             <button
               onClick={deleteAllArticles}
@@ -200,7 +258,7 @@ export default function PublishedPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search live articles..."
-              className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 w-64"
+              className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 w-52 sm:w-64"
             />
           </div>
         </div>
@@ -208,7 +266,7 @@ export default function PublishedPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-[#00e676]" />
+          <Loader2 className="w-6 h-6 animate-spin text-[#2563eb]" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
@@ -217,16 +275,16 @@ export default function PublishedPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((article) => (
+          {pagedArticles.map((article) => (
             <div
               key={article.id}
-              className="bg-[#0f1729]/80 border border-white/5 rounded-xl p-5 hover:border-white/10 transition-all"
+              className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 hover:border-slate-200 transition-all"
             >
               <div className="flex gap-4">
                 {/* Thumbnail with direct Change Image trigger */}
                 <div
                   onClick={() => openImageModal(article)}
-                  className="group relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer border border-white/10 bg-white/5"
+                  className="group relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer border border-slate-200 bg-slate-50"
                   title="Click to Change Featured Image"
                 >
                   {article.imageUrl ? (
@@ -236,8 +294,8 @@ export default function PublishedPage() {
                       <ImageIcon className="w-8 h-8 text-slate-600" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition gap-1 text-[10px] text-white font-bold">
-                    <Camera className="w-4 h-4 text-[#00e676]" />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition gap-1 text-[10px] text-slate-900 font-bold">
+                    <Camera className="w-4 h-4 text-[#2563eb]" />
                     <span>Change</span>
                   </div>
                 </div>
@@ -249,47 +307,47 @@ export default function PublishedPage() {
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
                         placeholder="Article Headline"
-                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00e676]/30"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                       />
                       <textarea
                         value={editSummary}
                         onChange={(e) => setEditSummary(e.target.value)}
                         placeholder="Article Summary"
                         rows={2}
-                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 resize-none"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 resize-none"
                       />
                       <div className="flex items-center gap-2">
                         <input
                           value={editImageUrl}
                           onChange={(e) => setEditImageUrl(e.target.value)}
                           placeholder="Featured Image URL (https://...)"
-                          className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#00e676]/30 font-mono"
+                          className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 font-mono"
                         />
                         <button
                           type="button"
                           onClick={() => openImageModal(article)}
-                          className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-slate-200 text-xs rounded-lg flex items-center gap-1 font-medium transition"
+                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs rounded-lg flex items-center gap-1 font-medium transition"
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-[#00e676]" /> Preset Library
+                          <Sparkles className="w-3.5 h-3.5 text-[#2563eb]" /> Preset Library
                         </button>
                       </div>
                       <div className="flex gap-2 pt-1">
-                        <button onClick={() => saveEdit(article.id)} className="px-3 py-1.5 bg-[#00e676] text-black font-bold text-xs rounded-md hover:bg-[#00e676]/90 transition">
+                        <button onClick={() => saveEdit(article.id)} className="px-3 py-1.5 bg-[#2563eb] text-white font-bold text-xs rounded-md hover:bg-[#2563eb]/90 transition">
                           Save Changes
                         </button>
-                        <button onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-white/5 text-slate-400 text-xs rounded-md hover:bg-white/10 transition">
+                        <button onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-slate-50 text-slate-400 text-xs rounded-md hover:bg-slate-100 transition">
                           Cancel
                         </button>
                       </div>
                     </div>
                   ) : (
                     <>
-                      <h3 className="text-base font-semibold text-white leading-tight flex items-center gap-2">
+                      <h3 className="text-base font-semibold text-slate-900 leading-tight flex items-center gap-2">
                         {article.title}
                         <Link
                           href={`/article/${article.slug}`}
                           target="_blank"
-                          className="text-slate-500 hover:text-[#00e676] transition"
+                          className="text-slate-500 hover:text-[#2563eb] transition"
                           title="View Live Page"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -300,11 +358,11 @@ export default function PublishedPage() {
                   )}
 
                   <div className="flex items-center gap-4 mt-2">
-                    <span className="text-[10px] px-2 py-0.5 bg-[#00e676]/10 text-[#00e676] rounded-full font-medium">
+                    <span className="text-[10px] px-2 py-0.5 bg-[#2563eb]/10 text-[#2563eb] rounded-full font-medium">
                       <Tag className="w-3 h-3 inline mr-1" />{article.category}
                     </span>
                     <span className="text-[10px] text-slate-400 flex items-center gap-1 font-semibold">
-                      <Eye className="w-3 h-3 text-[#00e676]" /> {article.views.toLocaleString()} views
+                      <Eye className="w-3 h-3 text-[#2563eb]" /> {article.views.toLocaleString()} views
                     </span>
                     <span className="text-[10px] text-slate-500 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
@@ -315,11 +373,11 @@ export default function PublishedPage() {
               </div>
 
               {editingId !== article.id && (
-                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/5 items-center">
-                  <button onClick={() => startEdit(article)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-300 text-xs font-medium rounded-md hover:bg-white/10 transition">
+                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200 items-center">
+                  <button onClick={() => startEdit(article)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-700 text-xs font-medium rounded-md hover:bg-slate-100 transition">
                     <FileEdit className="w-3.5 h-3.5" /> Quick Edit
                   </button>
-                  <button onClick={() => openImageModal(article)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00e676]/10 text-[#00e676] text-xs font-bold rounded-md hover:bg-[#00e676]/20 transition border border-[#00e676]/20">
+                  <button onClick={() => openImageModal(article)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb]/10 text-[#2563eb] text-xs font-bold rounded-md hover:bg-[#2563eb]/20 transition border border-[#2563eb]/20">
                     <Camera className="w-3.5 h-3.5" /> Change Image
                   </button>
                   <Link href={`/ng-admin/editor?id=${article.id}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-md hover:bg-blue-500/20 transition">
@@ -335,33 +393,78 @@ export default function PublishedPage() {
               )}
             </div>
           ))}
+
+          {/* Pagination Controls */}
+          {pageSize !== "all" && totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-200 text-xs text-slate-400">
+              <div>
+                Showing <span className="text-slate-900 font-bold">{startIndex + 1}</span> to{" "}
+                <span className="text-slate-900 font-bold">{endIndex}</span> of{" "}
+                <span className="text-slate-900 font-bold">{filtered.length}</span> published articles
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={validCurrentPage === 1}
+                  className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 text-slate-900 transition"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentPage(p)}
+                      className={`w-7 h-7 rounded-lg text-xs font-bold transition ${
+                        validCurrentPage === p
+                          ? "bg-[#2563eb] text-white shadow-lg shadow-[#2563eb]/20"
+                          : "bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={validCurrentPage >= totalPages}
+                  className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-medium hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 text-slate-900 transition"
+                >
+                  Next <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Modern Image Picker Modal */}
       {imageModalArticle && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0b1329] border border-white/10 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#00e676]/10 text-[#00e676] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-[#2563eb]/10 text-[#2563eb] flex items-center justify-center">
                   <Camera className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Change Featured Image</h3>
+                  <h3 className="text-base font-bold text-slate-900">Change Featured Image</h3>
                   <p className="text-xs text-slate-400 line-clamp-1">{imageModalArticle.title}</p>
                 </div>
               </div>
               <button
                 onClick={() => setImageModalArticle(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Live Image Preview */}
-            <div className="w-full h-44 rounded-xl overflow-hidden bg-black/50 border border-white/10 relative">
+            <div className="w-full h-44 rounded-xl overflow-hidden bg-black/50 border border-slate-200 relative">
               {newImageUrl ? (
                 <img
                   src={newImageUrl}
@@ -381,8 +484,8 @@ export default function PublishedPage() {
 
             {/* Custom URL Input */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <LinkIcon className="w-3.5 h-3.5 text-[#00e676]" />
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <LinkIcon className="w-3.5 h-3.5 text-[#2563eb]" />
                 Image URL (Direct link)
               </label>
               <input
@@ -390,14 +493,14 @@ export default function PublishedPage() {
                 value={newImageUrl}
                 onChange={(e) => setNewImageUrl(e.target.value)}
                 placeholder="https://images.unsplash.com/... or any web image link"
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:border-[#00e676]/50 font-mono"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs placeholder-slate-500 focus:outline-none focus:border-[#2563eb]/50 font-mono"
               />
             </div>
 
             {/* Preset Library */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#00e676]" />
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#2563eb]" />
                 Curated High-Res Nigerian Editorial Presets
               </label>
               <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
@@ -408,8 +511,8 @@ export default function PublishedPage() {
                     onClick={() => setNewImageUrl(preset.url)}
                     className={`flex items-center gap-2 p-1.5 rounded-lg border text-left text-[11px] transition ${
                       newImageUrl === preset.url
-                        ? "bg-[#00e676]/15 border-[#00e676] text-white font-semibold"
-                        : "bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+                        ? "bg-[#2563eb]/15 border-[#2563eb] text-slate-900 font-semibold"
+                        : "bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-900 hover:bg-slate-100"
                     }`}
                   >
                     <img src={preset.url} alt="" className="w-7 h-7 rounded object-cover flex-shrink-0" />
@@ -425,7 +528,7 @@ export default function PublishedPage() {
                 type="button"
                 onClick={saveNewImage}
                 disabled={savingImage || !newImageUrl.trim()}
-                className="flex-1 py-2.5 bg-[#00e676] text-black font-bold text-xs rounded-xl hover:bg-[#00e676]/90 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="flex-1 py-2.5 bg-[#2563eb] text-white font-bold text-xs rounded-xl hover:bg-[#2563eb]/90 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {savingImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                 Apply & Save Image
@@ -433,7 +536,7 @@ export default function PublishedPage() {
               <button
                 type="button"
                 onClick={() => setImageModalArticle(null)}
-                className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 text-xs rounded-xl transition"
+                className="px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs rounded-xl transition"
               >
                 Cancel
               </button>

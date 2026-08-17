@@ -17,7 +17,7 @@ export interface ChatMessageMemory {
     sourceUrl?: string;
     category: string;
     imageUrl?: string;
-    status: "new" | "sent_to_inbox" | "in_draft" | "paraphrasing";
+    status: StoryCardStatus;
   }[];
 }
 
@@ -28,7 +28,7 @@ export interface AiChatSessionMemory {
   updatedAt: string;
 }
 
-type StoryCardStatus = "new" | "sent_to_inbox" | "in_draft" | "paraphrasing";
+type StoryCardStatus = "new" | "sent_to_inbox" | "in_draft" | "paraphrasing" | "published";
 
 // In serverless environment (Vercel), use /tmp directory which is guaranteed to be writable
 const MEMORY_FILE_PATH =
@@ -241,7 +241,7 @@ export async function appendPersistentChatMessage(
 
 export function updateMemoryCardStatus(
   cardId: string,
-  newStatus: "sent_to_inbox" | "in_draft"
+  newStatus: Exclude<StoryCardStatus, "new" | "paraphrasing">
 ): boolean {
   try {
     const history = getChatMemory();

@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { themeConfig } from "@/lib/theme";
-import AdminSidebarModern from "@/components/admin/AdminSidebarModern";
-import { Menu } from "lucide-react";
 
 interface AdminLayoutModernProps {
   children: React.ReactNode;
@@ -12,57 +10,28 @@ interface AdminLayoutModernProps {
   subtitle?: string;
 }
 
+/**
+ * Lightweight page-header wrapper for /ng-admin pages. The sidebar and mobile
+ * drawer are already provided globally by AdminLayoutGuard — this component
+ * only adds an optional sticky title/subtitle bar above the page content.
+ */
 export default function AdminLayoutModern({
   children,
   title,
   subtitle,
 }: AdminLayoutModernProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { theme } = useTheme();
   const colors = themeConfig[theme];
 
   return (
-    <div className={`min-h-screen ${colors.bg}`}>
-      <AdminSidebarModern
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-
-      {/* Main Content */}
-      <div className="lg:ml-64">
-        {/* Top Bar */}
-        <div
-          className={`sticky top-0 z-20 ${colors.bgSecondary} border-b ${colors.border} backdrop-blur-sm`}
-        >
-          <div className="flex items-center justify-between h-16 px-6">
-            <div className="flex items-center gap-4 flex-1">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className={`lg:hidden p-2 rounded-lg ${colors.hover}`}
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-              {title && (
-                <div>
-                  <h2 className={`text-lg font-semibold ${colors.text}`}>
-                    {title}
-                  </h2>
-                  {subtitle && (
-                    <p className={`text-sm ${colors.textSecondary}`}>
-                      {subtitle}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+    <div>
+      {title && (
+        <div className={`-mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-6 px-4 sm:px-6 py-4 border-b ${colors.border} ${colors.bgSecondary}`}>
+          <h2 className={`text-lg font-semibold ${colors.text}`}>{title}</h2>
+          {subtitle && <p className={`text-sm ${colors.textSecondary}`}>{subtitle}</p>}
         </div>
-
-        {/* Page Content */}
-        <main className={`p-6 ${colors.text}`}>
-          <div className="mx-auto">{children}</div>
-        </main>
-      </div>
+      )}
+      <div className={colors.text}>{children}</div>
     </div>
   );
 }

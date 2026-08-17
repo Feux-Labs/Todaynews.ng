@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -113,6 +114,7 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
             )}
           </button>
           <button
+            onClick={() => signOut({ callbackUrl: "/ng-admin/login" })}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors text-red-600 hover:bg-red-50 dark:hover:bg-red-950`}
           >
             <LogOut className="w-5 h-5" />
