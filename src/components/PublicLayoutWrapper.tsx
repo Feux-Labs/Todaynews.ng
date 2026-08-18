@@ -40,6 +40,9 @@ export default function PublicLayoutWrapper({
       {/* Global Script hooks for Adsterra Social Bar */}
       <AdSlot id="adsterra-social-bar" type="social-bar" />
 
+      {/* Adsterra Popunder — one per page per Adsterra's own guidance */}
+      <AdSlot id="adsterra-popunder" type="popunder" />
+
       {/* Bottom index directory footer */}
       <Footer />
     </>

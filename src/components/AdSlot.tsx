@@ -33,14 +33,14 @@ export default function AdSlot({
   const containerRef = useRef<HTMLDivElement>(null);
   const injectedRef = useRef(false);
   const [adLoaded, setAdLoaded] = useState(false);
-  // Tri-state: null = still waiting, true = a real ad rendered, false = no
-  // fill / blocked — collapse the slot so a dead ad network never leaves a
-  // visible gap in the layout.
-  const [adFilled, setAdFilled] = useState<boolean | null>(null);
+  // Stays false — and the slot renders nothing — until the ad network has
+  // actually inserted a real ad (an iframe). The container's own min-height
+  // means "has children" is NOT proof of a real ad (the config/invoke
+  // <script> tags themselves count as children), so only an actual iframe
+  // counts as a fill. If it never fills, the slot never shows and never
+  // leaves a gap in the layout.
+  const [adFilled, setAdFilled] = useState(false);
 
-  // Watch the container for the ad network actually inserting content
-  // (iframe/ins/div with real height). If nothing shows up within a few
-  // seconds — ad blocked, no fill, dead network — collapse the slot.
   useEffect(() => {
     if (type !== "banner" && type !== "banner-top" && type !== "in-article-mid" && type !== "native" && type !== "sidebar-native") {
       return;
@@ -48,29 +48,15 @@ export default function AdSlot({
     const el = containerRef.current;
     if (!el) return;
 
-    let settled = false;
-    const markFilled = () => {
-      if (settled) return;
-      settled = true;
-      setAdFilled(true);
+    const checkFilled = () => {
+      if (el.querySelector("iframe")) setAdFilled(true);
     };
 
-    const observer = new MutationObserver(() => {
-      if (el.querySelector("iframe, ins") || el.scrollHeight > 4) markFilled();
-    });
+    const observer = new MutationObserver(checkFilled);
     observer.observe(el, { childList: true, subtree: true });
+    checkFilled();
 
-    const timeout = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        setAdFilled(el.scrollHeight > 4 && !!el.querySelector("iframe, ins"));
-      }
-    }, 4000);
-
-    return () => {
-      observer.disconnect();
-      clearTimeout(timeout);
-    };
+    return () => observer.disconnect();
   }, [type]);
 
   // ── Banner (iframe) injection — guaranteed config-before-invoke order ────────
@@ -184,33 +170,47 @@ export default function AdSlot({
     );
   }
 
-  // ── Popunder / In-page Push — headless ─────────────────────────────────────
-  if (type === "popunder" || type === "in-page-push") {
+  // ── Popunder — headless, one per page per Adsterra's own guidance ──────────
+  if (type === "popunder") {
+    return (
+      <Script
+        id="adsterra-popunder"
+        src="https://wailsilence.com/86/84/34/868434848e287f3925fb66a84554c4a8.js"
+        strategy="lazyOnload"
+      />
+    );
+  }
+
+  // ── In-page Push — headless, not yet configured ─────────────────────────────
+  if (type === "in-page-push") {
     return <div className="hidden" />;
   }
 
   // ── Rendered container for Banner & Native ─────────────────────────────────
+  // The container (with the ref the injection effects target) must always be
+  // in the DOM, but stays visually zero-footprint — no label, no border, no
+  // min-height — until an iframe actually appears inside it. That way a dead
+  // ad network never leaves a gap, but the slot is still there to receive
+  // the ad if/when the network fills it.
   const isTopBanner = type === "banner-top";
 
-  // No fill / blocked — collapse to nothing so a dead ad network never
-  // leaves visible whitespace in the layout.
-  if (adFilled === false) {
-    return <div ref={containerRef} className="hidden" />;
-  }
-
   return (
-    <div className={`w-full my-1 flex flex-col items-center justify-center overflow-hidden ${className}`}>
-      <span className="text-[9px] uppercase font-bold tracking-widest text-muted/60 mb-0.5 font-mono">
-        Sponsored Advertisement
-      </span>
+    <div className={`w-full ${adFilled ? "my-1 flex flex-col items-center justify-center overflow-hidden" : "h-0 overflow-hidden"} ${className}`}>
+      {adFilled && (
+        <span className="text-[9px] uppercase font-bold tracking-widest text-muted/60 mb-0.5 font-mono">
+          Sponsored Advertisement
+        </span>
+      )}
       <div
         id={id}
         ref={containerRef}
-        className={`w-full flex items-center justify-center overflow-hidden rounded-lg bg-paper border border-ink/5 shadow-sm transition-all ${
-          isTopBanner
-            ? "min-h-[90px] max-w-[728px] mx-auto p-1"
-            : "min-h-[250px] min-w-[300px]"
-        }`}
+        className={
+          adFilled
+            ? `w-full flex items-center justify-center overflow-hidden rounded-lg bg-paper border border-ink/5 shadow-sm transition-all ${
+                isTopBanner ? "min-h-[90px] max-w-[728px] mx-auto p-1" : "min-h-[250px] min-w-[300px]"
+              }`
+            : "h-0 w-0 overflow-hidden"
+        }
       />
     </div>
   );
