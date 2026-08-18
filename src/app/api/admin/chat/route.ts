@@ -447,6 +447,12 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
         scraped = await scrapeRSSFeeds(6);
       }
 
+      // Resolve accurate, correctly-credited images up front so the preview
+      // cards never show a mismatched/unrelated thumbnail.
+      const resolvedImages = await Promise.all(
+        scraped.map((s) => resolveStoryImage(s.imageUrl, s.title, s.category, s.imageCredit))
+      );
+
       storyCards = scraped.map((s, idx) => ({
         id: `scraped-${Date.now()}-${idx}`,
         title: s.title,
@@ -455,8 +461,8 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
         sourceName: s.sourceName,
         sourceUrl: s.sourceUrl,
         category: s.category,
-        imageUrl: s.imageUrl,
-        imageCredit: s.imageCredit,
+        imageUrl: resolvedImages[idx].url,
+        imageCredit: resolvedImages[idx].credit,
         status: "new" as const,
       }));
     }

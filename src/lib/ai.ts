@@ -358,6 +358,38 @@ const TOPIC_MAP: { keywords: string[]; query: string; label: string }[] = [
   { keywords: ["tech", "technology", "startup", "ai", "fintech", "internet"], query: "Nigeria technology", label: "Technology" },
 ];
 
+/** Word-boundary substring match — prevents false positives like "airtel" matching the "ai" keyword. */
+function hasWord(text: string, keyword: string): boolean {
+  if (keyword.includes(" ")) return text.includes(keyword); // multi-word phrases are safe as substrings
+  return new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text);
+}
+
+// Command/filler phrases stripped off the front of a message to recover the
+// user's actual subject — e.g. "pick up the news about X" -> "X".
+const QUERY_STRIP_PATTERNS = [
+  /^(please\s+)?(can you\s+|could you\s+)?(pick up|search for|search|find|fetch|get me|get|scrape|look for|show me|bring me|bring|give me|pull up|pull)\s+/i,
+  /^(the\s+)?(latest\s+|top\s+|trending\s+|breaking\s+)?news\s+(about|on|regarding|concerning)\s+/i,
+  /^(any\s+)?(updates?|stories|headlines|reports?)\s+(about|on|regarding)\s+/i,
+];
+
+function extractSearchSubject(rawMessage: string): string {
+  let subject = rawMessage.trim();
+  let stripped = true;
+  while (stripped) {
+    stripped = false;
+    for (const pattern of QUERY_STRIP_PATTERNS) {
+      const next = subject.replace(pattern, "");
+      if (next !== subject) {
+        subject = next.trim();
+        stripped = true;
+      }
+    }
+  }
+  // Trim trailing filler like "etc", "please", punctuation.
+  subject = subject.replace(/\s*(,?\s*etc\.?|please)\s*$/i, "").replace(/[.?!]+$/, "").trim();
+  return subject;
+}
+
 export function detectNewsSearchIntent(userMessage: string): { isSearch: boolean; query?: string; topicLabel?: string } {
   const text = userMessage.toLowerCase().trim();
 
@@ -390,19 +422,37 @@ export function detectNewsSearchIntent(userMessage: string): { isSearch: boolean
     "find news",
   ];
 
-  if (explicitTriggers.some((t) => text.includes(t))) {
-    return { isSearch: true, topicLabel: "Top Trending Nigerian News" };
-  }
-
   const searchKeywords = [
     "search", "find", "fetch", "get", "scrape", "look for", "show me", "give me",
     "bring", "latest", "trending", "today", "update", "pull", "news", "stories",
     "headlines", "report", "reports"
   ];
-  const hasSearchIntent = searchKeywords.some((k) => text.includes(k));
+  const hasSearchIntent = searchKeywords.some((k) => hasWord(text, k));
 
-  const matched = TOPIC_MAP.filter((t) => t.keywords.some((kw) => text.includes(kw)));
-  if (matched.length > 0 && hasSearchIntent) {
+  if (!hasSearchIntent && !explicitTriggers.some((t) => text.includes(t))) {
+    return { isSearch: false };
+  }
+
+  // The user's own words always win over a generic topic bucket — extract
+  // their actual subject first, and only fall back to a canned topic query
+  // when there's no real subject left (e.g. a bare "get me top news").
+  const subject = extractSearchSubject(userMessage);
+  const isGenericSubject =
+    subject.length < 3 ||
+    explicitTriggers.some((t) => subject.toLowerCase() === t) ||
+    /^(top|trending|breaking|latest)?\s*(nigeria(n)?\s+)?news$/i.test(subject);
+
+  const matched = TOPIC_MAP.filter((t) => t.keywords.some((kw) => hasWord(text, kw)));
+
+  if (!isGenericSubject) {
+    return {
+      isSearch: true,
+      query: subject,
+      topicLabel: matched.length > 0 ? matched.map((m) => m.label).join(", ") : subject,
+    };
+  }
+
+  if (matched.length > 0) {
     return {
       isSearch: true,
       query: matched[0].query,
@@ -410,8 +460,8 @@ export function detectNewsSearchIntent(userMessage: string): { isSearch: boolean
     };
   }
 
-  if (hasSearchIntent && (text.includes("news") || text.includes("headline") || text.includes("headlines") || text.includes("story") || text.includes("stories") || text.includes("article"))) {
-    return { isSearch: true, topicLabel: "Latest Verified News" };
+  if (explicitTriggers.some((t) => text.includes(t)) || hasSearchIntent) {
+    return { isSearch: true, topicLabel: "Top Trending Nigerian News" };
   }
 
   return { isSearch: false };
@@ -431,9 +481,9 @@ export async function chatWithAi(
   const newsCheck = detectNewsSearchIntent(userMessage);
   if (newsCheck.isSearch) {
     const introLines = [
-      `Understood. I've activated the Todaynews.ng intelligence scanner across Punch NG, Daily Trust, Vanguard, and Premium Times for **${newsCheck.topicLabel || "Top Stories"}**.\n\nHere are the latest verified reports ready for your **Inbox**, **Drafts**, or instant **AI Paraphrasing**:`,
-      `Scanning live Nigerian news channels for **${newsCheck.topicLabel || "Breaking Stories"}**. Here is what I found across verified sources — choose an action on any card below to send to inbox, draft, or paraphrase:`,
-      `On it. Cross-referencing active feeds from Punch NG, Daily Trust, and Vanguard for **${newsCheck.topicLabel || "Top Trending Stories"}**:\n\nReview the story cards below:`,
+      `Understood. I've scanned Todaynews.ng's full source list plus a live web search for **${newsCheck.topicLabel || "Top Stories"}**.\n\nHere are the latest verified reports ready for your **Inbox**, **Drafts**, or instant **AI Paraphrasing**:`,
+      `Scanning our full RSS network and the wider web for **${newsCheck.topicLabel || "Breaking Stories"}**. Here is what I found — choose an action on any card below to send to inbox, draft, or paraphrase:`,
+      `On it. Cross-referencing every configured source plus a live web search for **${newsCheck.topicLabel || "Top Trending Stories"}**:\n\nReview the story cards below:`,
     ];
     const intro = introLines[Math.floor(Math.random() * introLines.length)];
 

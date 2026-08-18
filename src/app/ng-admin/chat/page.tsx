@@ -424,6 +424,11 @@ export default function AIChatPage() {
                                 <span className="text-[9px] px-1.5 py-0.5 bg-[#2563eb]/10 text-[#2563eb] rounded font-mono">
                                   {card.category}
                                 </span>
+                                {card.imageCredit && (
+                                  <span className="text-[9px] text-slate-400 dark:text-slate-500 italic">
+                                    Photo: {card.imageCredit}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
