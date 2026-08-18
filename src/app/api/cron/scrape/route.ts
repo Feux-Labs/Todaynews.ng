@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scrapeRSSFeeds, scrapeScholarships, scrapeJapa, scrapeMakeMoneyOnline, enrichAndRankStories, resolveStoryImage, stripCompetitorLinksAndBoilerplate, isDuplicateStory, getRecentArticleTitles } from "@/lib/scraper";
+import { scrapeRSSFeeds, scrapeScholarships, scrapeJapa, scrapeMakeMoneyOnline, enrichAndRankStories, stripCompetitorLinksAndBoilerplate, isDuplicateStory, getRecentArticleTitles } from "@/lib/scraper";
 import { paraphraseNews, localProceduralRewriter, cleanAndFormatTitle } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { sendNewStoryAlert } from "@/lib/mailer";
@@ -144,7 +144,10 @@ export async function GET(req: Request) {
         console.log(`[Cron Scraper] Gemini failed for "${cleanTitle}", using local rewriter.`, paraErr);
         paraphrased = localProceduralRewriter(cleanContent, cleanTitle, story.category);
       }
-      const finalImageUrl = await resolveStoryImage(story.imageUrl, paraphrased.title, paraphrased.category);
+      // story.imageUrl/imageCredit were already fully resolved (source → Wikipedia
+      // → stock, with attribution) by enrichAndRankStories above.
+      const finalImageUrl = story.imageUrl!;
+      const finalImageCredit = story.imageCredit || "Source publisher";
 
       const slug = paraphrased.title
         .toLowerCase()
@@ -167,6 +170,7 @@ export async function GET(req: Request) {
             sourceName: "Todaynews AI",
             sourceUrl: story.sourceUrl,
             imageUrl: finalImageUrl,
+            imageCredit: finalImageCredit,
             imageAlt: paraphrased.imageAlt || paraphrased.title,
             author: settings.defaultAuthorName,
             pages: {
@@ -189,6 +193,7 @@ export async function GET(req: Request) {
           sourceName: "Todaynews AI",
           sourceUrl: story.sourceUrl,
           imageUrl: finalImageUrl,
+          imageCredit: finalImageCredit,
           imageAlt: paraphrased.imageAlt || paraphrased.title,
           author: settings.defaultAuthorName,
           readTimeMinutes: 3,

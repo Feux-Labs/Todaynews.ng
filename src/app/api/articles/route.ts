@@ -117,10 +117,11 @@ export async function POST(req: Request) {
 
     const uniqueSlug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
 
-    const finalImageUrl = await resolveStoryImage(
+    const resolvedImage = await resolveStoryImage(
       imageUrl,
       title,
-      category
+      category,
+      sourceName
     );
 
     const requestedStatus = (status || "DRAFT").toString().toUpperCase();
@@ -143,7 +144,8 @@ export async function POST(req: Request) {
             category: category.toUpperCase() as any,
             status: resolvedStatus as any,
             scheduledAt: resolvedScheduledAt,
-            imageUrl: finalImageUrl,
+            imageUrl: resolvedImage.url,
+            imageCredit: resolvedImage.credit,
             sourceName: sourceName || "Manual Editorial",
             author: resolvedAuthor,
             readTimeMinutes: resolvedReadTime,
@@ -169,7 +171,8 @@ export async function POST(req: Request) {
       summary,
       category: category.toUpperCase() as any,
       status: resolvedStatus as any,
-      imageUrl: finalImageUrl,
+      imageUrl: resolvedImage.url,
+      imageCredit: resolvedImage.credit,
       sourceName: sourceName || "Manual Editorial",
       author: resolvedAuthor,
       readTimeMinutes: resolvedReadTime,

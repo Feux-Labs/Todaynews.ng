@@ -27,6 +27,7 @@ export interface ArticleData {
   sourceName?: string;
   imageUrl?: string;
   imageAlt?: string;
+  imageCredit?: string;
   keywords?: string[];
   author: string;
   readTimeMinutes: number;

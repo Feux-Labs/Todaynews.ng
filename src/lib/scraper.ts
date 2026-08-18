@@ -9,6 +9,9 @@ export interface ScrapedStory {
   sourceName: string;
   category: string;
   imageUrl?: string;
+  /** Real outlet name for image attribution — kept separate from the
+   * (deliberately Todaynews-branded) sourceName field above. */
+  imageCredit?: string;
   pubDate?: string;
 }
 
@@ -561,7 +564,12 @@ export async function scrapeRSSFeeds(
             sourceUrl: item.link,
             sourceName: "Todaynews AI",
             category,
-            imageUrl: imageUrl || FALLBACK_IMAGE_BY_CATEGORY[category] || FALLBACK_IMAGE_BY_CATEGORY.DEFAULT,
+            // Leave unresolved if the source had no image — resolveStoryImage
+            // handles the full source → Wikipedia → stock priority chain later,
+            // with correct attribution. Falling back to stock here would get
+            // mislabeled as a "sourced" image downstream.
+            imageUrl,
+            imageCredit: imageUrl ? source.name : undefined,
             pubDate: pubDateStr || new Date().toISOString(),
           });
         }
@@ -592,13 +600,14 @@ export async function scrapeRSSFeeds(
 
   const selected = unique.slice(0, limit);
 
-  // Guarantee every story has a valid high-res image
+  // Guarantee every story has a valid high-res image, correctly attributed
   const resolvedStories = await Promise.all(
     selected.map(async (story) => {
-      const resolvedImg = await resolveStoryImage(story.imageUrl, story.title, story.category);
+      const resolved = await resolveStoryImage(story.imageUrl, story.title, story.category, story.imageCredit);
       return {
         ...story,
-        imageUrl: resolvedImg,
+        imageUrl: resolved.url,
+        imageCredit: resolved.credit,
       };
     })
   );
@@ -673,6 +682,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedStory | null> {
       sourceName: "Todaynews AI",
       category: detectCategory(title, content),
       imageUrl,
+      imageCredit: imageUrl ? sourceName : undefined,
     };
   } catch (err) {
     console.error("[Scraper] URL scrape failed:", err);
@@ -785,14 +795,15 @@ export async function scrapeMakeMoneyOnline(limit: number = 5): Promise<ScrapedS
  * Ensures every story has an image and is ranked by importance.
  */
 export async function enrichAndRankStories(stories: ScrapedStory[]): Promise<ScrapedStory[]> {
-  // Add missing images
+  // Add missing images, correctly attributed
   const enrichedStories = await Promise.all(
     stories.map(async (story) => {
       if (!story.imageUrl) {
-        const resolvedImage = await resolveStoryImage(story.imageUrl, story.title, story.category);
+        const resolved = await resolveStoryImage(story.imageUrl, story.title, story.category, story.imageCredit);
         return {
           ...story,
-          imageUrl: resolvedImage,
+          imageUrl: resolved.url,
+          imageCredit: resolved.credit,
         };
       }
       return story;

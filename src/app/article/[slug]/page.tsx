@@ -65,6 +65,7 @@ async function getArticle(slug: string): Promise<ArticleData | null> {
           status: "PUBLISHED",
           imageUrl: publishedArticle.imageUrl || undefined,
           imageAlt: publishedArticle.imageAlt || undefined,
+          imageCredit: (publishedArticle as any).imageCredit || undefined,
           author: publishedArticle.author,
           readTimeMinutes: publishedArticle.readTimeMinutes,
           views: publishedArticle.views + 1,
@@ -198,13 +199,20 @@ export default async function ArticlePage({ params, searchParams }: Readonly<Art
 
           {/* Article Image Banner */}
           {article.imageUrl && currentPage === 1 && (
-            <div className="relative aspect-video w-full overflow-hidden rounded border border-ink/5 my-6">
-              <img
-                src={article.imageUrl}
-                alt={(article as any).imageAlt || article.title}
-                className="object-cover w-full h-full"
-              />
-            </div>
+            <figure className="my-6">
+              <div className="relative aspect-video w-full overflow-hidden rounded border border-ink/5">
+                <img
+                  src={article.imageUrl}
+                  alt={(article as any).imageAlt || article.title}
+                  className="object-cover w-full h-full"
+                />
+              </div>
+              {(article as any).imageCredit && (
+                <figcaption className="text-[10px] text-muted/70 mt-1 text-right italic">
+                  Photo credit: {(article as any).imageCredit}
+                </figcaption>
+              )}
+            </figure>
           )}
 
           {/* Headline page indicator */}

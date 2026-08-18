@@ -125,6 +125,7 @@ export async function POST(req: Request) {
       storySource,
       storySourceUrl,
       storyImageUrl,
+      storyImageCredit,
     } = body;
 
     // ── Handle Action Commands (Inbox, Drafts, Paraphrase updates) ────────────
@@ -180,10 +181,11 @@ export async function POST(req: Request) {
         let createdId = `art-${Math.random().toString(36).substring(2, 9)}`;
         const finalCategory = sanitizeCategory(article.category);
 
-        const finalImageUrl = await resolveStoryImage(
+        const resolvedImage = await resolveStoryImage(
           storyImageUrl,
           safeTitle,
-          finalCategory
+          finalCategory,
+          storyImageCredit
         );
 
         if (isDbConfigured()) {
@@ -197,7 +199,8 @@ export async function POST(req: Request) {
                 status: targetStatus as any,
                 sourceUrl: storySourceUrl || undefined,
                 sourceName: "Todaynews AI",
-                imageUrl: finalImageUrl,
+                imageUrl: resolvedImage.url,
+                imageCredit: resolvedImage.credit,
                 imageAlt: article.imageAlt || article.title || safeTitle,
                 author: settings.defaultAuthorName || "Todaynews.ng Editorial",
                 pages: {
@@ -220,7 +223,8 @@ export async function POST(req: Request) {
               status: targetStatus as any,
               sourceUrl: storySourceUrl || undefined,
               sourceName: "Todaynews AI",
-              imageUrl: finalImageUrl,
+              imageUrl: resolvedImage.url,
+              imageCredit: resolvedImage.credit,
               imageAlt: article.imageAlt || article.title || safeTitle,
               author: settings.defaultAuthorName || "Todaynews.ng Editorial",
               readTimeMinutes: 3,
@@ -237,7 +241,8 @@ export async function POST(req: Request) {
             status: targetStatus as any,
             sourceUrl: storySourceUrl || undefined,
             sourceName: "Todaynews AI",
-            imageUrl: finalImageUrl,
+            imageUrl: resolvedImage.url,
+            imageCredit: resolvedImage.credit,
             imageAlt: article.imageAlt || article.title || safeTitle,
             author: settings.defaultAuthorName || "Todaynews.ng Editorial",
             readTimeMinutes: 3,
@@ -361,10 +366,11 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
 
         const replyMsg = `✨ **Article Paraphrased & Re-written Successfully!**\n\n${formattedMarkdown}`;
 
-        const paraphrasedImageUrl = await resolveStoryImage(
+        const paraphrasedImage = await resolveStoryImage(
           storyImageUrl,
           article.title || safeTitle,
-          finalCategory
+          finalCategory,
+          storyImageCredit
         );
 
         const paraphrasedCard = {
@@ -373,7 +379,8 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
           summary: article.summary || safeSummary,
           sourceName: "Todaynews AI",
           category: finalCategory,
-          imageUrl: paraphrasedImageUrl,
+          imageUrl: paraphrasedImage.url,
+          imageCredit: paraphrasedImage.credit,
           status: "new" as const,
         };
 
@@ -449,6 +456,7 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
         sourceUrl: s.sourceUrl,
         category: s.category,
         imageUrl: s.imageUrl,
+        imageCredit: s.imageCredit,
         status: "new" as const,
       }));
     }

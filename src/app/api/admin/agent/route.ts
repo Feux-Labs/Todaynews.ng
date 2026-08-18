@@ -40,7 +40,7 @@ export async function POST(req: Request) {
           rewritten = localProceduralRewriter(cleanContent, cleanTitle, finalCategory);
         }
 
-        const finalImage = await resolveStoryImage(imageUrl, rewritten.title, rewritten.category);
+        const resolvedImage = await resolveStoryImage(imageUrl, rewritten.title, rewritten.category);
         const slug = `${rewritten.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").substring(0, 60)}-${Date.now().toString(36)}`;
 
         let savedId = "";
@@ -53,7 +53,8 @@ export async function POST(req: Request) {
               category: rewritten.category as any,
               status: targetStatus as any,
               sourceName: "Todaynews AI",
-              imageUrl: finalImage,
+              imageUrl: resolvedImage.url,
+              imageCredit: resolvedImage.credit,
               author: settings.defaultAuthorName || "Todaynews.ng Editorial",
               pages: {
                 create: rewritten.pages.map((p: { pageNumber: number; title?: string | null; content: string }) => ({
@@ -73,7 +74,8 @@ export async function POST(req: Request) {
             category: rewritten.category as any,
             status: targetStatus as any,
             sourceName: "Todaynews AI",
-            imageUrl: finalImage,
+            imageUrl: resolvedImage.url,
+            imageCredit: resolvedImage.credit,
             author: settings.defaultAuthorName || "Todaynews.ng Editorial",
             readTimeMinutes: 3,
             pages: rewritten.pages,
@@ -107,7 +109,7 @@ export async function POST(req: Request) {
             rewritten = localProceduralRewriter(cleanContent, cleanTitle, story.category);
           }
 
-          const finalImage = await resolveStoryImage(story.imageUrl, rewritten.title, rewritten.category);
+          const resolvedImage = await resolveStoryImage(story.imageUrl, rewritten.title, rewritten.category, story.imageCredit);
           const slug = `${rewritten.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").substring(0, 60)}-${Date.now().toString(36)}`;
           const status = autoPublish ? "PUBLISHED" : "DRAFT";
 
@@ -121,7 +123,8 @@ export async function POST(req: Request) {
                 category: rewritten.category as any,
                 status: status as any,
                 sourceName: "Todaynews AI",
-                imageUrl: finalImage,
+                imageUrl: resolvedImage.url,
+                imageCredit: resolvedImage.credit,
                 author: settings.defaultAuthorName || "Todaynews.ng Editorial",
                 pages: {
                   create: rewritten.pages.map((p: { pageNumber: number; title?: string | null; content: string }) => ({
@@ -141,7 +144,8 @@ export async function POST(req: Request) {
               category: rewritten.category as any,
               status: status as any,
               sourceName: "Todaynews AI",
-              imageUrl: finalImage,
+              imageUrl: resolvedImage.url,
+              imageCredit: resolvedImage.credit,
               author: settings.defaultAuthorName || "Todaynews.ng Editorial",
               readTimeMinutes: 3,
               pages: rewritten.pages,

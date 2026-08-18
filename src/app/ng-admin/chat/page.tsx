@@ -35,6 +35,7 @@ interface StoryCard {
   sourceUrl?: string;
   category: string;
   imageUrl?: string;
+  imageCredit?: string;
   status: "new" | "sent_to_inbox" | "in_draft" | "published";
 }
 
@@ -223,6 +224,7 @@ export default function AIChatPage() {
           storySource: card.sourceName,
           storySourceUrl: card.sourceUrl,
           storyImageUrl: card.imageUrl,
+          storyImageCredit: card.imageCredit,
         }),
       });
 
