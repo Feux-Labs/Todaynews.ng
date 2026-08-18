@@ -148,7 +148,7 @@ export default function InboxPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <InboxIcon className="w-6 h-6 text-[#475569]" />
             Inbox
             {articles.length > 0 && (
@@ -157,16 +157,16 @@ export default function InboxPage() {
               </span>
             )}
           </h1>
-          <p className="text-slate-400 text-sm mt-1">AI-scraped stories waiting for your review</p>
+          <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">AI-scraped stories waiting for your review</p>
         </div>
 
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-slate-400" />
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search stories..."
-            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 w-full sm:w-64"
+            className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 w-full sm:w-64"
           />
         </div>
       </div>
@@ -178,9 +178,9 @@ export default function InboxPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
-          <InboxIcon className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-          <p className="text-slate-400">No pending stories in inbox</p>
-          <p className="text-slate-500 text-sm mt-1">
+          <InboxIcon className="w-12 h-12 text-slate-600 dark:text-slate-400 mx-auto mb-3" />
+          <p className="text-slate-400 dark:text-slate-500">No pending stories in inbox</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
             Use the AI Chat to scrape new stories, or wait for the auto-scraper.
           </p>
         </div>
@@ -189,7 +189,7 @@ export default function InboxPage() {
           {filtered.map((article) => (
             <div
               key={article.id}
-              className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 hover:border-slate-200 transition-all"
+              className="bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:border-slate-200 dark:hover:border-slate-700 transition-all"
             >
               <div className="flex gap-4">
                 {/* Thumbnail */}
@@ -200,8 +200,8 @@ export default function InboxPage() {
                     className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-24 h-24 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
-                    <ImageIcon className="w-8 h-8 text-slate-600" />
+                  <div className="w-24 h-24 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <ImageIcon className="w-8 h-8 text-slate-600 dark:text-slate-400" />
                   </div>
                 )}
 
@@ -213,25 +213,25 @@ export default function InboxPage() {
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
                         placeholder="Article Headline"
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                       />
                       <textarea
                         value={editSummary}
                         onChange={(e) => setEditSummary(e.target.value)}
                         rows={2}
                         placeholder="Article summary / meta description"
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 resize-none"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 resize-none"
                       />
                       <div className="flex items-center gap-2">
                         <input
                           value={editAuthor}
                           onChange={(e) => setEditAuthor(e.target.value)}
                           placeholder="Author / Byline name"
-                          className="flex-1 px-3 py-2 bg-slate-50 border border-[#2563eb]/30 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
+                          className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-[#2563eb]/30 rounded-lg text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
                         />
                         <button
                           onClick={() => setEditAuthor(defaultAuthor)}
-                          className="px-2 py-2 text-[10px] text-slate-400 hover:text-[#2563eb] border border-slate-200 rounded-lg transition whitespace-nowrap"
+                          className="px-2 py-2 text-[10px] text-slate-400 dark:text-slate-500 hover:text-[#2563eb] border border-slate-200 dark:border-slate-700 rounded-lg transition whitespace-nowrap"
                         >
                           Reset to Default
                         </button>
@@ -245,7 +245,7 @@ export default function InboxPage() {
                         </button>
                         <button
                           onClick={() => setEditingId(null)}
-                          className="px-3 py-1.5 bg-slate-50 text-slate-400 text-xs font-medium rounded-md"
+                          className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-medium rounded-md"
                         >
                           Cancel
                         </button>
@@ -253,10 +253,10 @@ export default function InboxPage() {
                     </div>
                   ) : (
                     <>
-                      <h3 className="text-base font-semibold text-slate-900 leading-tight">
+                      <h3 className="text-base font-semibold text-slate-900 dark:text-white leading-tight">
                         {article.title}
                       </h3>
-                      <p className="text-sm text-slate-400 mt-1 line-clamp-2">{article.summary}</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-1 line-clamp-2">{article.summary}</p>
                     </>
                   )}
 
@@ -265,10 +265,10 @@ export default function InboxPage() {
                       <Tag className="w-3 h-3 inline mr-1" />
                       {article.category}
                     </span>
-                    <span className="text-[10px] text-blue-700/80 flex items-center gap-1 font-mono">
+                    <span className="text-[10px] text-blue-700 dark:text-blue-300/80 flex items-center gap-1 font-mono">
                       <Globe className="w-3 h-3 text-[#2563eb]" /> Todaynews AI
                     </span>
-                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       {new Date(article.createdAt).toLocaleString("en-NG", {
                         month: "short",
@@ -277,7 +277,7 @@ export default function InboxPage() {
                         minute: "2-digit",
                       })}
                     </span>
-                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
                       <Eye className="w-3 h-3" /> {article.pages?.length || 0} pages
                     </span>
                   </div>
@@ -286,7 +286,7 @@ export default function InboxPage() {
 
               {/* Action Buttons */}
               {editingId !== article.id && (
-                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200">
+                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                   <Link
                     href={`/ng-admin/editor?id=${article.id}`}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2563eb]/10 text-[#2563eb] text-xs font-bold rounded-md hover:bg-[#2563eb]/20 transition"
@@ -295,7 +295,7 @@ export default function InboxPage() {
                   </Link>
                   <button
                     onClick={() => startEdit(article)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-700 text-xs font-medium rounded-md hover:bg-slate-100 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition"
                   >
                     <FileEdit className="w-3.5 h-3.5" /> Quick Edit
                   </button>

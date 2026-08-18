@@ -92,18 +92,18 @@ export default function CommentsPage() {
   const statusBadge = (status: CommentRecord["status"]) => {
     if (status === "APPROVED")
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
           <CheckCircle className="w-3 h-3" /> Approved
         </span>
       );
     if (status === "REJECTED")
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900">
           <XCircle className="w-3 h-3" /> Rejected
         </span>
       );
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
         <Clock className="w-3 h-3" /> Pending
       </span>
     );
@@ -113,22 +113,22 @@ export default function CommentsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <MessageSquare className="w-6 h-6 text-[#2563eb]" />
             Comments
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">
             Reader comments are held for moderation and only appear publicly once approved.
           </p>
         </div>
 
-        <div className="flex flex-wrap bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+        <div className="flex flex-wrap bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
           {FILTERS.map((f) => (
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
               className={`px-3 py-2 text-xs font-bold transition ${
-                filter === f.value ? "bg-[#2563eb] text-white" : "text-slate-600 hover:bg-slate-100"
+                filter === f.value ? "bg-[#2563eb] text-white" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
               }`}
             >
               {f.label}
@@ -144,19 +144,19 @@ export default function CommentsPage() {
       ) : comments.length === 0 ? (
         <div className="text-center py-20">
           <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-400">No {filter !== "ALL" ? filter.toLowerCase() : ""} comments.</p>
+          <p className="text-slate-400 dark:text-slate-500">No {filter !== "ALL" ? filter.toLowerCase() : ""} comments.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {comments.map((c) => {
             const isActing = actioningId === c.id;
             return (
-              <div key={c.id} className="bg-slate-50/80 border border-slate-200 rounded-xl p-4">
+              <div key={c.id} className="bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-900 text-sm">{c.authorName}</span>
-                      {c.authorEmail && <span className="text-xs text-slate-400">{c.authorEmail}</span>}
+                      <span className="font-semibold text-slate-900 dark:text-white text-sm">{c.authorName}</span>
+                      {c.authorEmail && <span className="text-xs text-slate-400 dark:text-slate-500">{c.authorEmail}</span>}
                       {statusBadge(c.status)}
                     </div>
                     {c.article && (
@@ -169,12 +169,12 @@ export default function CommentsPage() {
                       </Link>
                     )}
                   </div>
-                  <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
                     {new Date(c.createdAt).toLocaleString()}
                   </span>
                 </div>
 
-                <p className="text-sm text-slate-700 mt-2 leading-relaxed whitespace-pre-wrap">{c.content}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300 mt-2 leading-relaxed whitespace-pre-wrap">{c.content}</p>
 
                 <div className="flex items-center gap-2 mt-3">
                   {c.status !== "APPROVED" && (
@@ -191,7 +191,7 @@ export default function CommentsPage() {
                     <button
                       onClick={() => moderate(c.id, "REJECTED")}
                       disabled={isActing}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg transition disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-lg transition disabled:opacity-50"
                     >
                       <X className="w-3.5 h-3.5" />
                       Reject
@@ -200,7 +200,7 @@ export default function CommentsPage() {
                   <button
                     onClick={() => remove(c.id)}
                     disabled={isActing}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-lg transition disabled:opacity-50 ml-auto"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-950 hover:bg-red-100 text-red-700 dark:text-red-300 text-xs font-bold rounded-lg transition disabled:opacity-50 ml-auto"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Delete

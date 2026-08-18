@@ -150,7 +150,7 @@ export default function SponsoredAdsPage() {
         <div
           className={`mb-4 p-4 rounded-lg flex items-center gap-3 ${
             theme === "light"
-              ? "bg-red-50 border border-red-200 text-red-800"
+              ? "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 text-red-800 dark:text-red-300"
               : "bg-red-950 border border-red-800 text-red-100"
           }`}
         >
@@ -297,7 +297,7 @@ export default function SponsoredAdsPage() {
                       ad.active
                         ? "bg-green-500 hover:bg-green-600"
                         : "bg-gray-500 hover:bg-gray-600"
-                    } text-slate-900 transition-colors`}
+                    } text-slate-900 dark:text-white transition-colors`}
                   >
                     {ad.active ? (
                       <CheckCircle className="w-5 h-5" />
@@ -322,7 +322,7 @@ export default function SponsoredAdsPage() {
                   <span
                     className={`text-xs px-2 py-1 rounded font-medium whitespace-nowrap ${
                       theme === "light"
-                        ? "bg-blue-100 text-blue-800"
+                        ? "bg-blue-100 text-blue-800 dark:text-blue-300"
                         : "bg-blue-900 text-blue-100"
                     }`}
                   >
@@ -351,14 +351,14 @@ export default function SponsoredAdsPage() {
                   href={ad.targetUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg font-medium text-sm transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 dark:hover:bg-blue-950 rounded-lg font-medium text-sm transition-colors"
                 >
                   <ExternalLink className="w-4 h-4" />
                   Visit
                 </a>
                 <button
                   onClick={() => handleDelete(ad.id)}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg font-medium text-sm transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 dark:hover:bg-red-950 rounded-lg font-medium text-sm transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                   Delete

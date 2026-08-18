@@ -11,15 +11,14 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Default to the classic light theme unless the admin has explicitly
-    // switched to dark mode before — don't auto-follow system preference,
-    // since most admin pages are hardcoded light and mixing looks broken.
+    // Dark mode is the default. Only fall back to light if the admin has
+    // explicitly switched to it before (stored preference wins either way).
     const stored = localStorage.getItem("admin-theme") as Theme | null;
-    const initialTheme = stored === "dark" ? "dark" : "light";
+    const initialTheme = stored === "light" ? "light" : "dark";
 
     setTheme(initialTheme);
     document.documentElement.classList.toggle("dark", initialTheme === "dark");

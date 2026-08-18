@@ -116,7 +116,7 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
           </button>
           <button
             onClick={() => signOut({ callbackUrl: "/ng-admin/login" })}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors text-red-600 hover:bg-red-50 dark:hover:bg-red-950`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors text-red-600 hover:bg-red-50 dark:hover:bg-red-950 dark:hover:bg-red-950`}
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>

@@ -301,11 +301,11 @@ export default function AIChatPage() {
       )}
 
       {/* Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-200 bg-white/50 backdrop-blur-sm shrink-0">
+      <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shrink-0">
         <Bot className="w-6 h-6 text-[#2563eb] mr-3" />
         <div>
-          <h1 className="text-base font-semibold text-slate-900">Todaynews AI Editor</h1>
-          <p className="text-[11px] text-slate-400">Scrape, paraphrase, and publish with AI</p>
+          <h1 className="text-base font-semibold text-slate-900 dark:text-white">Todaynews AI Editor</h1>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">Scrape, paraphrase, and publish with AI</p>
         </div>
         <div className="ml-auto flex items-center gap-4">
           <button
@@ -314,7 +314,7 @@ export default function AIChatPage() {
               setMessages([DEFAULT_WELCOME_MSG]);
               setInput("");
             }}
-            className="flex items-center gap-1 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg transition"
+            className="flex items-center gap-1 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg transition"
             title="Start New Session"
           >
             New Session
@@ -323,11 +323,11 @@ export default function AIChatPage() {
             <select
               value={selectedSessionId || ""}
               onChange={(e) => fetchHistory(e.target.value)}
-              className="max-w-56 bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
+              className="max-w-56 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30"
               title="Past AI Sessions"
             >
               {sessions.map((session) => (
-                <option key={session.id} value={session.id} className="bg-white">
+                <option key={session.id} value={session.id} className="bg-white dark:bg-slate-900">
                   {session.title}
                 </option>
               ))}
@@ -335,7 +335,7 @@ export default function AIChatPage() {
           )}
           <button
             onClick={handleClearHistory}
-            className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-lg transition"
+            className="flex items-center gap-1 px-3 py-1.5 bg-red-50 dark:bg-red-950 hover:bg-red-100 text-red-700 dark:text-red-300 text-xs font-bold rounded-lg transition"
             title="Clear Chat Memory"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -343,7 +343,7 @@ export default function AIChatPage() {
           </button>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-[#2563eb] rounded-full animate-pulse" />
-            <span className="text-xs text-slate-400 font-mono">AI Active</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">AI Active</span>
           </div>
         </div>
       </div>
@@ -368,15 +368,15 @@ export default function AIChatPage() {
               <div
                 className={`max-w-[80%] relative group ${
                   msg.role === "user"
-                    ? "bg-[#2563eb]/10 border border-[#2563eb]/20 text-slate-900"
-                    : "bg-slate-50 border border-slate-200 text-slate-800"
+                    ? "bg-[#2563eb]/10 border border-[#2563eb]/20 text-slate-900 dark:text-white"
+                    : "bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
                 } rounded-xl px-4 py-3 shadow-md`}
               >
                 {/* Copy content button for Assistant custom texts */}
                 {msg.role === "assistant" && hasMarkdown && (
                   <button
                     onClick={() => handleCopyText(msg.content, msg.id)}
-                    className="absolute right-3 top-3 p-1.5 bg-slate-50 border border-slate-200 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition shrink-0"
+                    className="absolute right-3 top-3 p-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition shrink-0"
                     title="Copy full text"
                   >
                     {copiedId === msg.id ? (
@@ -388,7 +388,7 @@ export default function AIChatPage() {
                 )}
 
                 <div className="text-sm whitespace-pre-wrap leading-relaxed pr-6">{msg.content}</div>
-                <p className="text-[9px] text-slate-500 mt-2 font-mono">{displayTime}</p>
+                <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-2 font-mono">{displayTime}</p>
 
                 {/* Story Cards */}
                 {msg.storyCards && msg.storyCards.length > 0 && (
@@ -400,10 +400,10 @@ export default function AIChatPage() {
                       return (
                         <div
                           key={card.id}
-                          className="bg-slate-50 border border-slate-200 rounded-lg p-3 hover:border-[#2563eb]/20 transition"
+                          className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 hover:border-[#2563eb]/20 transition"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border border-slate-200 bg-slate-50 relative">
+                            <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 relative">
                               <img
                                 src={card.imageUrl || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80"}
                                 alt={card.title}
@@ -414,10 +414,10 @@ export default function AIChatPage() {
                               />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-semibold text-slate-900 leading-tight truncate">
+                              <h4 className="text-sm font-semibold text-slate-900 dark:text-white leading-tight truncate">
                                 {card.title}
                               </h4>
-                              <p className="text-xs text-slate-400 mt-1 line-clamp-2">{card.summary}</p>
+                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 line-clamp-2">{card.summary}</p>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[9px] px-1.5 py-0.5 bg-[#2563eb]/10 text-[#2563eb] rounded font-mono">
                                   {card.category}
@@ -434,10 +434,10 @@ export default function AIChatPage() {
                               disabled={isCardLoading || card.status !== "new"}
                               className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition ${
                                 card.status === "sent_to_inbox"
-                                  ? "bg-slate-200 text-slate-700 border border-slate-300 cursor-not-allowed"
+                                  ? "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 cursor-not-allowed"
                                   : card.status !== "new"
-                                  ? "bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed"
-                                  : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
+                                  ? "bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed"
+                                  : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                               } disabled:opacity-60`}
                             >
                               {loadingAction === "send_to_inbox" ? (
@@ -454,7 +454,7 @@ export default function AIChatPage() {
                             <button
                               onClick={() => handleStoryAction(card, "paraphrase")}
                               disabled={isCardLoading}
-                              className="flex items-center justify-center gap-1.5 py-1.5 bg-slate-50 text-slate-700 text-xs font-bold rounded-md hover:bg-slate-100 border border-slate-200 transition disabled:opacity-60"
+                              className="flex items-center justify-center gap-1.5 py-1.5 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition disabled:opacity-60"
                             >
                               {loadingAction === "paraphrase" ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -470,10 +470,10 @@ export default function AIChatPage() {
                               disabled={isCardLoading || card.status !== "new"}
                               className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition ${
                                 card.status === "in_draft"
-                                  ? "bg-slate-200 text-slate-700 border border-slate-300 cursor-not-allowed"
+                                  ? "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 cursor-not-allowed"
                                   : card.status !== "new"
-                                  ? "bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed"
-                                  : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
+                                  ? "bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed"
+                                  : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                               } disabled:opacity-60`}
                             >
                               {loadingAction === "add_to_draft" ? (
@@ -494,7 +494,7 @@ export default function AIChatPage() {
                                 card.status === "published"
                                   ? "bg-[#2563eb]/20 text-[#2563eb] border border-[#2563eb]/30 cursor-not-allowed"
                                   : card.status !== "new"
-                                  ? "bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed"
+                                  ? "bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed"
                                   : "bg-[#2563eb] text-white hover:bg-[#1d4ed8] border border-[#2563eb]"
                               } disabled:opacity-60`}
                             >
@@ -516,8 +516,8 @@ export default function AIChatPage() {
               </div>
 
               {msg.role === "user" && (
-                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 mt-1 border border-slate-200">
-                  <User className="w-4 h-4 text-slate-700" />
+                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0 mt-1 border border-slate-200 dark:border-slate-700">
+                  <User className="w-4 h-4 text-slate-700 dark:text-slate-300" />
                 </div>
               )}
             </div>
@@ -529,8 +529,8 @@ export default function AIChatPage() {
             <div className="w-8 h-8 rounded-lg bg-[#2563eb]/10 flex items-center justify-center flex-shrink-0 border border-[#2563eb]/20">
               <Bot className="w-4 h-4 text-[#2563eb]" />
             </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 shadow-md">
-              <div className="flex items-center gap-2 text-sm text-slate-400">
+            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 shadow-md">
+              <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500">
                 <Loader2 className="w-4 h-4 animate-spin text-[#2563eb]" />
                 Todaynews AI is processing...
               </div>
@@ -551,7 +551,7 @@ export default function AIChatPage() {
                 <button
                   key={s.label}
                   onClick={() => sendMessage(s.label)}
-                  className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition text-left"
+                  className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition text-left"
                 >
                   <Icon className="w-4 h-4 text-[#2563eb] flex-shrink-0" />
                   {s.label}
@@ -563,7 +563,7 @@ export default function AIChatPage() {
       )}
 
       {/* Input Area */}
-      <div className="p-4 border-t border-slate-200 bg-white/50 backdrop-blur-sm shrink-0">
+      <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shrink-0">
         <div className="flex gap-3 items-end max-w-4xl mx-auto">
           <div className="flex-1 relative">
             <textarea
@@ -573,7 +573,7 @@ export default function AIChatPage() {
               onKeyDown={handleKeyDown}
               placeholder='Type a command... e.g. "Scrape Punch for politics today"'
               rows={1}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40 resize-none text-sm"
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563eb]/40 resize-none text-sm"
             />
           </div>
           <button

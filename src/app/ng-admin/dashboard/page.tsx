@@ -108,11 +108,11 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Activity className="w-6 h-6 text-[#2563eb]" />
             Dashboard
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">
             Welcome back, {session?.user?.name || "Admin"}
           </p>
         </div>
@@ -127,7 +127,7 @@ export default function DashboardPage() {
           </Link>
 
           {/* Period Selector */}
-          <div className="flex bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+          <div className="flex bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
             {(["today", "week", "month"] as const).map((p) => (
               <button
                 key={p}
@@ -135,7 +135,7 @@ export default function DashboardPage() {
                 className={`px-4 py-2 text-xs font-medium capitalize transition ${
                   period === p
                     ? "bg-[#2563eb]/20 text-[#2563eb]"
-                    : "text-slate-400 hover:text-slate-900 hover:bg-slate-50"
+                    : "text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 {p === "today" ? "Today" : p === "week" ? "This Week" : "This Month"}
@@ -152,7 +152,7 @@ export default function DashboardPage() {
           return (
             <div
               key={card.label}
-              className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 hover:border-slate-200 transition-all group"
+              className="bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:border-slate-200 dark:hover:border-slate-700 transition-all group"
             >
               <div className="flex items-start justify-between mb-3">
                 <div
@@ -161,10 +161,10 @@ export default function DashboardPage() {
                 >
                   <Icon className="w-5 h-5" style={{ color: card.color }} />
                 </div>
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider">{card.subtitle}</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">{card.subtitle}</span>
               </div>
-              <p className="text-2xl font-bold text-slate-900">{card.value}</p>
-              <p className="text-xs text-slate-400 mt-1">{card.label}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{card.value}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{card.label}</p>
             </div>
           );
         })}
@@ -173,10 +173,10 @@ export default function DashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Hourly Traffic Chart */}
-        <div className="lg:col-span-2 bg-slate-50/80 border border-slate-200 rounded-xl p-5">
+        <div className="lg:col-span-2 bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-[#2563eb]" />
-            <h3 className="text-sm font-semibold text-slate-900">Hourly Traffic (Last 24h)</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Hourly Traffic (Last 24h)</h3>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -213,10 +213,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Category Breakdown Pie */}
-        <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-5">
+        <div className="bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-4 h-4 text-[#2979ff]" />
-            <h3 className="text-sm font-semibold text-slate-900">Category Breakdown</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Category Breakdown</h3>
           </div>
           <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
@@ -251,7 +251,7 @@ export default function DashboardPage() {
             {(stats?.categoryBreakdown || []).map((cat, idx) => (
               <span
                 key={cat.category}
-                className="text-[10px] px-2 py-0.5 rounded-full border border-slate-200"
+                className="text-[10px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700"
                 style={{ color: CHART_COLORS[idx % CHART_COLORS.length] }}
               >
                 {cat.category} ({cat.count})
@@ -262,10 +262,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Top Articles */}
-      <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-5">
+      <div className="bg-slate-50/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="w-4 h-4 text-[#475569]" />
-          <h3 className="text-sm font-semibold text-slate-900">Top 10 Articles by Views ({period === "today" ? "Today" : period === "week" ? "This Week" : "This Month"})</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Top 10 Articles by Views ({period === "today" ? "Today" : period === "week" ? "This Week" : "This Month"})</h3>
         </div>
         {stats?.topArticles && stats.topArticles.length > 0 ? (
           <div className="h-64">
@@ -308,7 +308,7 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
         ) : (
-          <p className="text-slate-500 text-sm">No view data available yet. Articles will appear here as they receive traffic.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">No view data available yet. Articles will appear here as they receive traffic.</p>
         )}
       </div>
     </div>
