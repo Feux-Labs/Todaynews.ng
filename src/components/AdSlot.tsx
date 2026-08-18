@@ -41,25 +41,15 @@ export default function AdSlot({
   // leaves a gap in the layout.
   const [adFilled, setAdFilled] = useState(false);
 
-  useEffect(() => {
-    if (type !== "banner" && type !== "banner-top" && type !== "in-article-mid" && type !== "native" && type !== "sidebar-native") {
-      return;
-    }
-    const el = containerRef.current;
-    if (!el) return;
-
-    const checkFilled = () => {
-      if (el.querySelector("iframe")) setAdFilled(true);
-    };
-
-    const observer = new MutationObserver(checkFilled);
-    observer.observe(el, { childList: true, subtree: true });
-    checkFilled();
-
-    return () => observer.disconnect();
-  }, [type]);
-
-  // ── Banner (iframe) injection — guaranteed config-before-invoke order ────────
+  // ── Banner (iframe) injection — isolated per-unit window to avoid the
+  // classic Adsterra multi-unit bug: their tag reads a single global
+  // `window.atOptions`, so when more than one "banner"-type AdSlot mounts on
+  // the same page (e.g. top banner + in-article + sidebar), each instance's
+  // React effect can overwrite window.atOptions before an earlier instance's
+  // async-loaded invoke.js has read it — so only the last one ever fills,
+  // and every earlier slot silently gets the wrong (or no) ad. Writing the
+  // config + invoke script into a same-origin child iframe gives each unit
+  // its own isolated `window`, so they can never clobber each other.
   useEffect(() => {
     if (
       (type === "banner" || type === "banner-top" || type === "in-article-mid") &&
@@ -80,39 +70,64 @@ export default function AdSlot({
         ? "https://wailsilence.com/f1676b31bf7fb91f65c368c428768a54/invoke.js"
         : "https://wailsilence.com/baec4ba691aee8e6facd331480c3ff7a/invoke.js";
 
-      // 1. Synchronously set window.atOptions
-      (window as any).atOptions = {
-        key,
-        format: "iframe",
-        height,
-        width,
-        params: {},
-      };
+      const wrapperIframe = document.createElement("iframe");
+      wrapperIframe.style.border = "0";
+      wrapperIframe.style.width = `${width}px`;
+      wrapperIframe.style.height = `${height}px`;
+      wrapperIframe.style.maxWidth = "100%";
+      wrapperIframe.setAttribute("scrolling", "no");
+      wrapperIframe.setAttribute("title", "Advertisement");
+      target.appendChild(wrapperIframe);
 
-      // 2. Add inline config script to the DOM element
-      const configScript = document.createElement("script");
-      configScript.type = "text/javascript";
-      configScript.innerHTML = `
-        window.atOptions = {
-          'key' : '${key}',
-          'format' : 'iframe',
-          'height' : ${height},
-          'width' : ${width},
-          'params' : {}
-        };
-      `;
-      target.appendChild(configScript);
+      const doc = wrapperIframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(`
+          <!DOCTYPE html><html><head><style>body{margin:0;padding:0;overflow:hidden;}</style></head>
+          <body>
+            <script>
+              atOptions = {
+                'key': '${key}',
+                'format': 'iframe',
+                'height': ${height},
+                'width': ${width},
+                'params': {}
+              };
+            <\/script>
+            <script src="${src}"><\/script>
+          </body></html>
+        `);
+        doc.close();
+      }
 
-      // 3. Inject invoke script
-      const invokeScript = document.createElement("script");
-      invokeScript.type = "text/javascript";
-      invokeScript.src = src;
-      invokeScript.async = true;
-      invokeScript.onload = () => setAdLoaded(true);
-      invokeScript.onerror = () => setAdLoaded(true);
-
-      target.appendChild(invokeScript);
       setAdLoaded(true);
+
+      // Detect a real fill. Adsterra's script always creates an inner
+      // about:blank iframe shell immediately — that's not a fill, just
+      // confirmation the tag ran. A real fill means that inner iframe gets
+      // navigated to an actual ad creative (src changes away from
+      // about:blank), or the whole thing becomes cross-origin (their ad
+      // server content loaded, blocking our access entirely).
+      let attempts = 0;
+      const poll = setInterval(() => {
+        attempts++;
+        try {
+          const innerDoc = wrapperIframe.contentWindow?.document;
+          const adIframe = innerDoc?.querySelector("iframe") as HTMLIFrameElement | null;
+          const navigatedAway = adIframe && adIframe.src && adIframe.src !== "about:blank";
+          if (navigatedAway) {
+            setAdFilled(true);
+            clearInterval(poll);
+          }
+        } catch {
+          // Cross-origin now — the ad server's own content navigated in.
+          setAdFilled(true);
+          clearInterval(poll);
+        }
+        if (attempts >= 16) clearInterval(poll); // ~8s, give up quietly
+      }, 500);
+
+      return () => clearInterval(poll);
     }
   }, [type]);
 
