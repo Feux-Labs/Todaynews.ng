@@ -1,8 +1,17 @@
-name: 30-Min Auto-Scraper + Auto-Publish
+name: Scheduled Auto-Scraper + Auto-Publish
 
+# Runs 7x/day at fixed times (converted from WAT/UTC+1 to UTC, since GitHub
+# Actions cron always runs in UTC): 7am, 9am, 12pm, 2pm, 4pm, 9pm, 12am WAT.
+# GitHub Actions cron has no Vercel Hobby-plan restriction — free at any cadence.
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '0 6 * * *'   # 07:00 WAT
+    - cron: '0 8 * * *'   # 09:00 WAT
+    - cron: '0 11 * * *'  # 12:00 WAT
+    - cron: '0 13 * * *'  # 14:00 WAT
+    - cron: '0 15 * * *'  # 16:00 WAT
+    - cron: '0 20 * * *'  # 21:00 WAT
+    - cron: '0 23 * * *'  # 00:00 WAT
   workflow_dispatch:
 
 jobs:
@@ -14,9 +23,9 @@ jobs:
       - name: Trigger Todaynews.ng Scraper
         run: |
           echo "⏱️ $(date -u) — Triggering /api/cron/scrape..."
-          RESPONSE=$(curl -s -o /tmp/scrape_body.txt -w "%{http_code}" \
-            --max-time 60 \
-            -X GET "https://todaynews.ng/api/cron/scrape" \
+          RESPONSE=$(curl -sL -o /tmp/scrape_body.txt -w "%{http_code}" \
+            --max-time 170 \
+            -X GET "https://www.todaynews.ng/api/cron/scrape" \
             -H "Accept: application/json")
           echo "🔁 HTTP Status: $RESPONSE"
           cat /tmp/scrape_body.txt
@@ -29,9 +38,9 @@ jobs:
       - name: Trigger Auto-Publish Check
         run: |
           echo "⏱️ $(date -u) — Triggering /api/cron/auto-publish..."
-          RESPONSE=$(curl -s -o /tmp/pub_body.txt -w "%{http_code}" \
+          RESPONSE=$(curl -sL -o /tmp/pub_body.txt -w "%{http_code}" \
             --max-time 30 \
-            -X GET "https://todaynews.ng/api/cron/auto-publish" \
+            -X GET "https://www.todaynews.ng/api/cron/auto-publish" \
             -H "Accept: application/json")
           echo "🔁 HTTP Status: $RESPONSE"
           cat /tmp/pub_body.txt
