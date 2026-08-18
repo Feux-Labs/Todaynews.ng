@@ -3,6 +3,7 @@ import { paraphraseNews, localProceduralRewriter, cleanAndFormatTitle } from "@/
 import { scrapeRSSFeeds, enrichAndRankStories, resolveStoryImage, stripCompetitorLinksAndBoilerplate } from "@/lib/scraper";
 import { isDbConfigured, prisma, memoryDb } from "@/lib/db";
 import { getPersistentServerSettings } from "@/lib/settings";
+import { notifyNewPublish } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -146,6 +147,10 @@ export async function POST(req: Request) {
               pages: rewritten.pages,
             });
             articleId = article.id;
+          }
+
+          if (status === "PUBLISHED") {
+            notifyNewPublish({ id: articleId, title: rewritten.title, slug, summary: rewritten.summary }).catch(() => {});
           }
 
           results.push({ id: articleId, title: rewritten.title, status });

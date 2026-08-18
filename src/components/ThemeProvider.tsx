@@ -15,11 +15,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Get stored theme or system preference
+    // Default to the classic light theme unless the admin has explicitly
+    // switched to dark mode before — don't auto-follow system preference,
+    // since most admin pages are hardcoded light and mixing looks broken.
     const stored = localStorage.getItem("admin-theme") as Theme | null;
-    const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const initialTheme = stored || (systemDark ? "dark" : "light");
-    
+    const initialTheme = stored === "dark" ? "dark" : "light";
+
     setTheme(initialTheme);
     document.documentElement.classList.toggle("dark", initialTheme === "dark");
     setMounted(true);

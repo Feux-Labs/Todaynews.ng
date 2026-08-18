@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
+import { notifyNewPublish } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,8 @@ export async function PATCH(
 
     if (isDbConfigured()) {
       try {
+        const existing = await prisma.article.findUnique({ where: { id: params.id }, select: { status: true } });
+
         const updateData: any = {};
         if (status !== undefined) updateData.status = nextStatus;
         if (scheduledAt !== undefined) updateData.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
@@ -55,6 +58,11 @@ export async function PATCH(
           where: { id: params.id },
           data: updateData,
         });
+
+        if (nextStatus === "PUBLISHED" && existing?.status !== "PUBLISHED") {
+          notifyNewPublish({ id: updated.id, title: updated.title, slug: updated.slug, summary: updated.summary }).catch(() => {});
+        }
+
         return NextResponse.json(updated);
       } catch (dbErr) {
         console.error("[PATCH Article DB fallback]:", dbErr);
@@ -80,6 +88,9 @@ export async function PUT(
 
     if (isDbConfigured()) {
       try {
+        const existing = await prisma.article.findUnique({ where: { id: params.id }, select: { status: true } });
+        const willTransitionToPublished = nextStatus === "PUBLISHED" && existing?.status !== "PUBLISHED";
+
         // Status-only update (e.g. approve from inbox)
         if (status && !pages && !title) {
           const updated = await prisma.article.update({
@@ -90,6 +101,9 @@ export async function PUT(
               scheduledAt: scheduledAt ? new Date(scheduledAt) : nextStatus === "PUBLISHED" ? null : undefined,
             },
           });
+          if (willTransitionToPublished) {
+            notifyNewPublish({ id: updated.id, title: updated.title, slug: updated.slug, summary: updated.summary }).catch(() => {});
+          }
           return NextResponse.json(updated);
         }
 
@@ -124,6 +138,9 @@ export async function PUT(
           data: updateData,
           include: { pages: { orderBy: { pageNumber: "asc" } } },
         });
+        if (willTransitionToPublished) {
+          notifyNewPublish({ id: updated.id, title: updated.title, slug: updated.slug, summary: updated.summary }).catch(() => {});
+        }
         return NextResponse.json(updated);
       } catch (dbErr) {
         console.error("[PUT Article DB fallback]:", dbErr);

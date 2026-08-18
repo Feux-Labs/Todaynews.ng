@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isDbConfigured, prisma, memoryDb } from "@/lib/db";
+import { notifyNewPublish } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -23,30 +24,33 @@ export async function GET(req: Request) {
 
     if (isDbConfigured()) {
       // 1. Publish any SCHEDULED articles whose scheduledAt time has passed
-      const scheduledResult = await prisma.article.updateMany({
-        where: {
-          status: "SCHEDULED" as any,
-          scheduledAt: { lte: new Date() },
-        },
-        data: {
-          status: "PUBLISHED" as any,
-          scheduledAt: null,
-        },
+      const dueScheduled = await prisma.article.findMany({
+        where: { status: "SCHEDULED" as any, scheduledAt: { lte: new Date() } },
+        select: { id: true, title: true, slug: true, summary: true },
       });
-      publishedScheduled = scheduledResult.count;
+      if (dueScheduled.length > 0) {
+        await prisma.article.updateMany({
+          where: { id: { in: dueScheduled.map((a) => a.id) } },
+          data: { status: "PUBLISHED" as any, scheduledAt: null },
+        });
+        publishedScheduled = dueScheduled.length;
+        for (const a of dueScheduled) notifyNewPublish(a).catch(() => {});
+      }
 
       // 2. Auto-publish AI_PENDING articles that have been untouched for 45+ minutes
       const pendingCutoff = new Date(Date.now() - 45 * 60 * 1000);
-      const pendingResult = await prisma.article.updateMany({
-        where: {
-          status: "AI_PENDING" as any,
-          createdAt: { lte: pendingCutoff },
-        },
-        data: {
-          status: "PUBLISHED" as any,
-        },
+      const duePending = await prisma.article.findMany({
+        where: { status: "AI_PENDING" as any, createdAt: { lte: pendingCutoff } },
+        select: { id: true, title: true, slug: true, summary: true },
       });
-      autoPublishedPending = pendingResult.count;
+      if (duePending.length > 0) {
+        await prisma.article.updateMany({
+          where: { id: { in: duePending.map((a) => a.id) } },
+          data: { status: "PUBLISHED" as any },
+        });
+        autoPublishedPending = duePending.length;
+        for (const a of duePending) notifyNewPublish(a).catch(() => {});
+      }
     } else {
       // Fallback for memory DB
       const allArticles = await memoryDb.getArticles(undefined, undefined, 1, 200);

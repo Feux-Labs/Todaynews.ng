@@ -114,7 +114,7 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Settings className="w-6 h-6 text-[#2563eb]" />
@@ -124,7 +124,7 @@ export default function AdminSettingsPage() {
             Configure default author, site identity, and editorial contact details.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={handleReset}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-400 hover:text-slate-900 border border-slate-200 rounded-lg hover:border-slate-300 transition-all"

@@ -111,8 +111,8 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Users className="w-6 h-6 text-[#2979ff]" />
@@ -121,7 +121,7 @@ export default function UsersPage() {
           <p className="text-slate-400 text-sm mt-1">Manage editorial team accounts and access permissions</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={fetchUsers}
             className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"

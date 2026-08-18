@@ -24,13 +24,13 @@ export default function PublicLayoutWrapper({
       {/* Masthead Header navigation */}
       <Header />
 
-      {/* Global Top Banner Adsterra Insertion */}
-      <div className="max-w-6xl mx-auto w-full px-4 py-2 shrink-0">
+      {/* Global Top Banner Adsterra Insertion — collapses to nothing when unfilled/blocked */}
+      <div className="max-w-6xl mx-auto w-full px-4 pt-1.5 shrink-0">
         <AdSlot id="top-banner-adsterra" type="banner-top" />
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-3">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-2">
         {children}
       </main>
 

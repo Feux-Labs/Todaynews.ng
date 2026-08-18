@@ -64,7 +64,7 @@ model Article {
   imageUrl        String?
   imageAlt        String?
   imageCredit     String?
-  author          String        @default("Todaynews.ng Editorial")
+  author          String        @default("TodaynewsAi")
   readTimeMinutes Int           @default(3)
   views           Int           @default(0)
   approvedById    String?
@@ -80,6 +80,33 @@ model Article {
   @@index([status, views(sort: Desc)])
   @@index([category])
   @@index([slug])
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id          String        @id @default(cuid())
+  articleId   String
+  authorName  String
+  authorEmail String?
+  content     String
+  status      CommentStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+
+  @@index([articleId, status, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
 }
 
 model AiChatMessage {

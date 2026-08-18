@@ -294,7 +294,7 @@ export async function paraphraseNews(
       Input Target Category: "${category}"
       Input Article Text:
       ${cleanInputText}
-    
+      `;
 
       let lastError: any = null;
       for (const modelName of CANDIDATE_MODELS) {
@@ -312,7 +312,7 @@ export async function paraphraseNews(
           }
         } catch (err) {
           lastError = err;
-          console.warn(`[Gemini Paraphrase]Model ${ modelName } failed, trying next candidate: `, (err as any)?.message || err);
+          console.warn(`[Gemini Paraphrase] Model ${modelName} failed, trying next candidate:`, (err as any)?.message || err);
         }
       }
 
@@ -431,18 +431,18 @@ export async function chatWithAi(
   const newsCheck = detectNewsSearchIntent(userMessage);
   if (newsCheck.isSearch) {
     const introLines = [
-      `Understood.I've activated the Todaynews.ng intelligence scanner across Punch NG, Daily Trust, Vanguard, and Premium Times for **${newsCheck.topicLabel || "Top Stories"}**.\n\nHere are the latest verified reports ready for your **Inbox**, **Drafts**, or instant **AI Paraphrasing**:`,
-        `Scanning live Nigerian news channels for **${newsCheck.topicLabel || "Breaking Stories"}**. Here is what I found across verified sources — choose an action on any card below to send to inbox, draft, or paraphrase:`,
-        `On it. Cross-referencing active feeds from Punch NG, Daily Trust, and Vanguard for **${newsCheck.topicLabel || "Top Trending Stories"}**:\n\nReview the story cards below:`,
+      `Understood. I've activated the Todaynews.ng intelligence scanner across Punch NG, Daily Trust, Vanguard, and Premium Times for **${newsCheck.topicLabel || "Top Stories"}**.\n\nHere are the latest verified reports ready for your **Inbox**, **Drafts**, or instant **AI Paraphrasing**:`,
+      `Scanning live Nigerian news channels for **${newsCheck.topicLabel || "Breaking Stories"}**. Here is what I found across verified sources — choose an action on any card below to send to inbox, draft, or paraphrase:`,
+      `On it. Cross-referencing active feeds from Punch NG, Daily Trust, and Vanguard for **${newsCheck.topicLabel || "Top Trending Stories"}**:\n\nReview the story cards below:`,
     ];
-      const intro = introLines[Math.floor(Math.random() * introLines.length)];
+    const intro = introLines[Math.floor(Math.random() * introLines.length)];
 
-      return {
-        intent: "search",
-        searchQuery: newsCheck.query || undefined,
-        reply: intro,
-      };
-    }
+    return {
+      intent: "search",
+      searchQuery: newsCheck.query || undefined,
+      reply: intro,
+    };
+  }
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const conversationContext = history

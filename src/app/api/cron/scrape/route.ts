@@ -3,6 +3,7 @@ import { scrapeRSSFeeds, scrapeScholarships, scrapeJapa, scrapeMakeMoneyOnline, 
 import { paraphraseNews, localProceduralRewriter, cleanAndFormatTitle } from "@/lib/ai";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { sendNewStoryAlert } from "@/lib/mailer";
+import { notifyNewPublish } from "@/lib/push";
 import { getPersistentServerSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -37,9 +38,10 @@ async function storyAlreadyExists(sourceUrl: string, title: string, recentTitles
 }
 
 /**
- * 30-Minute Automated Cron Job Endpoint
- * Triggered by Vercel Cron or manual GET request.
- * Scrapes fresh Nigerian news → Paraphrases with Gemini → Saves to AI_PENDING inbox → Mails Admin.
+ * Scheduled Auto-Scraper Endpoint
+ * Triggered 7x/day by the GitHub Actions workflow (.github/workflows/scrape-cron.yml)
+ * — not Vercel cron, which is capped at once/day on the Hobby plan.
+ * Scrapes fresh news worldwide → Paraphrases with Gemini → Saves to AI_PENDING inbox → Mails Admin.
  */
 export async function GET(req: Request) {
   if (!isAuthorized(req)) {
@@ -47,7 +49,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    console.log("[Cron Scraper] Starting 30-minute auto-scrape cycle...");
+    console.log("[Cron Scraper] Starting scheduled auto-scrape cycle...");
     const settings = await getPersistentServerSettings();
     let publishedScheduled = 0;
     let autoPublished = 0;
@@ -71,27 +73,35 @@ export async function GET(req: Request) {
     }
 
     // Auto-publish articles that have been in AI_PENDING for more than 60 minutes
+    // (in practice: pending from the previous scheduled run, since runs are
+    // now hours apart — see .github/workflows/scrape-cron.yml)
     if (isDbConfigured()) {
       try {
         const sixtyMinsAgo = new Date(Date.now() - 60 * 60 * 1000);
-        const autoPublish = await prisma.article.updateMany({
-          where: {
-            status: "AI_PENDING" as any,
-            createdAt: { lte: sixtyMinsAgo },
-          },
-          data: { status: "PUBLISHED" as any },
+        const duePending = await prisma.article.findMany({
+          where: { status: "AI_PENDING" as any, createdAt: { lte: sixtyMinsAgo } },
+          select: { id: true, title: true, slug: true, summary: true },
         });
-        autoPublished = autoPublish.count;
-        if (autoPublished > 0) {
+        if (duePending.length > 0) {
+          await prisma.article.updateMany({
+            where: { id: { in: duePending.map((a) => a.id) } },
+            data: { status: "PUBLISHED" as any },
+          });
+          autoPublished = duePending.length;
           console.log(`[Cron Scraper] Auto-published ${autoPublished} pending articles older than 60 mins.`);
+          for (const a of duePending) {
+            notifyNewPublish(a).catch(() => {});
+          }
         }
       } catch (err) {
         console.error("[Cron Scraper] Auto-publish step failed:", err);
       }
     }
 
-    // Fetch top 3 fresh stories from RSS feeds published in the last 30 minutes
-    const newsStories = await scrapeRSSFeeds(3, undefined, 30);
+    // Fetch fresh stories from RSS feeds — widened to a 6-hour freshness window
+    // since scheduled runs are now hours apart (7 fixed times/day) rather than
+    // every 30 minutes.
+    const newsStories = await scrapeRSSFeeds(5, undefined, 360);
     
     // Also fetch from new specialized categories (mix in with news)
     const scholarshipStories = await scrapeScholarships(1);

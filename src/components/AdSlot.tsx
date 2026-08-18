@@ -33,6 +33,45 @@ export default function AdSlot({
   const containerRef = useRef<HTMLDivElement>(null);
   const injectedRef = useRef(false);
   const [adLoaded, setAdLoaded] = useState(false);
+  // Tri-state: null = still waiting, true = a real ad rendered, false = no
+  // fill / blocked — collapse the slot so a dead ad network never leaves a
+  // visible gap in the layout.
+  const [adFilled, setAdFilled] = useState<boolean | null>(null);
+
+  // Watch the container for the ad network actually inserting content
+  // (iframe/ins/div with real height). If nothing shows up within a few
+  // seconds — ad blocked, no fill, dead network — collapse the slot.
+  useEffect(() => {
+    if (type !== "banner" && type !== "banner-top" && type !== "in-article-mid" && type !== "native" && type !== "sidebar-native") {
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) return;
+
+    let settled = false;
+    const markFilled = () => {
+      if (settled) return;
+      settled = true;
+      setAdFilled(true);
+    };
+
+    const observer = new MutationObserver(() => {
+      if (el.querySelector("iframe, ins") || el.scrollHeight > 4) markFilled();
+    });
+    observer.observe(el, { childList: true, subtree: true });
+
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        setAdFilled(el.scrollHeight > 4 && !!el.querySelector("iframe, ins"));
+      }
+    }, 4000);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timeout);
+    };
+  }, [type]);
 
   // ── Banner (iframe) injection — guaranteed config-before-invoke order ────────
   useEffect(() => {
@@ -153,9 +192,15 @@ export default function AdSlot({
   // ── Rendered container for Banner & Native ─────────────────────────────────
   const isTopBanner = type === "banner-top";
 
+  // No fill / blocked — collapse to nothing so a dead ad network never
+  // leaves visible whitespace in the layout.
+  if (adFilled === false) {
+    return <div ref={containerRef} className="hidden" />;
+  }
+
   return (
-    <div className={`w-full my-2 flex flex-col items-center justify-center overflow-hidden ${className}`}>
-      <span className="text-[9px] uppercase font-bold tracking-widest text-muted/60 mb-1 font-mono">
+    <div className={`w-full my-1 flex flex-col items-center justify-center overflow-hidden ${className}`}>
+      <span className="text-[9px] uppercase font-bold tracking-widest text-muted/60 mb-0.5 font-mono">
         Sponsored Advertisement
       </span>
       <div

@@ -1,7 +1,8 @@
 import React from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Eye, Calendar, User, MessageSquare } from "lucide-react";
+import { Eye, Calendar, User } from "lucide-react";
+import CommentsSection from "@/components/CommentsSection";
 import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 import { generateSeoMetadata, getNewsArticleJsonLd, getBreadcrumbsJsonLd } from "@/lib/seo";
 import SocialShareBar from "@/components/SocialShareBar";
@@ -278,24 +279,7 @@ export default async function ArticlePage({ params, searchParams }: Readonly<Art
             </div>
           </div>
 
-          {/* Comments Feed Box Simulator */}
-          <div className="border-t-2 border-ink/10 pt-6 mt-8">
-            <h4 className="font-display font-black text-base uppercase text-ink mb-4 flex items-center gap-1.5">
-              <MessageSquare className="h-4.5 w-4.5 text-flag" /> Comments ({Math.floor(article.views / 2500) + 1})
-            </h4>
-            <div className="space-y-4">
-              <div className="border border-ink/10 p-3 rounded bg-paper/30 text-xs">
-                <span className="font-extrabold text-ink block">Musa from Kaduna</span>
-                <span className="text-[10px] text-muted font-bold block mb-1">2 hours ago</span>
-                <p className="text-muted leading-relaxed">This is indeed a timely development. Many HND holders have struggled for years for parity in grades. Thank you Todaynews for the details.</p>
-              </div>
-              <div className="border border-ink/10 p-3 rounded bg-paper/30 text-xs">
-                <span className="font-extrabold text-ink block">Chidi from Enugu</span>
-                <span className="text-[10px] text-muted font-bold block mb-1">4 hours ago</span>
-                <p className="text-muted leading-relaxed">Hope the conversion cost remains affordable. Good news overall.</p>
-              </div>
-            </div>
-          </div>
+          <CommentsSection articleId={article.id} />
 
         </div>
 

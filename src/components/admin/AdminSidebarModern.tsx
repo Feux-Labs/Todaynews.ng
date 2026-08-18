@@ -7,11 +7,11 @@ import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   MessageSquare,
+  MessagesSquare,
   FileText,
   Settings,
   Users,
   LogOut,
-  Menu,
   X,
   Moon,
   Sun,
@@ -36,6 +36,7 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
     { label: "Drafts", href: "/ng-admin/drafts", icon: FileText },
     { label: "Editor", href: "/ng-admin/editor", icon: FileText },
     { label: "Published", href: "/ng-admin/published", icon: FileText },
+    { label: "Comments", href: "/ng-admin/comments", icon: MessagesSquare },
     { label: "Users", href: "/ng-admin/users", icon: Users },
     { label: "Sponsored Ads", href: "/ng-admin/sponsored-ads", icon: Settings },
     { label: "Settings", href: "/ng-admin/settings", icon: Settings },
@@ -122,20 +123,6 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
           </button>
         </div>
       </aside>
-
-      {/* Mobile Menu Button */}
-      <div
-        className={`fixed top-4 left-4 lg:hidden z-50 ${
-          isOpen ? "hidden" : "block"
-        }`}
-      >
-        <button
-          onClick={() => !isOpen && onClose?.()}
-          className={`p-2 rounded-lg ${colors.card}`}
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      </div>
     </>
   );
 }
