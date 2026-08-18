@@ -378,34 +378,54 @@ export async function fetchPersonPhoto(name: string): Promise<string | null> {
   }
 }
 
+export interface ResolvedImage {
+  url: string;
+  /** Human-readable attribution for the image's real origin. */
+  credit: string;
+}
+
+/**
+ * Resolve the most accurate image for a story, in strict priority order:
+ *   1. The image actually published alongside the story at its source —
+ *      always preferred, credited to that source, for real photo accuracy.
+ *   2. Only if the source has no usable image: search elsewhere for a real
+ *      photo of the story's named subject (Wikipedia).
+ *   3. Only as a last-last-last resort: a generic category stock photo.
+ */
 export async function resolveStoryImage(
   imageUrl?: string,
   title?: string,
-  category?: string
-): Promise<string> {
+  category?: string,
+  sourceName?: string
+): Promise<ResolvedImage> {
   const cleanCandidate = (imageUrl || "").trim();
   const isGenericLogo = /logo|icon|favicon|placeholder|avatar|default-thumbnail|punch-logo|sprite|1x1|pixel/i.test(cleanCandidate);
 
+  // 1. The source's own image — always preferred for accuracy.
   if (cleanCandidate && /^https?:\/\//i.test(cleanCandidate) && !isGenericLogo) {
-    return cleanCandidate;
+    return {
+      url: cleanCandidate,
+      credit: sourceName && sourceName !== "Todaynews AI" ? sourceName : "Source publisher",
+    };
   }
 
-  // Try to find a real photo of the story's main subject before falling back to stock.
+  // 2. No source image — search elsewhere for a real photo of the subject.
   if (title) {
     const subject = extractMainSubject(title);
     if (subject) {
       const personPhoto = await fetchPersonPhoto(subject);
-      if (personPhoto) return personPhoto;
+      if (personPhoto) return { url: personPhoto, credit: "Wikipedia" };
     }
   }
 
+  // 3. Last resort — generic category stock photo.
   const categoryKey = ((category || "").toUpperCase() || "DEFAULT") as string;
   const pool = EDITORIAL_IMAGE_POOLS[categoryKey] || EDITORIAL_IMAGE_POOLS.DEFAULT;
 
   const titleKey = (title || categoryKey || "todaynews-story").trim();
   const selectedImage = pool[hashString(titleKey) % pool.length];
 
-  return selectedImage;
+  return { url: selectedImage, credit: "Unsplash (stock)" };
 }
 
 /**
