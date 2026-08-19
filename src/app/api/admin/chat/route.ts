@@ -432,10 +432,20 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
       } else if (query) {
         // Blend the fixed source list with a free, keyless whole-web search
         // (Google News RSS) so results aren't limited to RSS_SOURCES.
-        const [fromFeeds, fromWeb] = await Promise.all([
+        const [fromFeeds, fromWebInitial] = await Promise.all([
           scrapeRSSFeeds(6, query),
           searchGoogleNews(query),
         ]);
+        // Google News' own matching can come back empty for an over-specific
+        // query — retry once with just the leading significant words before
+        // giving up, rather than silently returning fewer/no results.
+        let fromWeb = fromWebInitial;
+        if (fromWeb.length === 0) {
+          const broadQuery = query.split(/\s+/).slice(0, 4).join(" ");
+          if (broadQuery && broadQuery !== query) {
+            fromWeb = await searchGoogleNews(broadQuery);
+          }
+        }
         const combined = [...fromFeeds];
         for (const story of fromWeb) {
           if (!combined.some((s) => titleSimilarity(s.title, story.title) >= 0.6)) {

@@ -467,6 +467,63 @@ export function detectNewsSearchIntent(userMessage: string): { isSearch: boolean
   return { isSearch: false };
 }
 
+/**
+ * LLM-based search-intent classifier. Replaces naive keyword matching, which
+ * broke on real messages in two ways: (1) short keywords like "ai" false-
+ * matched inside unrelated words ("airtel"), and (2) any message merely
+ * containing a word like "news" got treated as a fresh search — including
+ * pure feedback/complaints ("idiot the news is not there") or a rant mixing
+ * correction with instructions, which then got used VERBATIM as the search
+ * query and obviously matched nothing. Gemini can tell the difference and
+ * extract/clean the real subject (correcting typos, dropping meta-
+ * commentary about formatting or images) far better than regex ever could.
+ */
+async function classifySearchIntent(
+  userMessage: string,
+  conversationContext: string,
+  apiKey: string
+): Promise<{ isSearch: boolean; query?: string; topicLabel?: string }> {
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const prompt = `You are a search-intent classifier for a Nigerian news AI's chat assistant.
+
+Given the recent conversation and the user's latest message, decide:
+1. Is the user asking you to search/fetch/find news RIGHT NOW — including a retry after a previous search returned the wrong thing (e.g. "that's not it", "the news is not there", a frustrated correction that still describes what they actually want)?
+   This is FALSE for: pure small talk, questions unrelated to news, or feedback that gives no clue what to search for.
+2. If true, write ONE clean, well-formed search query: correct obvious typos, strip meta-instructions (formatting requests, "ask me before publishing", image requests, insults/venting), keep the real proper nouns and subject. Use conversation context to fill in what a garbled or short message is actually about.
+
+Conversation so far:
+${conversationContext}
+
+Latest message: "${userMessage}"
+
+Return ONLY this JSON, nothing else:
+{"isSearch": true or false, "query": "clean search query or null", "topicLabel": "short 2-6 word display label or null"}`;
+
+    for (const modelName of CANDIDATE_MODELS) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName, generationConfig: { responseMimeType: "application/json" } });
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        if (text) {
+          const parsed = JSON.parse(text);
+          return {
+            isSearch: !!parsed.isSearch,
+            query: parsed.query || undefined,
+            topicLabel: parsed.topicLabel || undefined,
+          };
+        }
+      } catch {
+        continue;
+      }
+    }
+  } catch (err) {
+    console.warn("[Search Intent] Gemini classification failed, using regex fallback:", err);
+  }
+
+  return detectNewsSearchIntent(userMessage);
+}
+
 export async function chatWithAi(
   userMessage: string,
   history: { role: "user" | "assistant"; content: string }[]
@@ -477,8 +534,13 @@ export async function chatWithAi(
     throw new Error("Live Gemini AI is required and is not configured.");
   }
 
+  const conversationContext = history
+    .slice(-20)
+    .map((h) => `${h.role === "user" ? "User" : "AI"}: ${h.content}`)
+    .join("\n");
+
   // Check if user is asking for news articles/stories/scraping
-  const newsCheck = detectNewsSearchIntent(userMessage);
+  const newsCheck = await classifySearchIntent(userMessage, conversationContext, apiKey);
   if (newsCheck.isSearch) {
     const introLines = [
       `Understood. I've scanned Todaynews.ng's full source list plus a live web search for **${newsCheck.topicLabel || "Top Stories"}**.\n\nHere are the latest verified reports ready for your **Inbox**, **Drafts**, or instant **AI Paraphrasing**:`,
@@ -495,10 +557,6 @@ export async function chatWithAi(
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const conversationContext = history
-    .slice(-20)
-    .map((h) => `${h.role === "user" ? "User" : "AI"}: ${h.content}`)
-    .join("\n");
 
   const prompt = `
 You are a genuinely intelligent, broadly capable AI assistant — comparable to a top-tier general-purpose AI. You happen to be embedded inside Todaynews.ng, a Nigerian news platform, and you have deep expertise in Nigerian news, politics, economics, and culture. But you are NOT limited to news. You can discuss anything: philosophy, business, science, coding, relationships, strategy, creative writing, math, history, whatever the user brings up. Think and respond the way a sharp, well-read, emotionally intelligent human expert would — not like a scripted customer service bot.
