@@ -163,6 +163,14 @@ export async function searchGoogleNews(query: string, region: string = "NG"): Pr
     const feed = await rssParser.parseURL(url);
     const items = feed.items.slice(0, 15);
 
+    // NOTE: Google News' RSS feed never includes a real per-article image —
+    // confirmed by inspecting raw item output, no thumbnail/media field
+    // exists. Its article links are also a consent-walled redirect, not a
+    // real one, so fetching them for an og:image just returns Google's own
+    // interstitial page and a misleading generic image — tried this, reverted
+    // it. Leaving imageUrl unset here is deliberate: resolveStoryImage falls
+    // through cleanly to a real Wikipedia photo or stock instead of
+    // crediting an image to a source that never actually provided it.
     const stories: ScrapedStory[] = items
       .filter((item) => item.title && item.link)
       .map((item) => {
@@ -171,7 +179,6 @@ export async function searchGoogleNews(query: string, region: string = "NG"): Pr
         const cleanContent = stripCompetitorLinksAndBoilerplate(rawContent);
         // Google News titles are formatted "Headline - Source Name"; extract the real source.
         const sourceMatch = item.title!.match(/\s-\s([^-]+)$/);
-        const sourceName = sourceMatch ? sourceMatch[1].trim() : "Todaynews AI";
         const cleanTitle = sourceMatch ? item.title!.replace(/\s-\s([^-]+)$/, "").trim() : item.title!;
 
         return {
@@ -580,6 +587,21 @@ export async function scrapeRSSFeeds(
   });
 
   await Promise.allSettled(feedPromises);
+
+  // A "source" image that's identical across multiple different stories is a
+  // site-wide default/template image (common with WordPress/Yoast setups),
+  // not a real per-article photo — strip it so resolveStoryImage falls
+  // through to Wikipedia/stock instead of trusting a fake match.
+  const imageUrlCounts = new Map<string, number>();
+  for (const s of stories) {
+    if (s.imageUrl) imageUrlCounts.set(s.imageUrl, (imageUrlCounts.get(s.imageUrl) || 0) + 1);
+  }
+  for (const s of stories) {
+    if (s.imageUrl && (imageUrlCounts.get(s.imageUrl) || 0) > 1) {
+      s.imageUrl = undefined;
+      s.imageCredit = undefined;
+    }
+  }
 
   // Deduplicate by fuzzy title similarity (catches reworded rewrites of the
   // same story across different outlets, not just exact/prefix matches).
