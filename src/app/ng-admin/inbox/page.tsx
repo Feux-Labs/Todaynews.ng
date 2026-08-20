@@ -100,6 +100,7 @@ export default function InboxPage() {
           storyTitle: article.title,
           storySummary: article.summary,
           storyCategory: article.category,
+          storyImageUrl: article.imageUrl,
         }),
       });
       if (res.ok) {

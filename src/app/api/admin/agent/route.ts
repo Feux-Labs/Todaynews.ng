@@ -198,6 +198,14 @@ export async function POST(req: Request) {
 
           const targetStatus = autoPublish ? "PUBLISHED" : "DRAFT";
 
+          // Backfill a real image if this item somehow doesn't have one yet
+          // (e.g. it was scraped before the accuracy fixes existed) — never
+          // leave an inbox item with no image.
+          const needsImage = !item.imageUrl || !/^https?:\/\//i.test(item.imageUrl);
+          const resolvedImage = needsImage
+            ? await resolveStoryImage(item.imageUrl, rewritten.title, rewritten.category, item.imageCredit)
+            : null;
+
           if (isDbConfigured()) {
             await prisma.article.update({
               where: { id: item.id },
@@ -206,6 +214,7 @@ export async function POST(req: Request) {
                 summary: rewritten.summary,
                 status: targetStatus as any,
                 sourceName: "Todaynews AI",
+                ...(resolvedImage ? { imageUrl: resolvedImage.url, imageCredit: resolvedImage.credit } : {}),
                 pages: {
                   deleteMany: {},
                   create: rewritten.pages.map((p: { pageNumber: number; title?: string | null; content: string }) => ({
@@ -222,6 +231,7 @@ export async function POST(req: Request) {
               summary: rewritten.summary,
               status: targetStatus as any,
               sourceName: "Todaynews AI",
+              ...(resolvedImage ? { imageUrl: resolvedImage.url, imageCredit: resolvedImage.credit } : {}),
               pages: rewritten.pages,
             });
           }

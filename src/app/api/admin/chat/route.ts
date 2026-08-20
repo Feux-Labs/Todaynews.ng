@@ -309,6 +309,16 @@ export async function POST(req: Request) {
 
         const finalCategory = sanitizeCategory(article.category);
 
+        // Resolve/backfill a real image before persisting — an existing
+        // article being re-paraphrased should never lose (or keep missing)
+        // its image just because this action forgot to touch that column.
+        const paraphraseResolvedImage = await resolveStoryImage(
+          storyImageUrl,
+          article.title || safeTitle,
+          finalCategory,
+          storyImageCredit
+        );
+
         if (storyId && !storyId.startsWith("scraped-")) {
           if (isDbConfigured()) {
             try {
@@ -318,6 +328,8 @@ export async function POST(req: Request) {
                   title: article.title || safeTitle,
                   summary: article.summary || safeSummary,
                   category: finalCategory as any,
+                  imageUrl: paraphraseResolvedImage.url,
+                  imageCredit: paraphraseResolvedImage.credit,
                   pages: {
                     deleteMany: {},
                     create: (article.pages || []).map((p: any, idx: number) => ({
@@ -366,21 +378,14 @@ ${(p.content || "").replace(/<[^>]*>/g, "")}`
 
         const replyMsg = `✨ **Article Paraphrased & Re-written Successfully!**\n\n${formattedMarkdown}`;
 
-        const paraphrasedImage = await resolveStoryImage(
-          storyImageUrl,
-          article.title || safeTitle,
-          finalCategory,
-          storyImageCredit
-        );
-
         const paraphrasedCard = {
           id: `para-${Date.now()}`,
           title: article.title || safeTitle,
           summary: article.summary || safeSummary,
           sourceName: "Todaynews AI",
           category: finalCategory,
-          imageUrl: paraphrasedImage.url,
-          imageCredit: paraphrasedImage.credit,
+          imageUrl: paraphraseResolvedImage.url,
+          imageCredit: paraphraseResolvedImage.credit,
           status: "new" as const,
         };
 
