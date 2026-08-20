@@ -53,6 +53,7 @@ export default function PublishedPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "views" | "title">("newest");
+  const [period, setPeriod] = useState<"all" | "day" | "week" | "month" | "year">("all");
   const [pageSize, setPageSize] = useState<number | "all">(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -172,12 +173,22 @@ export default function PublishedPage() {
     }
   };
 
+  const periodCutoff = (() => {
+    if (period === "all") return null;
+    const now = new Date();
+    if (period === "day") return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (period === "week") return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    if (period === "month") return new Date(now.getFullYear(), now.getMonth(), 1);
+    return new Date(now.getFullYear(), 0, 1); // year
+  })();
+
   const filtered = articles
     .filter(
       (a) =>
         a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.category.toLowerCase().includes(searchQuery.toLowerCase())
     )
+    .filter((a) => !periodCutoff || new Date(a.createdAt) >= periodCutoff)
     .sort((a, b) => {
       if (sortBy === "newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       if (sortBy === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -212,6 +223,29 @@ export default function PublishedPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Period Filter */}
+          <div className="flex bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+            {([
+              { value: "day", label: "Day" },
+              { value: "week", label: "Week" },
+              { value: "month", label: "Month" },
+              { value: "year", label: "Year" },
+              { value: "all", label: "All Time" },
+            ] as const).map((p) => (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value)}
+                className={`px-3 py-2 text-xs font-bold transition ${
+                  period === p.value
+                    ? "bg-[#2563eb] text-white"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
           {/* Sort Selector */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">Sort:</span>

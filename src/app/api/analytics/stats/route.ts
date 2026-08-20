@@ -3,45 +3,15 @@ import { memoryDb, isDbConfigured, prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-async function syncDbPageViewsWithArticleViews() {
-  try {
-    const articles = await prisma.article.findMany({
-      where: { views: { gt: 0 } },
-      select: { slug: true, category: true, views: true, createdAt: true },
-    });
-
-    for (const art of articles) {
-      const pvCount = await (prisma as any).pageView.count({
-        where: { articleSlug: art.slug },
-      });
-
-      if (pvCount < art.views) {
-        const missing = art.views - pvCount;
-        const now = Date.now();
-        const start = new Date(art.createdAt).getTime();
-        const timeSpan = Math.max(now - start, 3600000);
-
-        const records = [];
-        for (let i = 0; i < missing; i++) {
-          const randomTime = new Date(start + Math.random() * timeSpan);
-          records.push({
-            articleSlug: art.slug,
-            category: art.category || "GENERAL",
-            visitedAt: randomTime,
-          });
-        }
-
-        for (let i = 0; i < records.length; i += 100) {
-          await (prisma as any).pageView.createMany({
-            data: records.slice(i, i + 100),
-          });
-        }
-      }
-    }
-  } catch (err) {
-    console.error("[PageView Sync] Error syncing pageviews:", err);
-  }
-}
+// NOTE: this file used to have a syncDbPageViewsWithArticleViews() that ran
+// on every stats request and INSERTED FAKE pageView rows (random
+// visitedAt timestamps) into the real database whenever article.views
+// exceeded the real recorded pageView count — fabricating analytics data
+// rather than fixing the actual bug, which was article.views being
+// double/triple-counted elsewhere (see article/[slug]/page.tsx and
+// PageViewBeacon). Removed. Historical data this already wrote is real
+// rows in the DB now — see /api/admin/reset-analytics for a one-time,
+// admin-triggered cleanup.
 
 export async function GET(req: Request) {
   try {
@@ -80,8 +50,6 @@ export async function GET(req: Request) {
 
     if (isDbConfigured()) {
       try {
-        await syncDbPageViewsWithArticleViews();
-
         const totalViews = await (prisma as any).pageView.count({
           where: { visitedAt: { gte: cutoff } },
         });

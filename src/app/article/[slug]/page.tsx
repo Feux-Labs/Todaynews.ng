@@ -43,19 +43,15 @@ async function getArticle(slug: string): Promise<ArticleData | null> {
       });
 
       if (publishedArticle) {
-        try {
-          await prisma.article.update({
-            where: { id: publishedArticle.id },
-            data: { views: { increment: 1 } },
-          });
-          await (prisma as any).pageView.create({
-            data: {
-              articleSlug: publishedArticle.slug,
-              category: publishedArticle.category || "GENERAL",
-            },
-          });
-        } catch {}
-
+        // View counting deliberately lives ONLY in PageViewBeacon (client-side,
+        // fires once per real browser render). This function used to also
+        // increment here — but it's called twice per request (once from
+        // generateMetadata, once from the page body) AND runs on every
+        // server-side request including bots/crawlers/link-preview fetchers
+        // that never execute client JS. That combination was inflating the
+        // count up to 3x per real visit and counting an unknown number of
+        // non-human hits on top — confirmed against real Adsterra impression
+        // data showing the true number was ~2% of what was displayed.
         return {
           id: publishedArticle.id,
           title: publishedArticle.title,
@@ -68,7 +64,7 @@ async function getArticle(slug: string): Promise<ArticleData | null> {
           imageCredit: (publishedArticle as any).imageCredit || undefined,
           author: publishedArticle.author,
           readTimeMinutes: publishedArticle.readTimeMinutes,
-          views: publishedArticle.views + 1,
+          views: publishedArticle.views,
           createdAt: publishedArticle.createdAt.toISOString(),
           pages: publishedArticle.pages,
         };

@@ -10,6 +10,8 @@ import {
   Loader2,
   RefreshCw,
   Shield,
+  AlertTriangle,
+  Trash2,
 } from "lucide-react";
 
 interface SiteSettings {
@@ -102,6 +104,34 @@ export default function AdminSettingsPage() {
 
   const update = (key: keyof SiteSettings) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setSettings((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<string | null>(null);
+
+  const handleResetAnalytics = async () => {
+    if (
+      !confirm(
+        "This permanently deletes all page-view history and resets every article's view count to 0. A past bug wrote fake inflated numbers into these — this clears them so counting is accurate going forward. This cannot be undone. Continue?"
+      )
+    ) {
+      return;
+    }
+    setResetting(true);
+    setResetResult(null);
+    try {
+      const res = await fetch("/api/admin/reset-analytics", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setResetResult(`Cleared ${data.deletedPageViews} fake page-view rows and reset ${data.resetArticles} articles to 0 views.`);
+      } else {
+        setResetResult(data.error || "Reset failed.");
+      }
+    } catch (err) {
+      setResetResult("Reset failed — network error.");
+    } finally {
+      setResetting(false);
+    }
+  };
 
   if (fetchLoading) {
     return (
@@ -291,6 +321,33 @@ export default function AdminSettingsPage() {
               <li>Settings are saved <strong className="text-slate-900 dark:text-white">server-side</strong> and persist across all devices and deployments.</li>
             </ul>
           </div>
+        </div>
+      </div>
+
+      {/* Maintenance */}
+      <div className="bg-slate-50/80 dark:bg-slate-800/80 border border-red-200 dark:border-red-900 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-4">
+          <AlertTriangle className="w-5 h-5 text-red-600" />
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">Maintenance</h2>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Reset Analytics</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
+            A now-fixed bug used to write fake page-view rows into the database to paper over a double-counting issue,
+            inflating view counts far beyond real traffic. This wipes that history and resets every article to 0 views
+            — view counting from this point on is accurate (one real page load, counted once).
+          </p>
+          <button
+            onClick={handleResetAnalytics}
+            disabled={resetting}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition disabled:opacity-60"
+          >
+            {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            {resetting ? "Resetting..." : "Reset Analytics"}
+          </button>
+          {resetResult && (
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">{resetResult}</p>
+          )}
         </div>
       </div>
     </div>

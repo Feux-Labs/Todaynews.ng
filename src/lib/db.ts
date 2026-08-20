@@ -75,13 +75,12 @@ class InMemoryDb {
   }
 
   async getArticleBySlug(slug: string) {
+    // View counting deliberately does NOT happen here — this getter is
+    // called twice per request (generateMetadata + page render) and would
+    // double-count on top of PageViewBeacon's client-side increment. See
+    // recordPageView(), which is the single source of truth for views.
     const article = this.articles.find((a) => a.slug === slug);
-    if (article) {
-      article.views += 1;
-      this.recordPageView(article.slug, article.category);
-      return { ...article }; // Return shallow clone to prevent external state mutation
-    }
-    return null;
+    return article ? { ...article } : null;
   }
 
   async getArticleById(id: string) {
@@ -178,29 +177,19 @@ class InMemoryDb {
       category: category || "UNKNOWN",
       visitedAt: new Date(),
     });
+
+    // This is the single place articles.views gets incremented — matches
+    // the real DB path (pageview API route), so counts stay honest.
+    const article = this.articles.find((a) => a.slug === articleSlug);
+    if (article) article.views += 1;
   }
 
   async getViewStats(period: "today" | "week" | "month" = "today") {
-    // Sync pageViews array with total article views if missing
-    for (const art of this.articles) {
-      const pvCount = this.pageViews.filter((pv) => pv.articleSlug === art.slug).length;
-      if (pvCount < art.views) {
-        const missing = art.views - pvCount;
-        const now = Date.now();
-        const start = new Date(art.createdAt).getTime();
-        const timeSpan = Math.max(now - start, 3600000);
-
-        for (let i = 0; i < missing; i++) {
-          const randomTime = new Date(start + Math.random() * timeSpan);
-          this.pageViews.push({
-            id: `pv-${Math.random().toString(36).substring(2, 9)}`,
-            articleSlug: art.slug,
-            category: art.category || "GENERAL",
-            visitedAt: randomTime,
-          });
-        }
-      }
-    }
+    // NOTE: this used to "sync" by inventing fake pageViews rows with random
+    // timestamps whenever article.views didn't match the real recorded count
+    // — i.e. fabricating analytics data instead of surfacing a real bug.
+    // Now that view counting has a single source of truth (PageViewBeacon,
+    // via recordPageView), the two stay honest on their own.
 
     const now = new Date();
     let cutoff: Date;
